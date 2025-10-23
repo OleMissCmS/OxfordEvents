@@ -1,0 +1,25 @@
+OxfordEvents/
+  requirements.txt
+  README.md
+  streamlit_app.py
+.streamlit/
+  config.toml
+data/
+  sources.yaml
+  venues.csv
+  sample_events.json
+lib/
+  __init__.py
+  data_io.py
+  normalize.py
+  dedupe.py
+  calendar_links.py
+  parsers.py
+  aggregator.py
+components/
+  blocks.py
+tests/
+  test_smoke.py
+.github/
+  workflows/
+    ci.yml
