@@ -1,17 +1,134 @@
+# City/DMO & media
 - name: Visit Oxford (DMO) — Events
   type: html
   url: https://visitoxfordms.com/events/
   parser: visit_oxford
+
+- name: Oxford-Lafayette Chamber — Events Calendar
+  type: html
+  url: https://business.oxfordms.com/events
+  parser: chambermaster
+
+- name: Oxford Eagle — Events
+  type: html
+  url: https://www.oxfordeagle.com/events/
+  parser: simple_list
+
+- name: The Local Voice (TLV) — Events
+  type: html
+  url: https://www.thelocalvoice.net/oxford/events/
+  parser: simple_list
+
 - name: Eventbrite — Oxford, MS
   type: html
   url: https://www.eventbrite.com/d/ms--oxford/events/
   parser: eventbrite_oxford
+
+# University & campus
 - name: Ole Miss — Central Events (RSS)
   type: rss
   url: https://eventcalendar.olemiss.edu/calendar.xml
+
 - name: Ole Miss — Central Events (ICS)
   type: ics
   url: https://eventcalendar.olemiss.edu/calendar.ics
+
+- name: Gertrude C. Ford Center — Events
+  type: html
+  url: https://fordcenter.org/events/
+  parser: ford_center
+
+- name: Ole Miss Alumni Association — Events
+  type: html
+  url: https://www.olemissalumni.com/events/
+  parser: alumni
+
+# Athletics: ensure key sports always appear
 - name: Ole Miss Athletics — Football (ICS)
   type: ics
   url: https://olemisssports.com/calendar.ashx/calendar.ics?path=football
+- name: Ole Miss Athletics — Baseball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=baseball
+- name: Ole Miss Athletics — Softball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=softball
+- name: Ole Miss Athletics — M Basketball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=mbball
+- name: Ole Miss Athletics — W Basketball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=wbball
+
+# Venues/arts & community
+- name: The Lyric Oxford — Calendar
+  type: html
+  url: https://thelyricoxford.com/calendar/
+  parser: lyric
+
+- name: Proud Larry's — Upcoming Shows
+  type: html
+  url: https://proudlarrys.com/
+  parser: proud_larrys
+
+- name: Square Books — Events
+  type: html
+  url: https://squarebooks.com/events
+  parser: square_books
+
+- name: Thacker Mountain Radio Hour — Upcoming
+  type: html
+  url: https://www.thackermountain.com/
+  parser: thacker
+
+- name: Yoknapatawpha Arts Council (Powerhouse) — Events
+  type: html
+  url: https://www.oxfordarts.com/shop/category/29-events
+  parser: yac_powerhouse
+
+- name: Oxford Community Market (OXCM)
+  type: html
+  url: https://www.oxfordcommunitymarket.com/
+  parser: oxcm
+
+# Government/Community hubs
+- name: City of Oxford — Meetings
+  type: html
+  url: https://www.oxfordms.net/government/meetings
+  parser: city_meetings
+
+- name: Oxford Conference Center — News/Events (lite)
+  type: html
+  url: https://www.oxfordconferencecenter.com/
+  parser: occ_lite
+
+- name: Lafayette & Oxford Public Library — Calendars
+  type: html
+  url: https://firstregional.org/calendars/
+  parser: library_portal
+
+# Social accounts & groups (monitor-only placeholders for now)
+- name: Visit Oxford — Social (X/IG/Facebook)
+  type: html
+  url: https://twitter.com/VisitOxfordMS
+  parser: social_stub
+
+- name: The Local Voice — Social (X/IG)
+  type: html
+  url: https://twitter.com/TheLocalVoice
+  parser: social_stub
+
+- name: Facebook Group — What's Happening In Oxford, MS
+  type: html
+  url: https://www.facebook.com/groups/5394297997344637/
+  parser: social_stub
+
+- name: Facebook Group — Oxford, Mississippi News and Events
+  type: html
+  url: https://www.facebook.com/groups/oxfordmississippi/
+  parser: social_stub
+
+- name: Ole Miss student life signals (OleMissSAA/RebelRewards/EverythingRebs)
+  type: html
+  url: https://twitter.com/EverythingRebs
+  parser: social_stub
