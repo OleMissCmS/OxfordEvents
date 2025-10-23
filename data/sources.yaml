@@ -1,6 +1,4 @@
-# Event sources for Oxford, MS + Ole Miss.
-# type: rss | ics | html
-# parser: optional custom parser key handled in lib/parsers.py
+# Core Oxford + Ole Miss sources
 - name: Visit Oxford (DMO) — Events
   type: html
   url: https://visitoxfordms.com/events/
@@ -20,6 +18,11 @@
   type: html
   url: https://www.thelocalvoice.net/oxford/events/
   parser: simple_list
+
+- name: Eventbrite — Oxford, MS
+  type: html
+  url: https://www.eventbrite.com/d/ms--oxford/events/
+  parser: eventbrite_oxford
 
 - name: The Lyric Oxford — Calendar
   type: html
@@ -51,8 +54,8 @@
   url: https://www.oxfordcommunitymarket.com/
   parser: oxcm
 
-# University / Ole Miss
-- name: Ole Miss — Central Events (Localist)
+# University / Ole Miss central
+- name: Ole Miss — Central Events (RSS)
   type: rss
   url: https://eventcalendar.olemiss.edu/calendar.xml
 
@@ -70,18 +73,29 @@
   url: https://www.olemissalumni.com/events/
   parser: alumni
 
-- name: Ole Miss Athletics — Composite Schedule
-  type: html
-  url: https://olemisssports.com/calendar.aspx
-  parser: athletics
+# Athletics — ensure the five sports always appear (ICS via Sidearm)
+- name: Ole Miss Athletics — Football (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=football
 
-- name: Campus Life (The ForUM / Engage)
-  type: html
-  url: https://olemiss.campuslabs.com/engage/events
-  parser: engage_campus
+- name: Ole Miss Athletics — Baseball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=baseball
 
-# Government / Community hubs
-- name: City of Oxford — Meetings Calendar (lite)
+- name: Ole Miss Athletics — Softball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=softball
+
+- name: Ole Miss Athletics — M Basketball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=mbball
+
+- name: Ole Miss Athletics — W Basketball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=wbball
+
+# Government / community hubs
+- name: City of Oxford — Meetings
   type: html
   url: https://www.oxfordms.net/government/meetings
   parser: city_meetings
@@ -91,7 +105,33 @@
   url: https://www.oxfordconferencecenter.com/
   parser: occ_lite
 
-- name: Lafayette & Oxford Public Library — Calendars (portal)
+- name: Lafayette & Oxford Public Library — Calendars
   type: html
   url: https://firstregional.org/calendars/
   parser: library_portal
+
+# Social accounts (monitor-only placeholders; APIs required for live scraping)
+- name: Visit Oxford — Social (X/IG/Facebook)
+  type: html
+  url: https://twitter.com/VisitOxfordMS
+  parser: social_stub
+
+- name: The Local Voice — Social (X/IG)
+  type: html
+  url: https://twitter.com/TheLocalVoice
+  parser: social_stub
+
+- name: Facebook Group — What's Happening In Oxford, MS
+  type: html
+  url: https://www.facebook.com/groups/5394297997344637/
+  parser: social_stub
+
+- name: Facebook Group — Oxford, Mississippi News and Events
+  type: html
+  url: https://www.facebook.com/groups/oxfordmississippi/
+  parser: social_stub
+
+- name: Ole Miss student life signals (OleMissSAA/RebelRewards/EverythingRebs)
+  type: html
+  url: https://twitter.com/EverythingRebs
+  parser: social_stub

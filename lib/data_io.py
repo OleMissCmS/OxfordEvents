@@ -1,26 +1,23 @@
 from __future__ import annotations
-import io, re, json, time, math, logging, hashlib
-from dataclasses import dataclass, asdict
-from typing import List, Optional, Dict, Any, Tuple
 import requests
-from bs4 import BeautifulSoup
 import feedparser
-from icalendar import Calendar, Event as ICalEvent
-from dateutil import parser as dtp, tz
+from bs4 import BeautifulSoup
+from icalendar import Calendar
+from dateutil import parser as dtp
 
 USER_AGENT = "OxfordEvents/1.0 (+https://github.com/your-username/OxfordEvents)"
 HEADERS = {"User-Agent": USER_AGENT, "Accept": "*/*"}
 
 def fetch(url: str, timeout: int = 20) -> bytes:
-    resp = requests.get(url, headers=HEADERS, timeout=timeout)
-    resp.raise_for_status()
-    return resp.content
+    r = requests.get(url, headers=HEADERS, timeout=timeout)
+    r.raise_for_status()
+    return r.content
 
 def get_soup(url: str) -> BeautifulSoup:
     html = fetch(url)
     return BeautifulSoup(html, "lxml")
 
-def parse_rss(url: str) -> List[Dict[str, Any]]:
+def parse_rss(url: str):
     fp = feedparser.parse(url)
     items = []
     for e in fp.entries:
@@ -30,14 +27,12 @@ def parse_rss(url: str) -> List[Dict[str, Any]]:
         dt = e.get("published") or e.get("updated") or e.get("date")
         start = None
         if dt:
-            try:
-                start = dtp.parse(dt)
-            except Exception:
-                start = None
+            try: start = dtp.parse(dt)
+            except Exception: start = None
         items.append({"title": title, "link": link, "description": summary, "start": start})
     return items
 
-def parse_ics(url: str) -> List[Dict[str, Any]]:
+def parse_ics(url: str):
     data = fetch(url)
     cal = Calendar.from_ical(data)
     out = []
