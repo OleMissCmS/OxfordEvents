@@ -6,7 +6,6 @@ import re
 from bs4 import BeautifulSoup
 import html
 
-# Ordered regex rules; first match wins.
 CATEGORY_RULES = [
     (re.compile(r"\b(football|baseball|softball|basketball|soccer|volleyball|golf|tennis|track|athletics|game)\b", re.I), "Sports"),
     (re.compile(r"\b(concert|live music|recital|orchestra|band|choir|jazz|music)\b", re.I), "Music"),
@@ -28,7 +27,6 @@ def strip_html(text: Optional[str]) -> Optional[str]:
         return text
     s = BeautifulSoup(text, "lxml").get_text(" ", strip=True)
     s = html.unescape(s)
-    # Remove boilerplate like "View on site | Email this event"
     s = re.sub(r"\b(View on site\s*\|\s*Email this event)\b", "", s, flags=re.I)
     s = re.sub(r"\s{2,}", " ", s).strip()
     return s or None

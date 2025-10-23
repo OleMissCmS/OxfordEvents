@@ -82,9 +82,12 @@ def collect_with_progress(notify: Optional[Callable[[str, int, int], None]] = No
                 recs = []
             all_events.extend(normalize_records(recs, source_name=name))
         except Exception as e:
-            # Never crash the app on a single source failing.
             all_events.append({"title": f"[{name}] (source error)", "start_iso": None, "end_iso": None, "location": None, "cost": None, "link": url, "source": name, "category": None, "description": str(e)})
     return dedupe(all_events, threshold=88)
+
+def collect() -> List[Dict[str, Any]]:
+    # Simple wrapper for caching use (no notify callback requirement)
+    return collect_with_progress(None)
 
 def window(events: List[Dict[str, Any]], days: int = 21) -> List[Dict[str, Any]]:
     now = datetime.now(tz.tzlocal())
@@ -93,7 +96,13 @@ def window(events: List[Dict[str, Any]], days: int = 21) -> List[Dict[str, Any]]
     for ev in events:
         if not ev.get("start_iso"): continue
         try:
-            dt = datetime.fromisoformat(ev["start_iso"].replace("Z",""))
+            # More tolerant: dateutil handles date-only strings too.
+            dt = __import__("dateutil").parser.parse(ev["start_iso"])
+            # If parse yields a date without time, assume 00:00 local to include it in the list
+            if isinstance(dt, datetime):
+                pass
+            else:
+                dt = datetime(dt.year, dt.month, dt.day, tzinfo=tz.tzlocal())
             if now <= dt <= end:
                 sel.append(ev)
         except Exception:

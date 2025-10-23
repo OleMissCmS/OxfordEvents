@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from icalendar import Calendar
 from dateutil import parser as dtp
 
-UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36 OxfordEvents/4.2"
+UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36 OxfordEvents/4.3"
 HEADERS = {
     "User-Agent": UA,
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -14,10 +14,8 @@ HEADERS = {
 }
 
 def fetch(url: str, timeout: int = 15) -> bytes:
-    """Fetch bytes; never raise on HTTP errors. Returns b'' on failure."""
     try:
         r = requests.get(url, headers=HEADERS, timeout=timeout)
-        # Don't raise_for_status; some sites 403/404 — we degrade gracefully.
         if r.status_code >= 400:
             return b""
         return r.content or b""
@@ -27,12 +25,10 @@ def fetch(url: str, timeout: int = 15) -> bytes:
 def get_soup(url: str) -> BeautifulSoup:
     html = fetch(url)
     if not html:
-        # empty soup that won't break parsers
         return BeautifulSoup("<html></html>", "lxml")
     return BeautifulSoup(html, "lxml")
 
 def parse_rss(url: str):
-    # feedparser handles errors internally; returns empty entries on failure
     fp = feedparser.parse(url)
     items = []
     for e in fp.entries:

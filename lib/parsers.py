@@ -154,7 +154,6 @@ def library_portal(url: str) -> List[Dict[str, Any]]:
     return [{"title":"First Regional Library — Calendars","link":url,"source":"Oxford Public Library (FRL)"}]
 
 def eventbrite_oxford(url: str) -> List[Dict[str, Any]]:
-    # Some regions may return 403; with hardened fetch(), we degrade to a single link item.
     soup=get_soup(url); out=[]
     for a in soup.select("a[href*='eventbrite.com/e/']"):
         txt=_clean(a.get_text()); href=a.get("href")
@@ -163,5 +162,4 @@ def eventbrite_oxford(url: str) -> List[Dict[str, Any]]:
     return out
 
 def social_stub(url: str) -> List[Dict[str, Any]]:
-    # Placeholder indicating social feeds to monitor; APIs are needed for live ingest.
     return [{"title":"Social feed (monitor for updates)","link":url,"source":"Social"}]
