@@ -134,4 +134,30 @@
 - name: Ole Miss student life signals (OleMissSAA/RebelRewards/EverythingRebs)
   type: html
   url: https://twitter.com/EverythingRebs
+
+  - name: Eventbrite — Oxford, MS
+  type: html
+  url: https://www.eventbrite.com/d/ms--oxford/events/
+  parser: eventbrite_oxford
+
+  - name: Ole Miss Athletics — Football (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=football
+
+- name: Ole Miss Athletics — Baseball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=baseball
+
+- name: Ole Miss Athletics — Softball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=softball
+
+- name: Ole Miss Athletics — M Basketball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=mbball
+
+- name: Ole Miss Athletics — W Basketball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=wbball
+
   parser: social_stub
