@@ -1,18 +1,22 @@
 # Upcoming in Oxford — OxfordEvents
 
-Streamlit app that consolidates upcoming events around Oxford, MS & Ole Miss. Sources include Visit Oxford, Ole Miss Localist (RSS/ICS), Chamber, Local Voice, Eventbrite, venue pages, and athletics ICS (football/baseball/softball/men's & women's basketball).
+A Streamlit app that consolidates upcoming events around Oxford, MS and Ole Miss from public sources (RSS, ICS, HTML). It deduplicates near-duplicate listings, shows a **month calendar** with hover tooltips, renders clean **event cards with descriptions**, and includes **Google/Apple calendar** buttons. Mobile-friendly design (sidebar collapsed, responsive chart, stacked cards).
 
 ## Quickstart
 ```bash
-python -m venv .venv && source .venv/bin/activate  # Windows: .venv\Scripts\activate
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
 
-## Deploy (Streamlit Community Cloud)
-New app → repo → main branch → `streamlit_app.py` → Deploy.
+## Deploy to Streamlit Community Cloud
+- New app → pick this repo → **Main file:** `streamlit_app.py` → Deploy.
+- If you edit `requirements.txt`, go to **Manage app → Restart** to rebuild.
 
 ## Customize
-- Add sources in `data/sources.yaml`
-- Category rules in `lib/normalize.py`
-- Venue map markers in `data/venues.csv`
+- Add/disable sources in `data/sources.yaml` (Eventbrite + Ole Miss Athletics ICS already added).
+- Edit categories in `lib/normalize.py` (ordered regex rules).
+- Add venue markers in `data/venues.csv`.
+
+## Notes on social sources
+This repo includes entries for social accounts/groups as placeholders. Most social platforms require API keys or permissions; the app links to them but does not ingest posts automatically.

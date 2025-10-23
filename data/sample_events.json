@@ -3,12 +3,12 @@
     "title": "Thacker Mountain Radio Hour",
     "start": "2025-10-30T18:00:00-05:00",
     "end": "2025-10-30T19:00:00-05:00",
-    "location": "The Powerhouse",
+    "location": "The Powerhouse, 413 S 14th St, Oxford, MS",
     "cost": "Free",
     "link": "https://www.thackermountain.com/",
-    "source": "Thacker Mountain",
+    "source": "Thacker Mountain Radio Hour",
     "category": "Arts & Culture",
-    "description": "Weekly live show with author interviews and music."
+    "description": "Weekly live show featuring author interviews and music."
   },
   {
     "title": "Ole Miss Football vs LSU",
@@ -17,7 +17,7 @@
     "location": "Vaught-Hemingway Stadium",
     "cost": null,
     "link": "https://olemisssports.com/",
-    "source": "Ole Miss Athletics",
+    "source": "Ole Miss Athletics \u2014 Football (ICS)",
     "category": "Sports",
     "description": "SEC home game at Vaught-Hemingway."
   },
@@ -28,7 +28,7 @@
     "location": "Off Square Books",
     "cost": "Free",
     "link": "https://squarebooks.com/events",
-    "source": "Square Books",
+    "source": "Square Books \u2014 Events",
     "category": "Books & Literary",
     "description": "Reading and signing with Jane Doe."
   }

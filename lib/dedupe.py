@@ -4,6 +4,7 @@ from rapidfuzz import fuzz
 from dateutil import parser as dtp
 
 def dedupe(events: List[Dict[str, Any]], threshold: int = 88) -> List[Dict[str, Any]]:
+    # group by date; within each date, fuzzy-match titles
     by_date = {}
     for ev in events:
         d = "unknown"
@@ -22,7 +23,6 @@ def dedupe(events: List[Dict[str, Any]], threshold: int = 88) -> List[Dict[str, 
                 if j in used: continue
                 score = fuzz.token_set_ratio(a.get("title",""), b.get("title",""))
                 if score >= threshold:
-                    # merge metadata
                     for k in ["link","location","cost","description","category"]:
                         if not merged.get(k) and b.get(k):
                             merged[k] = b[k]

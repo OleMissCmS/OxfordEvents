@@ -7,7 +7,7 @@ from lib.aggregator import collect, window
 from lib.calendar_links import google_link, build_ics
 import json
 
-st.set_page_config(page_title="Upcoming in Oxford", page_icon="📅", layout="wide")
+st.set_page_config(page_title="Upcoming in Oxford", page_icon="📅", layout="wide", initial_sidebar_state="collapsed")
 hero()
 
 st.sidebar.header("Filters")
@@ -25,8 +25,9 @@ def _fetch_events():
             return json.load(f)
 
 events = _fetch_events()
-events3 = window(events, days=60)
 
+# First, broaden window, then apply chosen range
+events3 = window(events, days=60)
 def _within(ev):
     if not ev.get("start_iso"): 
         return False
@@ -38,7 +39,7 @@ cats = sorted({e.get("category") or "Uncategorized" for e in events_sel})
 cat_choice = st.sidebar.multiselect("Category", options=cats, default=cats)
 events_sel = [e for e in events_sel if (e.get("category") or "Uncategorized") in cat_choice]
 
-# --- Calendar view (current month) ---
+# --- Calendar view (month) ---
 import plotly.graph_objects as go
 from calendar import monthrange
 
@@ -72,7 +73,7 @@ def build_month_calendar(evts, year, month):
                 text[rr][cc] = ""
                 z[rr][cc] = None
                 continue
-            d = datetime(today.year, today.month, day).date()
+            d = datetime(year, month, day).date()
             lst = by_day.get(d, [])
             z[rr][cc] = len(lst) if lst else 0
             titles = []
@@ -93,7 +94,7 @@ def build_month_calendar(evts, year, month):
         text=text, hoverinfo="text", showscale=False, colorscale="Blues"
     ))
     fig.update_layout(
-        title=f"{datetime(today.year, today.month, 1).strftime('%B %Y')} — events per day",
+        title=f"{datetime(year, month, 1).strftime('%B %Y')} — events per day",
         xaxis=dict(side="top"),
         yaxis=dict(autorange="reversed"),
         margin=dict(l=10,r=10,t=40,b=10),
@@ -102,12 +103,12 @@ def build_month_calendar(evts, year, month):
     fig.update_layout(annotations=annotations)
     return fig
 
-current_year = today.year
-current_month = today.month
-cal_fig = build_month_calendar(events_sel, current_year, current_month)
-st.plotly_chart(cal_fig, use_container_width=True)
+# Use selected 'From date' as the month anchor
+month_anchor = date_min
+cal_fig = build_month_calendar(events_sel, month_anchor.year, month_anchor.month)
+st.plotly_chart(cal_fig, use_container_width=True, config={"displayModeBar": False, "responsive": True})
 
-# --- Event cards with calendar buttons ---
+# --- Cards with calendar buttons ---
 for ev in events_sel[:60]:
     event_card(ev)
     colA, colB, colC = st.columns([1,1,5])

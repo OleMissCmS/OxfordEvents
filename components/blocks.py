@@ -5,14 +5,11 @@ from dateutil import parser as dtp
 
 def hero():
     st.markdown(
-        """
-<div style="padding:1rem 1.2rem;border-radius:16px;background:linear-gradient(90deg,#0C2340,#163b6a);color:white">
+        """<div style="padding:1rem 1.2rem;border-radius:16px;background:linear-gradient(90deg,#0C2340,#163b6a);color:white">
   <h1 style="margin:0">Upcoming in Oxford</h1>
   <p style="margin-top:.5rem;opacity:.95">Oxford & Ole Miss events — refreshed when you open the page.</p>
 </div>
-""",
-        unsafe_allow_html=True,
-    )
+""", unsafe_allow_html=True)
 
 def event_card(ev: Dict[str, Any]) -> None:
     when = None

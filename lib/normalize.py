@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any
 from dateutil import parser as dtp
 import re
 
+# Ordered regex rules; first match wins.
 CATEGORY_RULES = [
     (re.compile(r"\b(football|baseball|softball|basketball|soccer|volleyball|golf|tennis|track|athletics|game)\b", re.I), "Sports"),
     (re.compile(r"\b(concert|live music|recital|orchestra|band|choir|jazz|music)\b", re.I), "Music"),

@@ -1,4 +1,8 @@
-# Core Oxford + Ole Miss sources
+# Event sources for Oxford, MS + Ole Miss.
+# type: rss | ics | html
+# parser: optional custom parser key in lib/parsers.py
+
+# City/DMO & media
 - name: Visit Oxford (DMO) — Events
   type: html
   url: https://visitoxfordms.com/events/
@@ -19,11 +23,47 @@
   url: https://www.thelocalvoice.net/oxford/events/
   parser: simple_list
 
-- name: Eventbrite — Oxford, MS
-  type: html
-  url: https://www.eventbrite.com/d/ms--oxford/events/
-  parser: eventbrite_oxford
+# University & campus
+- name: Ole Miss — Central Events (RSS)
+  type: rss
+  url: https://eventcalendar.olemiss.edu/calendar.xml
 
+- name: Ole Miss — Central Events (ICS)
+  type: ics
+  url: https://eventcalendar.olemiss.edu/calendar.ics
+
+- name: Gertrude C. Ford Center — Events
+  type: html
+  url: https://fordcenter.org/events/
+  parser: ford_center
+
+- name: Ole Miss Alumni Association — Events
+  type: html
+  url: https://www.olemissalumni.com/events/
+  parser: alumni
+
+# Athletics: ensure key sports always appear
+- name: Ole Miss Athletics — Football (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=football
+
+- name: Ole Miss Athletics — Baseball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=baseball
+
+- name: Ole Miss Athletics — Softball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=softball
+
+- name: Ole Miss Athletics — M Basketball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=mbball
+
+- name: Ole Miss Athletics — W Basketball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=wbball
+
+# Venues/arts & community
 - name: The Lyric Oxford — Calendar
   type: html
   url: https://thelyricoxford.com/calendar/
@@ -54,47 +94,7 @@
   url: https://www.oxfordcommunitymarket.com/
   parser: oxcm
 
-# University / Ole Miss central
-- name: Ole Miss — Central Events (RSS)
-  type: rss
-  url: https://eventcalendar.olemiss.edu/calendar.xml
-
-- name: Ole Miss — Central Events (ICS)
-  type: ics
-  url: https://eventcalendar.olemiss.edu/calendar.ics
-
-- name: Gertrude C. Ford Center — Events
-  type: html
-  url: https://fordcenter.org/events/
-  parser: ford_center
-
-- name: Ole Miss Alumni Association — Events
-  type: html
-  url: https://www.olemissalumni.com/events/
-  parser: alumni
-
-# Athletics — ensure the five sports always appear (ICS via Sidearm)
-- name: Ole Miss Athletics — Football (ICS)
-  type: ics
-  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=football
-
-- name: Ole Miss Athletics — Baseball (ICS)
-  type: ics
-  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=baseball
-
-- name: Ole Miss Athletics — Softball (ICS)
-  type: ics
-  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=softball
-
-- name: Ole Miss Athletics — M Basketball (ICS)
-  type: ics
-  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=mbball
-
-- name: Ole Miss Athletics — W Basketball (ICS)
-  type: ics
-  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=wbball
-
-# Government / community hubs
+# Government/Community hubs
 - name: City of Oxford — Meetings
   type: html
   url: https://www.oxfordms.net/government/meetings
@@ -110,7 +110,13 @@
   url: https://firstregional.org/calendars/
   parser: library_portal
 
-# Social accounts (monitor-only placeholders; APIs required for live scraping)
+# Aggregators
+- name: Eventbrite — Oxford, MS
+  type: html
+  url: https://www.eventbrite.com/d/ms--oxford/events/
+  parser: eventbrite_oxford
+
+# Social accounts & groups (monitor-only placeholders for now)
 - name: Visit Oxford — Social (X/IG/Facebook)
   type: html
   url: https://twitter.com/VisitOxfordMS
@@ -134,30 +140,4 @@
 - name: Ole Miss student life signals (OleMissSAA/RebelRewards/EverythingRebs)
   type: html
   url: https://twitter.com/EverythingRebs
-
-  - name: Eventbrite — Oxford, MS
-  type: html
-  url: https://www.eventbrite.com/d/ms--oxford/events/
-  parser: eventbrite_oxford
-
-  - name: Ole Miss Athletics — Football (ICS)
-  type: ics
-  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=football
-
-- name: Ole Miss Athletics — Baseball (ICS)
-  type: ics
-  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=baseball
-
-- name: Ole Miss Athletics — Softball (ICS)
-  type: ics
-  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=softball
-
-- name: Ole Miss Athletics — M Basketball (ICS)
-  type: ics
-  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=mbball
-
-- name: Ole Miss Athletics — W Basketball (ICS)
-  type: ics
-  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=wbball
-
   parser: social_stub
