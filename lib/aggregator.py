@@ -1,14 +1,15 @@
+
 from __future__ import annotations
 from typing import List, Dict, Any, Callable, Optional
 import yaml
 from datetime import datetime, timedelta
 from dateutil import tz
 from .data_io import parse_rss, parse_ics
-from .parsers import visit_oxford, eventbrite_oxford, football_schedule
+from .parsers import visit_oxford, chambermaster, simple_list, lyric, proud_larrys, square_books, thacker, yac_powerhouse, ford_center, occ_lite, library_portal, eventbrite_oxford, football_schedule, social_stub
 from .normalize import Event, infer_category, to_iso, strip_html
 from .dedupe import dedupe
 
-PARSER_MAP={"visit_oxford":visit_oxford,"eventbrite_oxford":eventbrite_oxford,"football_schedule":football_schedule}
+PARSER_MAP={"visit_oxford":visit_oxford,"chambermaster":chambermaster,"simple_list":simple_list,"lyric":lyric,"proud_larrys":proud_larrys,"square_books":square_books,"thacker":thacker,"yac_powerhouse":yac_powerhouse,"ford_center":ford_center,"occ_lite":occ_lite,"library_portal":library_portal,"eventbrite_oxford":eventbrite_oxford,"football_schedule":football_schedule,"social_stub":social_stub}
 
 def load_sources(path: str = "data/sources.yaml")->List[Dict[str, Any]]:
     with open(path,"r",encoding="utf-8") as f: return yaml.safe_load(f)
@@ -20,8 +21,7 @@ def normalize_records(records: List[Dict[str, Any]], source_name: str)->List[Dic
         start=r.get("start"); end=r.get("end"); loc=r.get("location"); link=r.get("link")
         desc=strip_html(r.get("description")); cost=r.get("cost")
         cat=r.get("category") or infer_category(title, desc)
-        ev=Event(title=title,start_iso=to_iso(start),end_iso=to_iso(end) if end else to_iso(start),
-                 location=loc,cost=cost,link=link,source=source_name,category=cat,description=desc)
+        ev=Event(title=title,start_iso=to_iso(start),end_iso=to_iso(end) if end else to_iso(start),location=loc,cost=cost,link=link,source=source_name,category=cat,description=desc)
         out.append(ev.to_dict())
     return out
 
@@ -33,7 +33,9 @@ def collect_with_progress(notify: Optional[Callable[[str,int,int],None]]=None)->
         try:
             if t=="rss": recs=parse_rss(url)
             elif t=="ics": recs=parse_ics(url)
-            elif t=="html": recs=PARSER_MAP.get(s.get("parser"), lambda u: [])(url)
+            elif t=="html":
+                fn=PARSER_MAP.get(s.get("parser"), social_stub if any(k in url for k in ["twitter.com","facebook.com","instagram.com"]) else simple_list)
+                recs=fn(url)
             else: recs=[]
             all_events.extend(normalize_records(recs, source_name=name))
         except Exception as e:

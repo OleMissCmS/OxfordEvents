@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 import streamlit as st
 from typing import Dict, Any
@@ -17,7 +18,6 @@ def event_card(ev: Dict[str, Any]) -> None:
         when = dtp.parse(ev.get("start_iso","")).strftime("%a %b %d, %I:%M %p")
     except Exception:
         pass
-
     with st.container(border=True):
         st.subheader(ev.get("title","Event"))
         st.markdown(
@@ -27,8 +27,6 @@ def event_card(ev: Dict[str, Any]) -> None:
             f"**Source:** {ev.get('source') or ''}"
         )
         desc = ev.get("description")
-        if desc:
-            st.markdown(desc)
+        if desc: st.markdown(desc)
         link = ev.get("link")
-        if link:
-            st.markdown(f"[Event link]({link})")
+        if link: st.markdown(f"[Event link]({link})")

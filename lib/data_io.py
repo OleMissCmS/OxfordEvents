@@ -1,11 +1,12 @@
+
 from __future__ import annotations
 import requests, feedparser
 from bs4 import BeautifulSoup
 from icalendar import Calendar
 from dateutil import parser as dtp
 
-UA = "Mozilla/5.0 OxfordEvents/4.5.1"
-HEADERS = {"User-Agent": UA, "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language":"en-US,en;q=0.7", "Connection":"close"}
+UA = "Mozilla/5.0 OxfordEvents/4.6"
+HEADERS = {"User-Agent": UA}
 
 def fetch(url: str, timeout: int = 15) -> bytes:
     try:
@@ -17,8 +18,7 @@ def fetch(url: str, timeout: int = 15) -> bytes:
 
 def get_soup(url: str) -> BeautifulSoup:
     html = fetch(url)
-    if not html: return BeautifulSoup("<html></html>", "lxml")
-    return BeautifulSoup(html, "lxml")
+    return BeautifulSoup(html or b"<html></html>", "lxml")
 
 def parse_rss(url: str):
     fp = feedparser.parse(url)
