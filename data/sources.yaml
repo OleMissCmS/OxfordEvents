@@ -1,4 +1,3 @@
-# University & athletics
 - name: Ole Miss — Central Events (RSS)
   type: rss
   url: https://eventcalendar.olemiss.edu/calendar.xml
@@ -16,11 +15,11 @@
   url: https://olemisssports.com/sports/football/schedule
   parser: football_schedule
 
-# Community highlights
 - name: Visit Oxford (DMO) — Events
   type: html
   url: https://visitoxfordms.com/events/
   parser: visit_oxford
+
 - name: Eventbrite — Oxford, MS
   type: html
   url: https://www.eventbrite.com/d/ms--oxford/events/

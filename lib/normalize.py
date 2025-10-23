@@ -13,7 +13,6 @@ def strip_html(text: Optional[str]) -> Optional[str]:
     s = html.unescape(re.sub(r"\s{2,}"," ", s)).strip()
     return s or None
 
-from dataclasses import dataclass, asdict
 @dataclass
 class Event:
     title: str

@@ -10,15 +10,12 @@ def _clean(t: Optional[str]) -> Optional[str]:
     return " ".join(t.split())
 
 def visit_oxford(url: str) -> List[Dict[str, Any]]:
-    soup = get_soup(url)
-    items = []
+    soup = get_soup(url); items = []
     for card in soup.select("[class*='event'] a"):
-        title = _clean(card.get_text())
-        link = card.get("href")
+        title = _clean(card.get_text()); link = card.get("href")
         if title and link and "/events/" in link:
             items.append({"title": title, "link": link, "source": "Visit Oxford"})
-    if not items:
-        items.append({"title":"Visit Oxford events", "link": url, "source":"Visit Oxford"})
+    if not items: items.append({"title":"Visit Oxford events", "link": url, "source":"Visit Oxford"})
     return items
 
 def eventbrite_oxford(url: str) -> List[Dict[str, Any]]:
@@ -30,8 +27,7 @@ def eventbrite_oxford(url: str) -> List[Dict[str, Any]]:
     return out
 
 def football_schedule(url: str) -> List[Dict[str, Any]]:
-    soup = get_soup(url)
-    out: List[Dict[str, Any]] = []
+    soup = get_soup(url); out: List[Dict[str, Any]] = []
     games = soup.select("li[class*='schedule'], li[class*='game'], li[class*='sidearm'], div[class*='game'], tr")
     for g in games:
         txt = " ".join(g.get_text(" ", strip=True).split())

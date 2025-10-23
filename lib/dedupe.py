@@ -13,10 +13,8 @@ def _norm_loc(l: str | None) -> str:
 def _start_key(iso: str | None) -> str | None:
     if not iso: return None
     try:
-        dt = dtp.parse(iso)
-        return dt.strftime("%Y-%m-%d %H:%M")
-    except Exception:
-        return None
+        dt = dtp.parse(iso); return dt.strftime("%Y-%m-%d %H:%M")
+    except Exception: return None
 
 def dedupe(events: List[Dict[str, Any]], threshold: int = 88) -> List[Dict[str, Any]]:
     if not events: return []

@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
+from collections import Counter
 from datetime import datetime, timedelta
 from dateutil import parser as dtp, tz
 from components.blocks import hero, event_card
-from lib.aggregator import collect, window
+from lib.aggregator import collect, window, load_sources
 from lib.calendar_links import google_link, build_ics
 
 st.set_page_config(page_title="Upcoming in Oxford", page_icon="📅", layout="wide", initial_sidebar_state="expanded")
@@ -25,6 +26,21 @@ if st.sidebar.button("🔄 Refresh events", help="Clear cache and re-collect"):
     fetch_events_cached_pack.clear()
     st.experimental_rerun()
 
+# Toggle & panel
+show_sources = st.sidebar.toggle("Show sources panel", value=False, help="Toggle to display the complete list of sources used by the app.")
+source_filter_selected = None
+if show_sources:
+    src_defs = load_sources()
+    counts = Counter([e.get("source") for e in events if e.get("source")])
+    with st.sidebar.expander(f"Sources ({len(src_defs)})", expanded=True):
+        for s in src_defs:
+            name = s.get("name"); url = s.get("url"); typ = s.get("type","")
+            c = counts.get(name, 0)
+            st.markdown(f"- [{name}]({url}) — `{typ}` — **{c}** events")
+    # NEW multi-select (defaults to all sources observed in dataset)
+    opts = sorted([k for k,v in counts.items() if v>0] or [s.get("name") for s in src_defs])
+    source_filter_selected = st.sidebar.multiselect("Filter by source(s)", options=opts, default=opts, help="Only show events from the selected sources.")
+
 today = datetime.now(tz.tzlocal()).date()
 date_min = st.sidebar.date_input("From date", today)
 date_max = st.sidebar.date_input("To date", today + timedelta(days=21))
@@ -32,12 +48,16 @@ date_max = st.sidebar.date_input("To date", today + timedelta(days=21))
 events3 = window(events, days=90)
 
 def _within(ev):
-    if not ev.get("start_iso"): 
-        return False
+    if not ev.get("start_iso"): return False
     d = dtp.parse(ev["start_iso"]).date()
     return date_min <= d <= date_max
 
 events_sel = [e for e in events3 if _within(e)]
+
+# Apply source filter if the panel is shown
+if source_filter_selected is not None and len(source_filter_selected) > 0:
+    events_sel = [e for e in events_sel if (e.get("source") in source_filter_selected)]
+
 cats = sorted({e.get("category") or "Uncategorized" for e in events_sel})
 cat_choice = st.sidebar.multiselect("Category", options=cats, default=cats)
 events_sel = [e for e in events_sel if (e.get("category") or "Uncategorized") in cat_choice]
