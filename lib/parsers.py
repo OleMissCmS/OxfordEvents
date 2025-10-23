@@ -117,7 +117,6 @@ def alumni(url: str) -> List[Dict[str, Any]]:
     return out
 
 def athletics(url: str) -> List[Dict[str, Any]]:
-    # Composite calendar links; handled better via ICS in sources.yaml.
     soup=get_soup(url); out=[]
     for a in soup.select("a[href*='calendar']"):
         txt=_clean(a.get_text()); href=a.get("href")
