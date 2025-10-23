@@ -1,18 +1,12 @@
 # 🏛️ Upcoming in Oxford
 
-**The most comprehensive events calendar for Oxford, MS & Ole Miss**
+**Comprehensive Ole Miss & Oxford events calendar**
 
-## 🚀 Quick Deploy
-1. Fork this repo
-2. Connect to Streamlit Cloud
-3. Deploy! 🎉
+[![Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://oxfordevents.streamlit.app)
 
-## 📊 Features
-- ✅ 12+ automated sources
-- ✅ AI-powered deduplication
-- ✅ Category filters
-- ✅ Google/Apple Calendar export
-- ✅ Professional Ole Miss theme
-- ✅ Map view ready
+## 🚀 Quickstart
 
-**Live Demo:** [upcominginoxford.streamlit.app](https://oxfordevents.streamlit.app)
+**Local**:
+```bash
+pip install -r requirements.txt
+streamlit run streamlit_app.py
