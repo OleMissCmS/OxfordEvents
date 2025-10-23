@@ -3,30 +3,11 @@ from urllib.parse import urlencode
 from dateutil import parser as dtp
 
 def _fmt(iso: str) -> str:
-    dt = dtp.parse(iso)
-    return dt.strftime("%Y%m%dT%H%M%S")
+    dt = dtp.parse(iso); return dt.strftime("%Y%m%dT%H%M%S")
 
-def google_link(title: str, start_iso: str, end_iso: str, details: str, location: str) -> str:
-    params = {
-        "action": "TEMPLATE",
-        "text": title or "Event",
-        "dates": f"{_fmt(start_iso)}/{_fmt(end_iso or start_iso)}",
-        "details": details or "",
-        "location": location or "",
-    }
-    return "https://calendar.google.com/calendar/render?" + urlencode(params)
+def google_link(title, start_iso, end_iso, details, location):
+    return "https://calendar.google.com/calendar/render?" + urlencode({"action":"TEMPLATE","text":title or "Event","dates":f"{_fmt(start_iso)}/{_fmt(end_iso or start_iso)}","details":details or "","location":location or ""})
 
-def build_ics(title: str, start_iso: str, end_iso: str, details: str, location: str) -> str:
-    s = dtp.parse(start_iso).strftime("%Y%m%dT%H%M%S")
-    e = dtp.parse(end_iso or start_iso).strftime("%Y%m%dT%H%M%S")
-    lines = [
-        "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//OxfordEvents//EN",
-        "BEGIN:VEVENT",
-        f"SUMMARY:{title}",
-        f"DTSTART:{s}",
-        f"DTEND:{e}",
-        f"LOCATION:{location or ''}",
-        f"DESCRIPTION:{details or ''}",
-        "END:VEVENT","END:VCALENDAR",""
-    ]
-    return "\r\n".join(lines)
+def build_ics(title, start_iso, end_iso, details, location):
+    s = dtp.parse(start_iso).strftime("%Y%m%dT%H%M%S"); e = dtp.parse(end_iso or start_iso).strftime("%Y%m%dT%H%M%S")
+    return "\r\n".join(["BEGIN:VCALENDAR","VERSION:2.0","BEGIN:VEVENT",f"SUMMARY:{title}",f"DTSTART:{s}",f"DTEND:{e}",f"LOCATION:{location or ''}",f"DESCRIPTION:{details or ''}","END:VEVENT","END:VCALENDAR",""])
