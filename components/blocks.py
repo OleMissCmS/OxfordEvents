@@ -4,14 +4,12 @@ from typing import Dict, Any
 from dateutil import parser as dtp
 
 def hero(subtitle: str | None = None):
-    st.markdown(
-        """<div style="padding:1rem 1.2rem;border-radius:16px;background:linear-gradient(90deg,#0C2340,#163b6a);color:white">
+    st.markdown(f"""
+<div style="padding:1rem 1.2rem;border-radius:16px;background:linear-gradient(90deg,#0C2340,#163b6a);color:white">
   <h1 style="margin:0">Upcoming in Oxford</h1>
-  <p style="margin-top:.5rem;opacity:.95">%s</p>
+  <p style="margin-top:.5rem;opacity:.95">{subtitle or "What's happening, Oxford?"}</p>
 </div>
-""" % (subtitle or "Oxford & Ole Miss events — refreshed when you open the page."),
-        unsafe_allow_html=True,
-    )
+""", unsafe_allow_html=True)
 
 def event_card(ev: Dict[str, Any]) -> None:
     when = None

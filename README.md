@@ -1,9 +1,7 @@
-# OxfordEvents v4.3
+# OxfordEvents v4.4
 
-**What's new**
-- Caching: event collection is cached for 2 hours, so changing filters **does not** re-collect data.
-- Duplicates: if two events share the **same start datetime (minute precision)** and **same location**, we keep the one with the **longer title**.
-- Window filter more tolerant (handles date-only ICS entries) — helps Ole Miss Football/other athletics appear.
-- All safety & UI improvements from v4.2 remain.
-
-You can manually refresh in the sidebar using **🔄 Refresh events**.
+- Header: **What's happening, Oxford?**
+- Spinner replaces status while fetching (it disappears after load).
+- Cached event collection (2h) so filters don't re-fetch; manual **Refresh events** button.
+- **Football schedule fallback** via HTML parser on https://olemisssports.com/sports/football/schedule
+- Dedup: same minute + normalized location (case-insensitive, punctuation/extra spaces stripped) → keep longer title.
