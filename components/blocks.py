@@ -1,19 +1,41 @@
 from __future__ import annotations
 import streamlit as st
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from dateutil import parser as dtp
-import hashlib
+import hashlib, base64
+from pathlib import Path
 
 RED = "#CE1126"
 NAVY = "#0C2340"
-VERSION = "v4.8.3"
+VERSION = "v4.8.4"
 
 def _clamp(text: str | None, n: int = 333) -> str | None:
     if not text: return text
     text = text.strip()
     return text if len(text) <= n else text[:n-1] + "…"
 
+def _img_data_uri(path: str) -> Optional[str]:
+    try:
+        p = Path(path)
+        if not p.exists() or p.stat().st_size == 0:
+            return None
+        b64 = base64.b64encode(p.read_bytes()).decode("ascii")
+        # Assume PNG by default; works for PNG/SVG served as image/png here
+        return f"data:image/png;base64,{b64}"
+    except Exception:
+        return None
+
 def hero(subtitle: str | None = None):
+    ox = _img_data_uri("assets/oxford_logo.png")
+    ms = _img_data_uri("assets/ms_flag.png")
+    om = _img_data_uri("assets/olemiss_logo.png")
+    def _slot(data_uri: Optional[str], alt: str) -> str:
+        if data_uri:
+            return f'<img src="{data_uri}" alt="{alt}" />'
+        # Graceful fallback: show text badge when image missing
+        return f'<span style="padding:4px 8px;border-radius:8px;background:{NAVY};color:white;opacity:.85;font-size:12px;">{alt}</span>'
+    imgs_html = _slot(ox,"Oxford, MS") + _slot(ms,"Mississippi") + _slot(om,"Ole Miss")
+
     st.markdown(f"""
 <style>
 .top-gradient {{
@@ -37,9 +59,7 @@ def hero(subtitle: str | None = None):
 
 <div style="padding:0.8rem 1.2rem 0.5rem 1.2rem;border-radius:16px;margin-top:10px;background:linear-gradient(180deg, rgba(12,35,64,.98), rgba(12,35,64,.85));color:white; text-align:center; position:relative;">
   <div class="brandbar">
-    <img src="assets/oxford_logo.png" alt="Oxford, MS"/>
-    <img src="assets/ms_flag.png" alt="Mississippi Flag"/>
-    <img src="assets/olemiss_logo.png" alt="Ole Miss"/>
+    {imgs_html}
   </div>
   <h1 style="margin:.1rem 0 0 0;">Upcoming in Oxford</h1>
   <p style="margin:.25rem 0 .5rem 0;opacity:.95">{subtitle or "What's happening, Oxford?"}</p>
