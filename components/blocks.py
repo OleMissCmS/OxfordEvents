@@ -6,7 +6,7 @@ import hashlib
 
 RED = "#CE1126"
 NAVY = "#0C2340"
-VERSION = "v4.8.2"
+VERSION = "v4.8.3"
 
 def _clamp(text: str | None, n: int = 333) -> str | None:
     if not text: return text
@@ -18,7 +18,7 @@ def hero(subtitle: str | None = None):
 <style>
 .top-gradient {{
   position: fixed; top: 0; left: 0; right: 0; height: 6px; z-index: 9999;
-  background: repeating-linear-gradient(90deg, {RED} 0 60px, {NAVY} 60px 120px);
+  background: repeating-linear-gradient(90deg, {RED} 0 48px, {NAVY} 48px 96px);
   animation: bar-slide 8s linear infinite;
   background-size: 300% 100%;
 }}
@@ -91,6 +91,5 @@ def event_card(ev: Dict[str, Any], idx: int) -> None:
             st.markdown(f"[Event link]({link})")
 
 def unique_key(label: str, *parts: str) -> str:
-    import hashlib
     h = hashlib.sha1(("||".join([label] + [p or "" for p in parts])).encode("utf-8")).hexdigest()[:10]
     return f"{label}-{h}"

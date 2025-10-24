@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from .data_io import get_soup
 
 def simple_list(url: str) -> List[Dict[str, Any]]:

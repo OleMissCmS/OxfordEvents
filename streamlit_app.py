@@ -6,11 +6,9 @@ from dateutil import parser as dtp, tz
 from components.blocks import hero, event_card, unique_key
 from lib.aggregator import collect_with_progress, window, load_sources
 from lib.calendar_links import google_link, build_ics
-from lib.parsers import __dict__ as parser_ns
-from lib.data_io import parse_rss, parse_ics
-import yaml, io, re
+import re
 
-VERSION = "v4.8.2"
+VERSION = "v4.8.3"
 
 st.set_page_config(page_title="Upcoming in Oxford", page_icon="📅", layout="wide", initial_sidebar_state="expanded")
 hero("What's happening, Oxford?")
@@ -111,7 +109,8 @@ def render_calendar_buttons(ev: dict, idx: int):
     colA, colB, _ = st.columns([1,1,5])
     with colA:
         if isinstance(g_url, str) and g_url.startswith("http"):
-            st.link_button("Add to Google Calendar", g_url, use_container_width=True, key=unique_key("gcal", title, start_iso or "", str(idx)))
+            # link_button does NOT accept `key`; remove it to avoid TypeError
+            st.link_button("Add to Google Calendar", g_url, use_container_width=True)
         else:
             st.caption("Google Calendar link unavailable.")
     with colB:
@@ -124,8 +123,6 @@ def render_calendar_buttons(ev: dict, idx: int):
                                key=unique_key("ics", title, start_iso or "", str(idx)))
         else:
             st.caption("ICS unavailable.")
-
-import re as _re  # used in filename sanitize above
 
 for i, ev in enumerate(view):
     event_card(ev, i)

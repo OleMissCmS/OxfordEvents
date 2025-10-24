@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from icalendar import Calendar
 from dateutil import parser as dtp
 
-UA = "Mozilla/5.0 OxfordEvents/4.8.2"
+UA = "Mozilla/5.0 OxfordEvents/4.8.3"
 HEADERS = {"User-Agent": UA}
 
 def fetch(url: str, timeout: int = 15) -> bytes:
