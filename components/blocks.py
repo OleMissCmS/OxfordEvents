@@ -6,7 +6,7 @@ import hashlib
 
 RED = "#CE1126"
 NAVY = "#0C2340"
-VERSION = "v4.8"
+VERSION = "v4.8.1"
 
 def _clamp(text: str | None, n: int = 333) -> str | None:
     if not text: return text
@@ -16,31 +16,17 @@ def _clamp(text: str | None, n: int = 333) -> str | None:
 def hero(subtitle: str | None = None):
     st.markdown(f"""
 <style>
-.top-gradient {{
-  position: fixed; top: 0; left: 0; right: 0; height: 6px; z-index: 9999;
+.top-gradient {{ position: fixed; top: 0; left: 0; right: 0; height: 6px; z-index: 9999;
   background: linear-gradient(90deg, {RED}, {NAVY}, {RED});
-  background-size: 300% 100%;
-  animation: gradshift 8s ease-in-out infinite;
-}}
-@keyframes gradshift {{
-  0% {{ background-position: 0% 50%; }}
-  50% {{ background-position: 100% 50%; }}
-  100% {{ background-position: 0% 50%; }}
-}}
-.filters-badge {{
-  position: fixed; top: 16px; left: 8px; z-index: 9998;
-  background: {NAVY}; color: white; padding: 2px 8px; border-radius: 999px;
-  font-size: 12px; opacity: .9; pointer-events: none;
-}}
+  background-size: 300% 100%; animation: gradshift 8s ease-in-out infinite; }}
+@keyframes gradshift {{ 0% {{ background-position: 0% 50%; }} 50% {{ background-position: 100% 50%; }} 100% {{ background-position: 0% 50%; }} }}
+.filters-badge {{ position: fixed; top: 16px; left: 8px; z-index: 9998; background: {NAVY}; color: white; padding: 2px 8px; border-radius: 999px; font-size: 12px; opacity: .9; pointer-events: none; }}
 .brandbar {{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:.25rem;}}
 .brandbar img {{height:44px; width:auto; object-fit:contain;}}
-@media (max-width: 640px){{
-  .brandbar img {{height:34px;}}
-}}
+@media (max-width: 640px){{ .brandbar img {{height:34px;}} }}
 </style>
 <div class="top-gradient"></div>
 <div class="filters-badge">Filters</div>
-
 <div style="padding:0.8rem 1.2rem 0.5rem 1.2rem;border-radius:16px;margin-top:10px;background:linear-gradient(180deg, rgba(12,35,64,.98), rgba(12,35,64,.85));color:white; text-align:center; position:relative;">
   <div class="brandbar">
     <img src="assets/oxford_logo.png" alt="Oxford, MS"/>
@@ -97,5 +83,6 @@ def event_card(ev: Dict[str, Any], idx: int) -> None:
             st.markdown(f"[Event link]({link})")
 
 def unique_key(label: str, *parts: str) -> str:
+    import hashlib
     h = hashlib.sha1(("||".join([label] + [p or "" for p in parts])).encode("utf-8")).hexdigest()[:10]
     return f"{label}-{h}"

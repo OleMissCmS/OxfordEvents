@@ -11,15 +11,19 @@ from .dedupe import dedupe
 PARSER_MAP={"visit_oxford":visit_oxford,"chambermaster":chambermaster,"simple_list":simple_list,"lyric":lyric,"proud_larrys":proud_larrys,"square_books":square_books,"thacker":thacker,"yac_powerhouse":yac_powerhouse,"ford_center":ford_center,"occ_lite":occ_lite,"library_portal":library_portal,"eventbrite_oxford":eventbrite_oxford,"football_schedule":football_schedule,"social_stub":social_stub}
 
 def load_sources(path: str = "data/sources.yaml")->List[Dict[str, Any]]:
-    with open(path,"r",encoding="utf-8") as f: return yaml.safe_load(f)
+    import os
+    if not os.path.exists(path):
+        return []
+    with open(path,"r",encoding="utf-8") as f: return yaml.safe_load(f) or []
 
 def load_alias_map(path: str = "data/venues.csv")->Dict[str,str]:
-    import re
+    import re, os
     def norm(s:str)->str:
         s=(s or "").lower()
         s=re.sub(r"[^a-z0-9]+"," ",s); s=re.sub(r"\s+"," ",s).strip()
         return s
     out={}
+    if not os.path.exists(path): return out
     with open(path,"r",encoding="utf-8") as f:
         r=csv.DictReader(f)
         for row in r:
@@ -44,13 +48,13 @@ def collect_with_progress(notify: Optional[Callable[[str,int,int],None]]=None)->
     sources=load_sources(); all_events=[]; total=len(sources)
     health={"started_at": datetime.now(tz.tzlocal()).isoformat(), "per_source": {}}
     for i,s in enumerate(sources, start=1):
-        name=s["name"]; t=s["type"]; url=s["url"]; group=s.get("group")
+        name=s.get("name","(source)"); t=s.get("type"); url=s.get("url"); group=s.get("group")
         if notify: notify(name, i, total)
         try:
             if t=="rss": recs=parse_rss(url)
             elif t=="ics": recs=parse_ics(url)
             elif t=="html":
-                fn=PARSER_MAP.get(s.get("parser"), social_stub if any(k in url for k in ["twitter.com","facebook.com","instagram.com"]) else simple_list)
+                fn=PARSER_MAP.get(s.get("parser"), social_stub if any(k in (url or "") for k in ["twitter.com","facebook.com","instagram.com"]) else simple_list)
                 recs=fn(url)
             else: recs=[]
             all_events.extend(normalize_records(recs, source_name=name, group=group))
