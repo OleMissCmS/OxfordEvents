@@ -1,10 +1,10 @@
 from __future__ import annotations
-import requests, feedparser, json
+import requests, feedparser
 from bs4 import BeautifulSoup
 from icalendar import Calendar
 from dateutil import parser as dtp
 
-UA = "Mozilla/5.0 OxfordEvents/4.9.0"
+UA = "Mozilla/5.0 OxfordEvents/4.9.1"
 HEADERS = {"User-Agent": UA}
 
 def fetch(url: str, timeout: int = 15) -> bytes:
@@ -28,8 +28,7 @@ def get_soup(url: str) -> BeautifulSoup:
     return BeautifulSoup(html or b"<html></html>", "lxml")
 
 def parse_rss(url: str):
-    fp = feedparser.parse(url)
-    items=[]
+    fp = feedparser.parse(url); items=[]
     for e in fp.entries:
         title = e.get("title","").strip()
         link = e.get("link")

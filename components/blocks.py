@@ -7,7 +7,7 @@ from pathlib import Path
 
 RED = "#CE1126"
 NAVY = "#0C2340"
-VERSION = "v4.9.0"
+VERSION = "v4.9.1"
 
 def _clamp(text: str | None, n: int = 333) -> str | None:
     if not text: return text

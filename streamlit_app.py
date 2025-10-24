@@ -1,14 +1,13 @@
 import streamlit as st
-import pandas as pd
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from dateutil import parser as dtp, tz
 from components.blocks import hero, event_card, unique_key
 from lib.aggregator import collect_with_progress, window, load_sources
 from lib.calendar_links import google_link, build_ics
 import re
 
-VERSION = "v4.9.0"
+VERSION = "v4.9.1"
 
 st.set_page_config(page_title="Upcoming in Oxford", page_icon="📅", layout="wide", initial_sidebar_state="expanded")
 hero("What's happening, Oxford?")
@@ -24,56 +23,63 @@ events = out.get("events", [])
 health = out.get("health", {})
 fetched_at = out.get("fetched_at")
 
-# Sidebar Filters
+def set_weekend(offset_weeks: int = 0):
+    today = date.today()
+    friday = today + timedelta(days=(4 - today.weekday()) % 7 + 7*offset_weeks)
+    sunday = friday + timedelta(days=2)
+    st.session_state["date_min"] = friday
+    st.session_state["date_max"] = sunday
+
 with st.sidebar:
     with st.expander("Filters", expanded=True):
         groups = {"University", "Community"}
-        chosen_groups = st.multiselect("Source groups", options=sorted(groups), default=sorted(groups), help="Quick filter by source grouping.", key="groups_selected")
-        show_sources = st.toggle("Show sources panel", value=False)
-        source_filter_selected = None
-        if show_sources:
-            src_defs = load_sources()
-            counts = Counter([e.get("source") for e in events if e.get("source")])
-            with st.expander("Sources health", expanded=True):
-                for s in src_defs:
-                    name, url, typ, grp = s.get("name"), s.get("url"), s.get("type",""), s.get("group","")
-                    c = counts.get(name, 0)
-                    status = health.get("per_source",{}).get(name,{})
-                    ok = status.get("ok", True)
-                    icon = "✅" if ok else "⚠️"
-                    st.markdown(f"- {icon} [{name}]({url}) — `{typ}` — **{c}** events — _{grp}_")
-            opts = sorted([k for k,v in counts.items() if v>0] or [s.get("name") for s in src_defs])
-            source_filter_selected = st.multiselect("Filter by source(s)", options=opts, default=opts, key="sources_selected")
+        st.multiselect("Source groups", options=sorted(groups), default=sorted(groups),
+                       help="Quick filter by source grouping.", key="groups_selected")
+
         today = datetime.now(tz.tzlocal()).date()
-        if "date_min" not in st.session_state: st.session_state["date_min"] = today
-        if "date_max" not in st.session_state: st.session_state["date_max"] = today + timedelta(days=21)
-        date_min = st.date_input("From date", st.session_state["date_min"], key="date_min")
-        date_max = st.date_input("To date", st.session_state["date_max"], key="date_max")
-        colW1, colW2, colW3 = st.columns(3)
-        with colW1:
-            if st.button("This weekend"):
-                now = datetime.now(tz.tzlocal()).date()
-                friday = now + timedelta(days=(4 - now.weekday()) % 7)
-                sunday = friday + timedelta(days=2)
-                st.session_state["date_min"] = friday
-                st.session_state["date_max"] = sunday
-                st.experimental_rerun()
-        with colW2:
-            if st.button("Next weekend"):
-                now = datetime.now(tz.tzlocal()).date()
-                friday = now + timedelta(days=(4 - now.weekday()) % 7 + 7)
-                sunday = friday + timedelta(days=2)
-                st.session_state["date_min"] = friday
-                st.session_state["date_max"] = sunday
-                st.experimental_rerun()
-        with colW3:
-            if st.button("Clear"):
+        st.session_state.setdefault("date_min", today)
+        st.session_state.setdefault("date_max", today + timedelta(days=21))
+        st.date_input("From date", st.session_state["date_min"], key="date_min")
+        st.date_input("To date", st.session_state["date_max"], key="date_max")
+
+        c1, c2, c3 = st.columns(3)
+        with c1: st.button("This weekend", on_click=set_weekend, kwargs={"offset_weeks": 0})
+        with c2: st.button("Next weekend", on_click=set_weekend, kwargs={"offset_weeks": 1})
+        with c3:
+            def _clear():
                 st.session_state["date_min"] = today
                 st.session_state["date_max"] = today + timedelta(days=21)
-                st.experimental_rerun()
-        if st.button("🔄 Refresh events", help="Clear cache and re-collect"):
-            fetch_events_cached_pack.clear()
-            st.experimental_rerun()
+            st.button("Clear", on_click=_clear)
+
+        st.checkbox("Show sources panel", value=False, key="show_sources_panel")
+
+        st.markdown("---")
+        st.markdown("**Suggest a new source**")
+        sug_url = st.text_input("Source URL", key="suggest_url", placeholder="https://…")
+        sug_type = st.selectbox("Type", ["rss","ics","html","api"], key="suggest_type")
+        sug_group = st.selectbox("Group", ["Community","University"], key="suggest_group")
+        sug_notes = st.text_area("Notes (optional)", key="suggest_notes", height=60)
+        yaml_snippet = f"""- name: Your Source Name
+  type: {sug_type}
+  url: {sug_url or 'https://example.com'}
+  parser: simple_list
+  group: {sug_group}
+  # notes: {sug_notes or ''}
+"""
+        st.download_button("Download YAML entry", data=yaml_snippet.encode("utf-8"),
+                           file_name="source_suggestion.yml", use_container_width=True)
+
+if st.session_state.get("show_sources_panel"):
+    with st.sidebar.expander("Sources & diagnostics", expanded=True):
+        src_defs = load_sources()
+        counts = Counter([e.get("source") for e in events if e.get("source")])
+        for s in src_defs:
+            name, url, typ, grp = s.get("name"), s.get("url"), s.get("type",""), s.get("group","")
+            c = counts.get(name, 0)
+            status = health.get("per_source",{}).get(name,{})
+            ok = status.get("ok", True)
+            icon = "✅" if ok else "⚠️"
+            st.markdown(f"- {icon} [{name}]({url}) — `{typ}` — **{c}** events — _{grp}_")
 
 def _within(ev):
     if not ev.get("start_iso"): return False
@@ -84,26 +90,37 @@ def _within(ev):
     return st.session_state["date_min"] <= d <= st.session_state["date_max"]
 
 events3 = window(events, days=180)
+
+all_categories = sorted({(e.get("category") or "Uncategorized") for e in events3})
+if "categories_selected" not in st.session_state:
+    st.session_state["categories_selected"] = all_categories
+
 sel0 = [e for e in events3 if _within(e) and (e.get("group") in st.session_state["groups_selected"] if e.get("group") else True)]
+
+if st.session_state.get("show_sources_panel"):
+    srcs = sorted({e.get("source") for e in events3 if e.get("source")})
+    st.sidebar.multiselect("Filter by source(s)", options=srcs, default=srcs, key="sources_selected")
 if st.session_state.get("sources_selected"):
     sel0 = [e for e in sel0 if (e.get("source") in st.session_state["sources_selected"])]
 
-categories_all = sorted({(e.get("category") or "Uncategorized") for e in sel0} - {None}) or ["Uncategorized"]
-if "categories_selected" not in st.session_state: st.session_state["categories_selected"] = categories_all
+st.sidebar.multiselect("Categories", options=all_categories,
+                       default=st.session_state["categories_selected"],
+                       key="categories_selected")
 
 st.markdown("#### Quick filters")
-chip_cols = st.columns(min(len(categories_all), 6) or 1)
-for idx, cat in enumerate(categories_all):
+import math
+chip_cols = st.columns(min(len(all_categories), 6) or 1)
+for idx, cat in enumerate(all_categories):
     count = sum(1 for e in sel0 if (e.get("category") or "Uncategorized")==cat)
     label = f"{cat} ({count})"
     col = chip_cols[idx % len(chip_cols)]
     with col:
         if st.button(label, key=f"chip_{idx}"):
-            sel = set(st.session_state["categories_selected"])
-            if cat in sel: sel.remove(cat)
-            else: sel.add(cat)
-            st.session_state["categories_selected"] = sorted(sel)
-            st.experimental_rerun()
+            cur = set(st.session_state["categories_selected"])
+            if cat in cur: cur.remove(cat)
+            else: cur.add(cat)
+            st.session_state["categories_selected"] = sorted(cur)
+            st.rerun()
 
 sel1 = [e for e in sel0 if ((e.get("category") or "Uncategorized") in st.session_state["categories_selected"])]
 
@@ -111,9 +128,7 @@ q = st.text_input("Search titles & descriptions", value=st.session_state.get("q"
 def _match(ev, q):
     if not q: return True
     hay = f"{ev.get('title','')} {ev.get('description','')}"
-    for token in q.split():
-        if token.lower() not in hay.lower(): return False
-    return True
+    return all(t.lower() in hay.lower() for t in q.split())
 sel = [e for e in sel1 if _match(e, q)]
 
 def norm_title(s:str)->str:
@@ -153,12 +168,8 @@ def render_calendar_buttons(ev: dict, idx: int):
     loc = (ev.get("location") or "").strip()
     if not start_iso:
         return
-    g_url = None
-    ics_payload = None
-    try: g_url = google_link(title, start_iso, end_iso, details, loc)
-    except Exception: g_url = None
-    try: ics_payload = build_ics(title, start_iso, end_iso, details, loc)
-    except Exception: ics_payload = None
+    g_url = google_link(title, start_iso, end_iso, details, loc)
+    ics_payload = build_ics(title, start_iso, end_iso, details, loc)
 
     colA, colB, _ = st.columns([1,1,5])
     with colA:
@@ -168,9 +179,10 @@ def render_calendar_buttons(ev: dict, idx: int):
             st.caption("Google Calendar link unavailable.")
     with colB:
         if isinstance(ics_payload, str) and len(ics_payload) > 0:
+            safe = re.sub(r'[^A-Za-z0-9 _.-]+','',title)
             st.download_button("Download .ics (Apple/Outlook)",
                                data=ics_payload.encode("utf-8"),
-                               file_name=f"{re.sub(r'[^A-Za-z0-9 _.-]+','',title)}.ics",
+                               file_name=f"{safe}.ics",
                                mime="text/calendar",
                                use_container_width=True,
                                key=unique_key("ics", title, start_iso or "", str(idx)))
@@ -184,7 +196,7 @@ for i, ev in enumerate(view):
 if end_idx < total:
     if st.button("Load more", use_container_width=True):
         st.session_state["page"] = page + 1
-        st.experimental_rerun()
+        st.rerun()
 
 with st.expander("Map of filtered events", expanded=False):
     import folium

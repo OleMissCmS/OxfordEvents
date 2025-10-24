@@ -18,7 +18,7 @@ def _to_iso(s: str | None) -> Optional[str]:
     try: return dtp.parse(s).isoformat()
     except Exception: return None
 
-def seatgeek_events(city="Oxford", state="MS") -> List[Dict[str, Any]]:
+def seatgeek_events(city="Oxford", state="MS"):
     cid = _secret("SEATGEEK_CLIENT_ID")
     if not cid:
         return []
@@ -40,7 +40,7 @@ def seatgeek_events(city="Oxford", state="MS") -> List[Dict[str, Any]]:
         })
     return out
 
-def ticketmaster_events(city="Oxford", stateCode="MS") -> List[Dict[str, Any]]:
+def ticketmaster_events(city="Oxford", stateCode="MS"):
     key = _secret("TICKETMASTER_API_KEY")
     if not key:
         return []
