@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 from typing import List, Dict, Any, Optional
 from bs4 import BeautifulSoup
@@ -33,7 +32,7 @@ def simple_list(url: str) -> List[Dict[str, Any]]:
     for a in soup.select("a"):
         txt=_clean(a.get_text()); href=a.get("href") or ""
         if not txt or not href: continue
-        if any(k in (href.lower()+" "+txt.lower()) for k in ["event","calendar"]):
+        if any(k in (href.lower()+" "+txt.lower()) for k in ["event","calendar","show"]):
             if not href.startswith("http"):
                 base = url.split("//")[0]+"//"+url.split("//")[1].split("/")[0]
                 href = base + href

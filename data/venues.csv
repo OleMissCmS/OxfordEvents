@@ -1,1 +1,5 @@
-name,address,lat,lon\nVaught-Hemingway Stadium,1780 University Ave Oxford MS 38655,34.36157,-89.53663\nSwayze Field,294 Coliseum Dr Oxford MS 38655,34.36366,-89.53406\nThe Pavilion at Ole Miss,762 All American Dr Oxford MS 38677,34.36281,-89.53790\n
+name,aliases,lat,lon
+Vaught-Hemingway Stadium,"Vaught-Hemingway|Vaught Hemingway|Vaught-Hemingway Stadium|VH Stadium|Vaught",34.36157,-89.53663
+Swayze Field,"Swayze|Oxford-University Stadium|Baseball Stadium",34.36366,-89.53406
+The Pavilion at Ole Miss,"Pavilion|The Pavilion|Ole Miss Pavilion",34.36281,-89.53790
+Ford Center for the Performing Arts,"Ford Center|Gertrude C. Ford Center",34.36518,-89.52924

@@ -1,11 +1,10 @@
-
 from __future__ import annotations
 import requests, feedparser
 from bs4 import BeautifulSoup
 from icalendar import Calendar
 from dateutil import parser as dtp
 
-UA = "Mozilla/5.0 OxfordEvents/4.6"
+UA = "Mozilla/5.0 OxfordEvents/4.8"
 HEADERS = {"User-Agent": UA}
 
 def fetch(url: str, timeout: int = 15) -> bytes:
@@ -49,6 +48,7 @@ def parse_ics(url: str):
                 "link": str(comp.get("url","")) or None,
                 "location": str(comp.get("location","")) or None,
                 "start": comp.get("dtstart").dt if comp.get("dtstart") else None,
-                "end": comp.get("dtend").dt if comp.get("dtend") else None
+                "end": comp.get("dtend").dt if comp.get("dtend") else None,
+                "rrule": str(comp.get("rrule","")) if comp.get("rrule") else None,
             })
     return out
