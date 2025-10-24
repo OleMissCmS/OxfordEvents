@@ -26,15 +26,12 @@ fetched_at = out.get("fetched_at")
 
 with st.sidebar:
     with st.expander("Filters", expanded=True):
-        # 1) Group filter
         groups = {"University", "Community"}
         chosen_groups = st.multiselect("Source groups", options=sorted(groups), default=sorted(groups), help="Quick filter by source grouping.")
-        # 2) Category multiselect (always shown in the expander; defaults to ALL)
         categories_all = sorted({(e.get("category") or "Uncategorized") for e in events} - {None})
         if not categories_all:
             categories_all = ["Uncategorized"]
         categories_selected = st.multiselect("Categories", options=categories_all, default=categories_all, help="Filter events by category.")
-        # 3) Optional Sources panel
         show_sources = st.toggle("Show sources panel", value=False)
         source_filter_selected = None
         if show_sources:
@@ -50,11 +47,9 @@ with st.sidebar:
                     st.markdown(f"- {icon} [{name}]({url}) — `{typ}` — **{c}** events — _{grp}_")
             opts = sorted([k for k,v in counts.items() if v>0] or [s.get("name") for s in src_defs])
             source_filter_selected = st.multiselect("Filter by source(s)", options=opts, default=opts)
-        # 4) Date range
         today = datetime.now(tz.tzlocal()).date()
         date_min = st.date_input("From date", today)
         date_max = st.date_input("To date", today + timedelta(days=21))
-        # 5) Manual refresh (clear cache)
         if st.button("🔄 Refresh events", help="Clear cache and re-collect"):
             fetch_events_cached_pack.clear()
             st.experimental_rerun()
@@ -71,7 +66,6 @@ events3 = window(events, days=120)
 sel = [e for e in events3 if _within(e) and (e.get("group") in chosen_groups if e.get("group") else True)]
 if source_filter_selected:
     sel = [e for e in sel if (e.get("source") in source_filter_selected)]
-# Apply category filter
 sel = [e for e in sel if ((e.get("category") or "Uncategorized") in categories_selected)]
 
 def norm_title(s:str)->str:

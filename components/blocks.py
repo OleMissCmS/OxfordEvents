@@ -20,7 +20,6 @@ def _img_data_uri(path: str) -> Optional[str]:
         if not p.exists() or p.stat().st_size == 0:
             return None
         b64 = base64.b64encode(p.read_bytes()).decode("ascii")
-        # Assume PNG by default; works for PNG/SVG served as image/png here
         return f"data:image/png;base64,{b64}"
     except Exception:
         return None
@@ -32,7 +31,6 @@ def hero(subtitle: str | None = None):
     def _slot(data_uri: Optional[str], alt: str) -> str:
         if data_uri:
             return f'<img src="{data_uri}" alt="{alt}" />'
-        # Graceful fallback: show text badge when image missing
         return f'<span style="padding:4px 8px;border-radius:8px;background:{NAVY};color:white;opacity:.85;font-size:12px;">{alt}</span>'
     imgs_html = _slot(ox,"Oxford, MS") + _slot(ms,"Mississippi") + _slot(om,"Ole Miss")
 

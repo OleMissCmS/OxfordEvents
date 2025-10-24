@@ -16,7 +16,7 @@ def load_sources(path: str = "data/sources.yaml")->List[Dict[str, Any]]:
     with open(path,"r",encoding="utf-8") as f: return yaml.safe_load(f) or []
 
 def load_alias_map(path: str = "data/venues.csv")->Dict[str,str]:
-    import re, os
+    import re, os, csv as _csv
     def norm(s:str)->str:
         s=(s or "").lower()
         s=re.sub(r"[^a-z0-9]+"," ",s); s=re.sub(r"\s+"," ",s).strip()
@@ -24,7 +24,7 @@ def load_alias_map(path: str = "data/venues.csv")->Dict[str,str]:
     out={}
     if not os.path.exists(path): return out
     with open(path,"r",encoding="utf-8") as f:
-        for row in csv.DictReader(f):
+        for row in _csv.DictReader(f):
             name=row["name"]; aliases=(row.get("aliases") or "").split("|")
             for a in [name]+[x.strip() for x in aliases if x.strip()]:
                 out[norm(a)] = norm(name)
