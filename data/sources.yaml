@@ -2,12 +2,28 @@
   type: rss
   url: https://eventcalendar.olemiss.edu/calendar.xml
   group: University
+
 - name: Ole Miss Athletics — Football (ICS)
   type: ics
   url: https://olemisssports.com/calendar.ashx/calendar.ics?path=football
   group: University
+
 - name: Visit Oxford (DMO) — Events
   type: html
   url: https://visitoxfordms.com/events/
   parser: simple_list
+  group: Community
+
+- name: SeatGeek — Oxford, MS
+  type: api
+  parser: seatgeek
+  city: Oxford
+  state: MS
+  group: Community
+
+- name: Ticketmaster — Oxford, MS
+  type: api
+  parser: ticketmaster
+  city: Oxford
+  state: MS
   group: Community

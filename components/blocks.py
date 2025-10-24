@@ -7,7 +7,7 @@ from pathlib import Path
 
 RED = "#CE1126"
 NAVY = "#0C2340"
-VERSION = "v4.8.4"
+VERSION = "v4.9.0"
 
 def _clamp(text: str | None, n: int = 333) -> str | None:
     if not text: return text
@@ -74,15 +74,13 @@ def event_badges(ev: Dict[str, Any]):
         _badge("FREE", "#0E9F6E")
     elif cost:
         _badge("PAID", "#EF4444")
-    title = (ev.get("title") or "").lower()
-    loc = (ev.get("location") or "").lower()
-    if "vaught" in loc or " vs " in title:
-        _badge("HOME", "#1D4ED8")
-    elif " away " in loc or " at " in title:
-        _badge("AWAY", "#6B7280")
     descr = (ev.get("description") or "").lower()
+    title = (ev.get("title") or "").lower()
     if any(k in (title + " " + descr) for k in ["family", "kids", "children", "story time", "storytime"]):
         _badge("Family", "#F59E0B")
+    src = ev.get("source") or ""
+    if src:
+        _badge(src, "#374151")
 
 def event_card(ev: Dict[str, Any], idx: int) -> None:
     when = None

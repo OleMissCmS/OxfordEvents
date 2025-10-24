@@ -1,10 +1,10 @@
 from __future__ import annotations
-import requests, feedparser
+import requests, feedparser, json
 from bs4 import BeautifulSoup
 from icalendar import Calendar
 from dateutil import parser as dtp
 
-UA = "Mozilla/5.0 OxfordEvents/4.8.4"
+UA = "Mozilla/5.0 OxfordEvents/4.9.0"
 HEADERS = {"User-Agent": UA}
 
 def fetch(url: str, timeout: int = 15) -> bytes:
@@ -14,6 +14,14 @@ def fetch(url: str, timeout: int = 15) -> bytes:
         return r.content or b""
     except requests.RequestException:
         return b""
+
+def fetch_json(url: str, timeout: int = 15):
+    try:
+        r = requests.get(url, headers=HEADERS, timeout=timeout)
+        r.raise_for_status()
+        return r.json()
+    except Exception:
+        return None
 
 def get_soup(url: str) -> BeautifulSoup:
     html = fetch(url)

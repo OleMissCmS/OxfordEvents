@@ -7,6 +7,7 @@ from .data_io import parse_rss, parse_ics
 from .parsers import simple_list, eventbrite_oxford, football_schedule, social_stub
 from .normalize import Event, infer_category, to_iso, strip_html
 from .dedupe import dedupe
+from .apis import seatgeek_events, ticketmaster_events
 
 PARSER_MAP={"simple_list":simple_list,"eventbrite_oxford":eventbrite_oxford,"football_schedule":football_schedule,"social_stub":social_stub}
 
@@ -46,15 +47,23 @@ def collect_with_progress(notify: Optional[Callable[[str,int,int],None]]=None)->
     sources=load_sources(); all_events=[]; total=len(sources)
     health={"started_at": datetime.now(tz.tzlocal()).isoformat(), "per_source": {}}
     for i,s in enumerate(sources, start=1):
-        name=s.get("name","(source)"); t=s.get("type"); url=s.get("url"); group=s.get("group")
+        name=s.get("name","(source)"); t=s.get("type"); url=s.get("url"); group=s.get("group"); parser=s.get("parser")
         if notify: notify(name, i, total)
         try:
             if t=="rss": recs=parse_rss(url)
             elif t=="ics": recs=parse_ics(url)
             elif t=="html":
-                fn=PARSER_MAP.get(s.get("parser"), social_stub if any(k in (url or "") for k in ["twitter.com","facebook.com","instagram.com"]) else simple_list)
+                fn=PARSER_MAP.get(parser, social_stub if any(k in (url or "") for k in ["twitter.com","facebook.com","instagram.com"]) else simple_list)
                 recs=fn(url)
-            else: recs=[]
+            elif t=="api":
+                if parser=="seatgeek":
+                    recs=seatgeek_events(city=s.get("city","Oxford"), state=s.get("state","MS"))
+                elif parser=="ticketmaster":
+                    recs=ticketmaster_events(city=s.get("city","Oxford"), stateCode=s.get("state","MS"))
+                else:
+                    recs=[]
+            else:
+                recs=[]
             all_events.extend(normalize_records(recs, source_name=name, group=group))
             health["per_source"][name]={"count": len(recs), "ok": True}
         except Exception as e:
