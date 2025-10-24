@@ -10,7 +10,7 @@ from lib.parsers import __dict__ as parser_ns
 from lib.data_io import parse_rss, parse_ics
 import yaml, io, re
 
-VERSION = "v4.8.1"
+VERSION = "v4.8.2"
 
 st.set_page_config(page_title="Upcoming in Oxford", page_icon="📅", layout="wide", initial_sidebar_state="expanded")
 hero("What's happening, Oxford?")
@@ -29,7 +29,7 @@ fetched_at = out.get("fetched_at")
 with st.sidebar:
     with st.expander("Filters", expanded=True):
         groups = {"University", "Community"}
-        chosen_groups = st.multiselect("Source groups", options=sorted(groups), default=sorted(groups))
+        chosen_groups = st.multiselect("Source groups", options=sorted(groups), default=sorted(groups), help="Quick filter by source grouping.")
         show_sources = st.toggle("Show sources panel", value=False)
         source_filter_selected = None
         if show_sources:
@@ -48,13 +48,16 @@ with st.sidebar:
         today = datetime.now(tz.tzlocal()).date()
         date_min = st.date_input("From date", today)
         date_max = st.date_input("To date", today + timedelta(days=21))
-        if st.button("🔄 Refresh events"):
+        if st.button("🔄 Refresh events", help="Clear cache and re-collect"):
             fetch_events_cached_pack.clear()
             st.experimental_rerun()
 
 def _within(ev):
     if not ev.get("start_iso"): return False
-    d = dtp.parse(ev["start_iso"]).date()
+    try:
+        d = dtp.parse(ev["start_iso"]).date()
+    except Exception:
+        return False
     return date_min <= d <= date_max
 
 events3 = window(events, days=120)
@@ -76,8 +79,9 @@ for e in sel:
 
 collapsed = []
 for key, items in series.items():
-    items = sorted(items, key=lambda x: x.get("start_iso"))
-    collapsed.append(items[0])  # keep simple collapse for patch
+    items = sorted(items, key=lambda x: x.get("start_iso") or "")
+    rep = max(items, key=lambda x: len(x.get("title") or ""))
+    collapsed.append(rep)
 
 PAGE_SIZE = 50
 page = st.session_state.get("page", 1)
@@ -89,25 +93,43 @@ st.caption(f"Last updated: {fetched_at}")
 st.markdown("### Upcoming events")
 st.caption(f"Showing {len(view)} of {total} events")
 
+def render_calendar_buttons(ev: dict, idx: int):
+    start_iso = ev.get("start_iso")
+    end_iso = ev.get("end_iso") or start_iso
+    title = (ev.get("title") or "Event").strip()
+    details = (ev.get("description") or "")[:333]
+    loc = (ev.get("location") or "").strip()
+    if not start_iso:
+        return
+    g_url = None
+    ics_payload = None
+    try: g_url = google_link(title, start_iso, end_iso, details, loc)
+    except Exception: g_url = None
+    try: ics_payload = build_ics(title, start_iso, end_iso, details, loc)
+    except Exception: ics_payload = None
+
+    colA, colB, _ = st.columns([1,1,5])
+    with colA:
+        if isinstance(g_url, str) and g_url.startswith("http"):
+            st.link_button("Add to Google Calendar", g_url, use_container_width=True, key=unique_key("gcal", title, start_iso or "", str(idx)))
+        else:
+            st.caption("Google Calendar link unavailable.")
+    with colB:
+        if isinstance(ics_payload, str) and len(ics_payload) > 0:
+            st.download_button("Download .ics (Apple/Outlook)",
+                               data=ics_payload.encode("utf-8"),
+                               file_name=f"{re.sub(r'[^A-Za-z0-9 _.-]+','',title)}.ics",
+                               mime="text/calendar",
+                               use_container_width=True,
+                               key=unique_key("ics", title, start_iso or "", str(idx)))
+        else:
+            st.caption("ICS unavailable.")
+
+import re as _re  # used in filename sanitize above
+
 for i, ev in enumerate(view):
     event_card(ev, i)
-    colA, colB, colC = st.columns([1,1,5])
-    start_iso = ev.get("start_iso"); end_iso = ev.get("end_iso") or start_iso
-    title = ev.get("title"); details = (ev.get("description") or "")[:333]; loc = ev.get("location") or ""
-    if start_iso:
-        g_url = google_link(title, start_iso, end_iso, details, loc)
-        with colA:
-            if g_url:
-                st.link_button("Add to Google Calendar", g_url, use_container_width=True, key=unique_key("gcal", title or "", start_iso or "", str(i)))
-        ics_payload = build_ics(title, start_iso, end_iso, details, loc)
-        with colB:
-            if ics_payload:
-                st.download_button("Download .ics (Apple/Outlook)",
-                                   data=ics_payload.encode("utf-8"),
-                                   file_name=f"{title}.ics",
-                                   mime="text/calendar",
-                                   use_container_width=True,
-                                   key=unique_key("ics", title or "", start_iso or "", str(i)))
+    render_calendar_buttons(ev, i)
 
 if end_idx < total:
     if st.button("Load more", use_container_width=True):

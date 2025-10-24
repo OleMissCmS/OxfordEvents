@@ -2,18 +2,17 @@ from __future__ import annotations
 from typing import List, Dict, Any, Callable, Optional, Tuple
 import yaml, csv
 from datetime import datetime, timedelta
-from dateutil import tz
+from dateutil import tz, parser as dtp
 from .data_io import parse_rss, parse_ics
-from .parsers import visit_oxford, chambermaster, simple_list, lyric, proud_larrys, square_books, thacker, yac_powerhouse, ford_center, occ_lite, library_portal, eventbrite_oxford, football_schedule, social_stub
+from .parsers import simple_list, eventbrite_oxford, football_schedule, social_stub
 from .normalize import Event, infer_category, to_iso, strip_html
 from .dedupe import dedupe
 
-PARSER_MAP={"visit_oxford":visit_oxford,"chambermaster":chambermaster,"simple_list":simple_list,"lyric":lyric,"proud_larrys":proud_larrys,"square_books":square_books,"thacker":thacker,"yac_powerhouse":yac_powerhouse,"ford_center":ford_center,"occ_lite":occ_lite,"library_portal":library_portal,"eventbrite_oxford":eventbrite_oxford,"football_schedule":football_schedule,"social_stub":social_stub}
+PARSER_MAP={"simple_list":simple_list,"eventbrite_oxford":eventbrite_oxford,"football_schedule":football_schedule,"social_stub":social_stub}
 
 def load_sources(path: str = "data/sources.yaml")->List[Dict[str, Any]]:
     import os
-    if not os.path.exists(path):
-        return []
+    if not os.path.exists(path): return []
     with open(path,"r",encoding="utf-8") as f: return yaml.safe_load(f) or []
 
 def load_alias_map(path: str = "data/venues.csv")->Dict[str,str]:
@@ -25,8 +24,7 @@ def load_alias_map(path: str = "data/venues.csv")->Dict[str,str]:
     out={}
     if not os.path.exists(path): return out
     with open(path,"r",encoding="utf-8") as f:
-        r=csv.DictReader(f)
-        for row in r:
+        for row in csv.DictReader(f):
             name=row["name"]; aliases=(row.get("aliases") or "").split("|")
             for a in [name]+[x.strip() for x in aliases if x.strip()]:
                 out[norm(a)] = norm(name)
@@ -72,7 +70,6 @@ def collect()->List[Dict[str,Any]]:
     return collect_with_progress(None)[0]
 
 def window(events: List[Dict[str, Any]], days:int=90)->List[Dict[str,Any]]:
-    from dateutil import parser as dtp
     now=datetime.now(tz.tzlocal()); end=now+timedelta(days=days); sel=[]
     for ev in events:
         if not ev.get("start_iso"): continue

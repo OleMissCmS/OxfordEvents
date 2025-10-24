@@ -9,5 +9,5 @@
 - name: Visit Oxford (DMO) — Events
   type: html
   url: https://visitoxfordms.com/events/
-  parser: visit_oxford
+  parser: simple_list
   group: Community
