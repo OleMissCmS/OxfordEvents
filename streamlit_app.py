@@ -8,6 +8,8 @@ import csv
 import io
 import requests
 from typing import Optional, Dict, Any, Tuple
+from PIL import Image, ImageDraw
+import base64
 
 # Page config
 st.set_page_config(
@@ -68,7 +70,65 @@ st.markdown("""
 .hero h1 { font-size: 2.25rem; margin: 0 0 .5rem 0; letter-spacing: -0.02em; }
 .hero p { margin: 0; opacity: .9; }
 
-/* Event cards - now using inline styles */
+/* Event cards - Bandsintown style */
+.event-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    transition: box-shadow 0.2s;
+}
+.event-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.event-image {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    background: #f3f4f6;
+}
+
+.event-date-pill {
+    font-size: 0.75rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-top: 0.5rem;
+}
+
+.event-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0.5rem 0 0.25rem 0;
+    line-height: 1.4;
+}
+
+.event-venue {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 0.25rem 0;
+}
+
+.event-meta {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.calendar-icon {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+    margin-right: 4px;
+    opacity: 0.6;
+}
 
 /* Stats section */
 .stats-section {
@@ -248,6 +308,99 @@ with col4:
 
 st.markdown('</div>', unsafe_allow_html=True)
 
+# Sports team detection and logo helpers
+TEAM_NAMES = {
+    # Ole Miss / SEC teams
+    "ole miss": ("Ole Miss", "https://logos-world.net/wp-content/uploads/2020/06/Ole-Miss-Logo.png"),
+    "rebel": ("Ole Miss", "https://logos-world.net/wp-content/uploads/2020/06/Ole-Miss-Logo.png"),
+    "rebels": ("Ole Miss", "https://logos-world.net/wp-content/uploads/2020/06/Ole-Miss-Logo.png"),
+    "alabama": ("Alabama", "https://logos-world.net/wp-content/uploads/2020/06/Alabama-Crimson-Tide-Logo.png"),
+    "crimson tide": ("Alabama", "https://logos-world.net/wp-content/uploads/2020/06/Alabama-Crimson-Tide-Logo.png"),
+    "arkansas": ("Arkansas", "https://logos-world.net/wp-content/uploads/2020/06/Arkansas-Razorbacks-Logo.png"),
+    "razorbacks": ("Arkansas", "https://logos-world.net/wp-content/uploads/2020/06/Arkansas-Razorbacks-Logo.png"),
+    "lsu": ("LSU", "https://logos-world.net/wp-content/uploads/2020/06/LSU-Tigers-Logo.png"),
+    "tigers": ("LSU", "https://logos-world.net/wp-content/uploads/2020/06/LSU-Tigers-Logo.png"),
+    "mississippi state": ("Miss State", "https://logos-world.net/wp-content/uploads/2020/06/Mississippi-State-Bulldogs-Logo.png"),
+    "bulldogs": ("Miss State", "https://logos-world.net/wp-content/uploads/2020/06/Mississippi-State-Bulldogs-Logo.png"),
+    "auburn": ("Auburn", "https://logos-world.net/wp-content/uploads/2020/06/Auburn-Tigers-Logo.png"),
+    "georgia": ("Georgia", "https://logos-world.net/wp-content/uploads/2020/06/Georgia-Bulldogs-Logo.png"),
+    "florida": ("Florida", "https://logos-world.net/wp-content/uploads/2020/06/Florida-Gators-Logo.png"),
+    "tennessee": ("Tennessee", "https://logos-world.net/wp-content/uploads/2020/06/Tennessee-Volunteers-Logo.png"),
+}
+
+@st.cache_data
+def _detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str, str]]]:
+    """Detect two teams from event title. Returns ((away_name, away_logo), (home_name, home_logo)) or None."""
+    title_lower = title.lower()
+    # Pattern: "Team A vs Team B" or "Team A @ Team B"
+    vs_pattern = r'(.+?)\s+(?:vs|@|v\.|versus)\s+(.+?)(?:\s+in|\s+at|\s+|$)'
+    match = re.search(vs_pattern, title_lower)
+    if not match:
+        return None
+    
+    team1_text, team2_text = match.groups()
+    
+    # Find team names
+    def find_team(text):
+        for key, (name, logo_url) in TEAM_NAMES.items():
+            if key in text:
+                return name, logo_url
+        return None, None
+    
+    team1_result = find_team(team1_text.strip())
+    team2_result = find_team(team2_text.strip())
+    
+    if team1_result[0] and team2_result[0]:
+        # First team is away, second is home (Ole Miss is typically home when second)
+        return team1_result, team2_result
+    
+    return None
+
+@st.cache_data
+def _get_logo_image(url: str, size: int = 120) -> Optional[Image.Image]:
+    """Download and resize team logo."""
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            img = Image.open(io.BytesIO(response.content))
+            img = img.convert("RGBA")
+            # Resize maintaining aspect ratio
+            img.thumbnail((size, size), Image.Resampling.LANCZOS)
+            return img
+    except Exception:
+        pass
+    return None
+
+def _create_team_matchup_image(away_team: Tuple[str, str], home_team: Tuple[str, str], width: int = 400, height: int = 300) -> io.BytesIO:
+    """Create composite image with away team (upper left), home team (lower right), diagonal divider."""
+    img = Image.new("RGB", (width, height), color="#f8f9fa")
+    draw = ImageDraw.Draw(img)
+    
+    # Draw diagonal line from bottom-left to top-right
+    draw.line([(0, height), (width, 0)], fill="#000000", width=4)
+    
+    # Download and place logos
+    away_logo = _get_logo_image(away_team[1], size=120)
+    home_logo = _get_logo_image(home_team[1], size=120)
+    
+    if away_logo:
+        # Upper left quadrant (center at x=width/4, y=height/4)
+        paste_x = width // 4 - away_logo.width // 2
+        paste_y = height // 4 - away_logo.height // 2
+        img.paste(away_logo, (paste_x, paste_y), away_logo if away_logo.mode == "RGBA" else None)
+    
+    if home_logo:
+        # Lower right quadrant (center at x=3*width/4, y=3*height/4)
+        paste_x = 3 * width // 4 - home_logo.width // 2
+        paste_y = 3 * height // 4 - home_logo.height // 2
+        img.paste(home_logo, (paste_x, paste_y), home_logo if home_logo.mode == "RGBA" else None)
+    
+    # Convert to base64 for display
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+    return buffer
+
 # Helper - curl-like URL diagnostics (defined early for sidebar use)
 def _curl_test_url(url: str, timeout: int = 5) -> Dict[str, Any]:
     """
@@ -281,23 +434,33 @@ def _curl_test_url(url: str, timeout: int = 5) -> Dict[str, Any]:
     
     return result
 
-# Helper - event image URL with validation
-def _event_image_url(ev: dict, validate: bool = False) -> Tuple[str, Optional[Dict[str, Any]]]:
+# Helper - event image URL with validation and sports detection
+def _event_image_url(ev: dict, validate: bool = False) -> Tuple[Any, Optional[Dict[str, Any]]]:
     """
-    Get event image URL, optionally validate it.
-    Returns (url, diagnostics_dict) or (url, None).
+    Get event image URL or generated image, optionally validate it.
+    For sports events, generates team matchup image.
+    Returns (image_url_or_buffer, diagnostics_dict) or (image_url_or_buffer, None).
     """
+    # Check if it's a sports event with team matchup
+    title = ev.get("title", "")
+    if ev.get("category") == "Sports" or "vs" in title.lower() or "@" in title.lower():
+        teams = _detect_sports_teams(title)
+        if teams:
+            away, home = teams
+            matchup_img = _create_team_matchup_image(away, home)
+            return matchup_img, None
+    
     url = (ev.get("image") or ev.get("img") or "").strip()
     if url:
         if validate:
             diag = _curl_test_url(url)
             if not diag["accessible"]:
-                # Fallback to placeholder if validation fails
-                url = "https://placehold.co/800x1000/1f2937/ffffff?text=Oxford+Event"
+                # Fallback to smaller placeholder
+                url = "https://placehold.co/400x250/e5e7eb/6b7280?text=Event"
             return url, diag
         return url, None
-    # poster-like placeholder (4:5)
-    placeholder = "https://placehold.co/800x1000/1f2937/ffffff?text=Oxford+Event"
+    # Smaller placeholder (Bandsintown-style)
+    placeholder = "https://placehold.co/400x250/e5e7eb/6b7280?text=Event"
     return placeholder, None
 
 # Debug panel (curl-like diagnostics) - after events are loaded
@@ -349,75 +512,80 @@ if events:
                         event_date = "TBA"
                         event_time = ""
 
-                    # Use Streamlit components with a bordered card
-                    with st.container(border=True):
-                        # Image header (poster) with diagnostics & safe fallback
+                    # Bandsintown-style event card
+                    with st.container():
+                        st.markdown('<div class="event-card">', unsafe_allow_html=True)
+                        
+                        # Smaller image (Bandsintown style)
                         _img, _diag = _event_image_url(event, validate=False)
-                        # If diagnostics available, show in debug mode
                         if _diag and st.session_state.get("debug_mode", False):
-                            with st.expander(f"🔍 Image Diagnostics: {_img[:50]}..."):
+                            with st.expander(f"Image Diagnostics: {str(_img)[:50]}..."):
                                 st.json(_diag)
+                        
+                        # Handle both URL strings and image buffers
                         try:
-                            st.image(_img, use_container_width=True)
+                            if isinstance(_img, io.BytesIO):
+                                # Reset buffer position
+                                _img.seek(0)
+                                st.image(_img, use_container_width=True)
+                            else:
+                                st.image(_img, use_container_width=True)
                         except Exception as e:
-                            # If image fails, validate URL and show diagnostics
+                            # If image fails, try validation fallback
                             _img_new, _diag_new = _event_image_url(event, validate=True)
-                            if _diag_new:
-                                st.error(f"Image failed to load: {_diag_new.get('error', 'Unknown error')}")
-                                with st.expander("📋 Full Diagnostics"):
-                                    st.json(_diag_new)
-                            # Fallback to HTML img tag
-                            st.markdown(f"<img src='{_img_new}' style='width:100%;border-radius:8px' alt='Event image' />", unsafe_allow_html=True)
+                            try:
+                                if isinstance(_img_new, io.BytesIO):
+                                    _img_new.seek(0)
+                                    st.image(_img_new, use_container_width=True)
+                                else:
+                                    st.markdown(f'<img src="{_img_new}" class="event-image" alt="Event image" />', unsafe_allow_html=True)
+                            except:
+                                # Final fallback
+                                st.markdown(f'<div class="event-image"></div>', unsafe_allow_html=True)
 
-                        # Date pill at top
-                        st.markdown(f"**{event_date}**  · {event_time}")
-                        # Title as link to details when available
+                        # Card content
+                        st.markdown('<div style="padding: 1rem;">', unsafe_allow_html=True)
+                        
+                        # Date with calendar icon (Bandsintown style)
+                        date_display = event_date.upper() if event_date != "TBA" else "TBA"
+                        calendar_svg = '<svg class="calendar-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>'
+                        st.markdown(f'<div class="event-date-pill">{calendar_svg} {date_display} {event_time}</div>', unsafe_allow_html=True)
+                        
+                        # Title as link
                         title = event.get("title") or "Event"
                         link = event.get("link")
                         if link:
-                            st.markdown(f"#### [{title}]({link})")
+                            st.markdown(f'<a href="{link}" style="text-decoration: none; color: inherit;"><h3 class="event-title">{title}</h3></a>', unsafe_allow_html=True)
                         else:
-                            st.markdown(f"#### {title}")
-
-                        # Date and location
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.caption(f"📅 {event_date}")
-                            st.caption(f"🕐 {event_time}")
-                        with col2:
-                            st.caption(f"📍 {event['location']}")
-
-                        # Badges for cost and category
-                        badge_cols = st.columns(2)
-                        with badge_cols[0]:
-                            if "Free" in event.get("cost", ""):
-                                st.markdown("🟢 **FREE**")
-                            else:
-                                st.markdown(f"💰 **{event.get('cost','')}**")
-                        with badge_cols[1]:
-                            st.markdown(f"🏷️ **{event['category']}**")
-
-                        # Description
-                        if len(event["description"]) > 100:
-                            st.caption(event["description"][:100] + "...")
+                            st.markdown(f'<h3 class="event-title">{title}</h3>', unsafe_allow_html=True)
+                        
+                        # Venue
+                        location = event.get("location", "")
+                        st.markdown(f'<div class="event-venue">{location}</div>', unsafe_allow_html=True)
+                        
+                        # Meta info (time, cost, category) - typography-based
+                        meta_parts = []
+                        if event_time:
+                            meta_parts.append(event_time)
+                        cost = event.get("cost", "")
+                        if cost and cost != "Free":
+                            meta_parts.append(cost)
+                        category = event.get("category", "")
+                        if category:
+                            meta_parts.append(category)
+                        
+                        if meta_parts:
+                            meta_text = " • ".join(meta_parts)
+                            st.markdown(f'<div class="event-meta">{meta_text}</div>', unsafe_allow_html=True)
+                        
+                        # Tickets button (Bandsintown style)
+                        if link:
+                            st.link_button("Tickets", link, use_container_width=True)
                         else:
-                            st.caption(event["description"])
-
-                        # Action buttons - compact CTAs inspired by Bandsintown
-                        btn_cols = st.columns([1,1,1])
-                        with btn_cols[0]:
-                            if st.button("📅 Add", key=f"cal_{i}_{j}"):
-                                st.info("Calendar integration coming soon!")
-                        with btn_cols[1]:
-                            if link:
-                                st.link_button("🎟️ Tickets", link, use_container_width=True)
-                            else:
-                                st.button("🔗 Details", key=f"det_{i}_{j}")
-                        with btn_cols[2]:
-                            if st.button("📍 Map", key=f"map_{i}_{j}"):
-                                st.info(f"Location: {event['location']}")
-
-                    st.markdown("---")
+                            st.button("Details", key=f"det_{i}_{j}", use_container_width=True)
+                        
+                        st.markdown('</div>', unsafe_allow_html=True)  # Close padding
+                        st.markdown('</div>', unsafe_allow_html=True)  # Close event-card
 
 # Footer
 st.markdown("---")
