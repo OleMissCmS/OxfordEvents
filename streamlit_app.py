@@ -52,11 +52,18 @@ st.markdown("""
 }
 
 /* Top accent bar */
-.accent-bar {
-    height: 4px;
-    background: linear-gradient(90deg, #3b82f6 0%, #06b6d4 50%, #8b5cf6 100%);
+.accent-bar { height: 4px; background: linear-gradient(90deg, #22c1c3 0%, #3a7bd5 100%); margin-bottom: 0; }
+
+/* Hero (Bandsintown-inspired) */
+.hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #334155 100%);
+    color: white;
+    padding: 2rem 1rem;
+    border-radius: 0 0 16px 16px;
     margin-bottom: 1rem;
 }
+.hero h1 { font-size: 2.25rem; margin: 0 0 .5rem 0; letter-spacing: -0.02em; }
+.hero p { margin: 0; opacity: .9; }
 
 /* Event cards - now using inline styles */
 
@@ -165,17 +172,17 @@ def load_events():
             }
         ]
 
-# Header
+# Header (Bandsintown style)
 st.markdown('<div class="accent-bar"></div>', unsafe_allow_html=True)
 st.markdown("""
-<div class="header">
-    <h1>Oxford Events</h1>
-    <p>What's happening in Oxford, MS</p>
+<div class="hero">
+  <h1>Concerts & Events in Oxford</h1>
+  <p>Browse live music, community happenings, athletics, arts and more over the next 3 weeks.</p>
 </div>
 """, unsafe_allow_html=True)
 
-# Combined filters and search
-col1, col2, col3, col4, col5, col6 = st.columns([1, 1, 1, 1, 1, 2])
+# Combined filters and search (chip-like)
+col1, col2, col3, col4, col5, col6 = st.columns([1, 1, 1, 1, 1, 3])
 
 with col1:
     if st.button("Today", key="today"):
@@ -243,8 +250,8 @@ def _event_image_url(ev: dict) -> str:
     url = (ev.get("image") or ev.get("img") or "").strip()
     if url:
         return url
-    # subtle neutral placeholder
-    return "https://placehold.co/600x360/edf2f7/475569?text=Oxford+Event"
+    # poster-like placeholder (4:5)
+    return "https://placehold.co/800x1000/1f2937/ffffff?text=Oxford+Event"
 
 # Event grid - using Streamlit components for proper rendering
 if events:
@@ -265,7 +272,7 @@ if events:
 
                     # Use Streamlit components with a bordered card
                     with st.container(border=True):
-                        # Image header
+                        # Image header (poster)
                         st.image(_event_image_url(event), use_container_width=True)
 
                         # Date pill at top
@@ -275,7 +282,7 @@ if events:
                         link = event.get("link")
                         if link:
                             st.markdown(f"#### [{title}]({link})")
-                        else:
+        else:
                             st.markdown(f"#### {title}")
 
                         # Date and location
@@ -291,7 +298,7 @@ if events:
                         with badge_cols[0]:
                             if "Free" in event["cost"]:
                                 st.markdown("🟢 **FREE**")
-                            else:
+        else:
                                 st.markdown(f"💰 **{event['cost']}**")
                         with badge_cols[1]:
                             st.markdown(f"🏷️ **{event['category']}**")
@@ -302,18 +309,16 @@ if events:
                         else:
                             st.caption(event["description"])
 
-                        # Action buttons - compact buttons (not full width)
-                        btn_cols = st.columns(3)
+                        # Action buttons - compact CTAs inspired by Bandsintown
+                        btn_cols = st.columns([1,1,1])
                         with btn_cols[0]:
-                            if st.button("📅 Calendar", key=f"cal_{i}_{j}"):
+                            if st.button("📅 Add", key=f"cal_{i}_{j}"):
                                 st.info("Calendar integration coming soon!")
                         with btn_cols[1]:
-                            # Prefer opening link directly if available
                             if link:
-                                st.link_button("🔗 Details", link, use_container_width=True)
+                                st.link_button("🎟️ Tickets", link, use_container_width=True)
                             else:
-                                if st.button("🔗 Details", key=f"det_{i}_{j}"):
-                                    st.info("No link available")
+                                st.button("🔗 Details", key=f"det_{i}_{j}")
                         with btn_cols[2]:
                             if st.button("📍 Map", key=f"map_{i}_{j}"):
                                 st.info(f"Location: {event['location']}")
