@@ -45,7 +45,7 @@ if missing_sources:
 # Read URL parameters early (before filters are set)
 today = datetime.now(tz.tzlocal()).date()
 groups = {"University", "Community"}
-events3 = window(events, days=180)
+events3 = window(events, days=21)  # Next 3 weeks as requested
 all_categories = sorted({(e.get("category") or "Uncategorized") for e in events3})
 
 try:

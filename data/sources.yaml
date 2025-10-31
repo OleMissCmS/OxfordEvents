@@ -1,13 +1,56 @@
+# University Events
 - name: Ole Miss — Central Events (RSS)
   type: rss
   url: https://eventcalendar.olemiss.edu/calendar.xml
   group: University
 
+# Ole Miss Athletics - All Sports
 - name: Ole Miss Athletics — Football (ICS)
   type: ics
   url: https://olemisssports.com/calendar.ashx/calendar.ics?path=football
   group: University
 
+- name: Ole Miss Athletics — Men's Basketball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=mbball
+  group: University
+
+- name: Ole Miss Athletics — Women's Basketball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=wbball
+  group: University
+
+- name: Ole Miss Athletics — Baseball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=baseball
+  group: University
+
+- name: Ole Miss Athletics — Softball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=softball
+  group: University
+
+- name: Ole Miss Athletics — Track & Field (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=track
+  group: University
+
+- name: Ole Miss Athletics — Soccer (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=soccer
+  group: University
+
+- name: Ole Miss Athletics — Volleyball (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=volleyball
+  group: University
+
+- name: Ole Miss Athletics — Tennis (ICS)
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=tennis
+  group: University
+
+# Community Events
 - name: Visit Oxford (DMO) — Events
   type: html
   url: https://visitoxfordms.com/events/
