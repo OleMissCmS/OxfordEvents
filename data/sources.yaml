@@ -1,0 +1,74 @@
+# Event Sources for Oxford Events
+
+# Ole Miss Athletics (ICS calendars)
+- name: Ole Miss Football
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=football
+  group: University
+
+- name: Ole Miss MBB
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=mbball
+  group: University
+
+- name: Ole Miss WBB
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=wbball
+  group: University
+
+- name: Ole Miss Baseball
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=baseball
+  group: University
+
+- name: Ole Miss Softball
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=softball
+  group: University
+
+- name: Ole Miss Track
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=track
+  group: University
+
+- name: Ole Miss Soccer
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=soccer
+  group: University
+
+- name: Ole Miss Volleyball
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=volleyball
+  group: University
+
+- name: Ole Miss Tennis
+  type: ics
+  url: https://olemisssports.com/calendar.ashx/calendar.ics?path=tennis
+  group: University
+
+# Ole Miss Events
+- name: Ole Miss Events
+  type: rss
+  url: https://eventcalendar.olemiss.edu/calendar.xml
+  group: University
+
+# Community Events
+- name: Visit Oxford
+  type: html
+  url: https://visitoxfordms.com/events/
+  parser: simple_list
+  group: Community
+
+- name: SeatGeek
+  type: api
+  parser: seatgeek
+  city: Oxford
+  state: MS
+  group: Community
+
+- name: Ticketmaster
+  type: api
+  parser: ticketmaster
+  city: Oxford
+  stateCode: MS
+  group: Community
