@@ -14,6 +14,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+st.set_option("client.showErrorDetails", True)
 
 # Custom CSS for clean, professional design
 st.markdown("""
@@ -272,11 +273,16 @@ if events:
 
                     # Use Streamlit components with a bordered card
                     with st.container(border=True):
-                        # Image header (poster) with safe fallback
+                        # Image header (poster) with diagnostics & safe fallback
+                        st.write("boot-ok-1")
                         _img = _event_image_url(event)
+                        if not isinstance(_img, str) or not _img.strip():
+                            _img = "https://placehold.co/800x1000/1f2937/ffffff?text=Oxford+Event"
+                        st.write("img-debug", {"type": type(_img).__name__, "len": len(_img) if isinstance(_img, str) else None, "head": _img[:64] if isinstance(_img, str) else None})
                         try:
                             st.image(_img, use_container_width=True)
-                except Exception:
+                        except Exception as e:
+                            st.exception(e)
                             st.markdown(f"<img src='{_img}' style='width:100%;border-radius:8px' />", unsafe_allow_html=True)
 
                         # Date pill at top
