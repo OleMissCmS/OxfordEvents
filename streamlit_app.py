@@ -242,7 +242,7 @@ with col4:
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# Event grid - using Streamlit columns for proper layout
+# Event grid - using Streamlit components for proper rendering
 if events:
     # Create 3-column grid
     for i in range(0, len(events), 3):
@@ -259,34 +259,47 @@ if events:
                         event_date = "TBA"
                         event_time = ""
 
-                    # Event card using Streamlit components
-                    st.markdown(f"""
-                    <div style="background: white; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
-                        <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 600; color: #1e293b;">{event["title"]}</h4>
+                    # Use Streamlit components instead of raw HTML
+                    with st.container():
+                        st.subheader(event["title"], divider=None)
 
-                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.25rem; font-size: 0.8rem; color: #64748b;">
-                            <span>📅 {event_date}</span>
-                            <span>🕐 {event_time}</span>
-                        </div>
+                        # Date and location
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.caption(f"📅 {event_date}")
+                            st.caption(f"🕐 {event_time}")
+                        with col2:
+                            st.caption(f"📍 {event['location']}")
 
-                        <div style="margin-bottom: 0.25rem; font-size: 0.8rem; color: #64748b;">
-                            📍 {event["location"]}
-                        </div>
+                        # Badges for cost and category
+                        badge_cols = st.columns(2)
+                        with badge_cols[0]:
+                            if "Free" in event["cost"]:
+                                st.markdown("🟢 **FREE**")
+                            else:
+                                st.markdown(f"💰 **{event['cost']}**")
+                        with badge_cols[1]:
+                            st.markdown(f"🏷️ **{event['category']}**")
 
-                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; font-size: 0.8rem;">
-                            <span style="background: {'#dcfce7' if 'Free' in event['cost'] else '#fef3c7'}; color: {'#166534' if 'Free' in event['cost'] else '#92400e'}; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-weight: 500;">{event["cost"]}</span>
-                            <span style="background: #e0e7ff; color: #3730a3; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-weight: 500;">{event["category"]}</span>
-                        </div>
+                        # Description
+                        if len(event["description"]) > 100:
+                            st.caption(event["description"][:100] + "...")
+                        else:
+                            st.caption(event["description"])
 
-                        <p style="margin: 0 0 0.75rem 0; font-size: 0.8rem; color: #475569; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{event["description"]}</p>
+                        # Action buttons - use Streamlit buttons
+                        btn_cols = st.columns(3)
+                        with btn_cols[0]:
+                            if st.button("📅 Calendar", key=f"cal_{i}_{j}", use_container_width=True):
+                                st.info("Calendar integration coming soon!")
+                        with btn_cols[1]:
+                            if st.button("🔗 Details", key=f"det_{i}_{j}", use_container_width=True):
+                                st.info(f"More info: {event.get('link', 'No link available')}")
+                        with btn_cols[2]:
+                            if st.button("📍 Map", key=f"map_{i}_{j}", use_container_width=True):
+                                st.info(f"Location: {event['location']}")
 
-                        <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
-                            <button style="background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 500; cursor: pointer;">📅 Add to Calendar</button>
-                            <button style="background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 500; cursor: pointer;">🔗 Details</button>
-                            <button style="background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 500; cursor: pointer;">📍 Map</button>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.markdown("---")
 
 # Footer
 st.markdown("---")
