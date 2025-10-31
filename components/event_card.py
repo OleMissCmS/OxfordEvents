@@ -27,9 +27,11 @@ def render_event_card(event: Dict[str, Any], debug_mode: bool = False) -> None:
             try:
                 if isinstance(_img, io.BytesIO):
                     _img.seek(0)
-                    st.image(_img, use_container_width=True)
+                    # Let Streamlit auto-size to container (default behavior)
+                    st.image(_img)
                 else:
-                    st.image(_img, use_container_width=True)
+                    # Let Streamlit auto-size to container (default behavior)
+                    st.image(_img)
             except Exception as e:
                 if debug_mode:
                     st.error(f"Failed to load image: {e}")

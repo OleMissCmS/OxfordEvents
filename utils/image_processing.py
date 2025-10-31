@@ -71,19 +71,21 @@ def get_logo_image(url: str, size: int = 120) -> Optional[Image.Image]:
     """Download and resize team logo."""
     try:
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
-        response = requests.get(url, timeout=10, headers=headers)
+        response = requests.get(url, timeout=10, headers=headers, allow_redirects=True)
         if response.status_code == 200:
             img = Image.open(io.BytesIO(response.content))
             img = img.convert("RGBA")
             # Resize maintaining aspect ratio
             img.thumbnail((size, size), Image.Resampling.LANCZOS)
             return img
+        else:
+            # Log status code for debugging
+            return None
     except Exception as e:
-        # Silently fail - logo will just not show
-        pass
-    return None
+        # Log error for debugging
+        return None
 
 
 def create_team_matchup_image(
@@ -91,19 +93,23 @@ def create_team_matchup_image(
     home_team: Tuple[str, str], 
     width: int = 400, 
     height: int = 300
-) -> Optional[io.BytesIO]:
+) -> Tuple[Optional[io.BytesIO], Optional[str]]:
     """
     Create composite image with away team (upper left), home team (lower right), diagonal divider.
-    Returns BytesIO buffer or None if logos can't be loaded.
+    Returns (BytesIO buffer or None, error_message or None).
     """
     try:
         # Download logos
         away_logo = get_logo_image(away_team[1], size=120)
         home_logo = get_logo_image(home_team[1], size=120)
         
-        # If we can't get both logos, return None
-        if not away_logo or not home_logo:
-            return None
+        # Check which logos failed
+        if not away_logo and not home_logo:
+            return None, f"Failed to download both logos: {away_team[0]} ({away_team[1]}) and {home_team[0]} ({home_team[1]})"
+        if not away_logo:
+            return None, f"Failed to download away team logo: {away_team[0]} ({away_team[1]})"
+        if not home_logo:
+            return None, f"Failed to download home team logo: {home_team[0]} ({home_team[1]})"
         
         # Create base image
         img = Image.new("RGB", (width, height), color="#f8f9fa")
@@ -126,9 +132,9 @@ def create_team_matchup_image(
         buffer = io.BytesIO()
         img.save(buffer, format="PNG")
         buffer.seek(0)
-        return buffer
-    except Exception:
-        return None
+        return buffer, None
+    except Exception as e:
+        return None, f"Exception creating matchup image: {str(e)}"
 
 
 def get_event_image(event: dict) -> Tuple[Any, Optional[str]]:
@@ -146,11 +152,11 @@ def get_event_image(event: dict) -> Tuple[Any, Optional[str]]:
         teams = detect_sports_teams(title)
         if teams:
             away, home = teams
-            matchup_img = create_team_matchup_image(away, home)
+            matchup_img, error = create_team_matchup_image(away, home)
             if matchup_img:
                 return matchup_img, None
-            # If matchup image creation fails, return error for debugging
-            return None, f"Failed to create matchup image for {away[0]} vs {home[0]}"
+            # If matchup image creation fails, return the specific error
+            return None, error or f"Failed to create matchup image for {away[0]} vs {home[0]}"
     
     # Try to get regular event image
     url = (event.get("image") or event.get("img") or "").strip()
