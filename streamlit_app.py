@@ -282,7 +282,7 @@ if events:
                         link = event.get("link")
                         if link:
                             st.markdown(f"#### [{title}]({link})")
-        else:
+                        else:
                             st.markdown(f"#### {title}")
 
                         # Date and location
@@ -296,10 +296,10 @@ if events:
                         # Badges for cost and category
                         badge_cols = st.columns(2)
                         with badge_cols[0]:
-                            if "Free" in event["cost"]:
+                            if "Free" in event.get("cost", ""):
                                 st.markdown("🟢 **FREE**")
-        else:
-                                st.markdown(f"💰 **{event['cost']}**")
+                            else:
+                                st.markdown(f"💰 **{event.get('cost','')}**")
                         with badge_cols[1]:
                             st.markdown(f"🏷️ **{event['category']}**")
 
