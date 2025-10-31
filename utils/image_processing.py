@@ -9,24 +9,69 @@ from PIL import Image, ImageDraw
 import requests
 import streamlit as st
 
-# Team name mappings to logo URLs
+# Team name mappings to logo URLs (multiple fallback sources)
 TEAM_NAMES = {
-    # Ole Miss / SEC teams
-    "ole miss": ("Ole Miss", "https://logos-world.net/wp-content/uploads/2020/06/Ole-Miss-Logo.png"),
-    "rebel": ("Ole Miss", "https://logos-world.net/wp-content/uploads/2020/06/Ole-Miss-Logo.png"),
-    "rebels": ("Ole Miss", "https://logos-world.net/wp-content/uploads/2020/06/Ole-Miss-Logo.png"),
-    "alabama": ("Alabama", "https://logos-world.net/wp-content/uploads/2020/06/Alabama-Crimson-Tide-Logo.png"),
-    "crimson tide": ("Alabama", "https://logos-world.net/wp-content/uploads/2020/06/Alabama-Crimson-Tide-Logo.png"),
-    "arkansas": ("Arkansas", "https://logos-world.net/wp-content/uploads/2020/06/Arkansas-Razorbacks-Logo.png"),
-    "razorbacks": ("Arkansas", "https://logos-world.net/wp-content/uploads/2020/06/Arkansas-Razorbacks-Logo.png"),
-    "lsu": ("LSU", "https://logos-world.net/wp-content/uploads/2020/06/LSU-Tigers-Logo.png"),
-    "tigers": ("LSU", "https://logos-world.net/wp-content/uploads/2020/06/LSU-Tigers-Logo.png"),
-    "mississippi state": ("Miss State", "https://logos-world.net/wp-content/uploads/2020/06/Mississippi-State-Bulldogs-Logo.png"),
-    "bulldogs": ("Miss State", "https://logos-world.net/wp-content/uploads/2020/06/Mississippi-State-Bulldogs-Logo.png"),
-    "auburn": ("Auburn", "https://logos-world.net/wp-content/uploads/2020/06/Auburn-Tigers-Logo.png"),
-    "georgia": ("Georgia", "https://logos-world.net/wp-content/uploads/2020/06/Georgia-Bulldogs-Logo.png"),
-    "florida": ("Florida", "https://logos-world.net/wp-content/uploads/2020/06/Florida-Gators-Logo.png"),
-    "tennessee": ("Tennessee", "https://logos-world.net/wp-content/uploads/2020/06/Tennessee-Volunteers-Logo.png"),
+    # Ole Miss / SEC teams - with fallback URLs
+    "ole miss": ("Ole Miss", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/145.png",  # ESPN CDN (primary)
+        "https://logos-world.net/wp-content/uploads/2020/06/Ole-Miss-Logo.png",  # Fallback
+    ]),
+    "rebel": ("Ole Miss", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/145.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Ole-Miss-Logo.png",
+    ]),
+    "rebels": ("Ole Miss", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/145.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Ole-Miss-Logo.png",
+    ]),
+    "alabama": ("Alabama", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/333.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Alabama-Crimson-Tide-Logo.png",
+    ]),
+    "crimson tide": ("Alabama", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/333.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Alabama-Crimson-Tide-Logo.png",
+    ]),
+    "arkansas": ("Arkansas", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/8.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Arkansas-Razorbacks-Logo.png",
+    ]),
+    "razorbacks": ("Arkansas", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/8.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Arkansas-Razorbacks-Logo.png",
+    ]),
+    "lsu": ("LSU", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/99.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/LSU-Tigers-Logo.png",
+    ]),
+    "tigers": ("LSU", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/99.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/LSU-Tigers-Logo.png",
+    ]),
+    "mississippi state": ("Miss State", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/344.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Mississippi-State-Bulldogs-Logo.png",
+    ]),
+    "bulldogs": ("Miss State", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/344.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Mississippi-State-Bulldogs-Logo.png",
+    ]),
+    "auburn": ("Auburn", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/2.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Auburn-Tigers-Logo.png",
+    ]),
+    "georgia": ("Georgia", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/61.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Georgia-Bulldogs-Logo.png",
+    ]),
+    "florida": ("Florida", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/57.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Florida-Gators-Logo.png",
+    ]),
+    "tennessee": ("Tennessee", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/2633.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Tennessee-Volunteers-Logo.png",
+    ]),
 }
 
 
@@ -51,9 +96,9 @@ def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str
         text_lower = text.lower().strip()
         # Sort by key length (longer first) to match "mississippi state" before "mississippi"
         sorted_teams = sorted(TEAM_NAMES.items(), key=lambda x: len(x[0]), reverse=True)
-        for key, (name, logo_url) in sorted_teams:
+        for key, (name, logo_urls) in sorted_teams:
             if key in text_lower:
-                return name, logo_url
+                return name, logo_urls
         return None, None
     
     team1_result = find_team(team1_text)
@@ -67,25 +112,40 @@ def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str
 
 
 @st.cache_data
-def get_logo_image(url: str, size: int = 120) -> Optional[Image.Image]:
-    """Download and resize team logo."""
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        response = requests.get(url, timeout=10, headers=headers, allow_redirects=True)
-        if response.status_code == 200:
-            img = Image.open(io.BytesIO(response.content))
-            img = img.convert("RGBA")
-            # Resize maintaining aspect ratio
-            img.thumbnail((size, size), Image.Resampling.LANCZOS)
-            return img
-        else:
-            # Log status code for debugging
-            return None
-    except Exception as e:
-        # Log error for debugging
-        return None
+def get_logo_image(url_or_urls, size: int = 120) -> Optional[Image.Image]:
+    """
+    Download and resize team logo.
+    Accepts either a single URL string or a list of URLs (for fallback).
+    """
+    # Normalize input to list
+    if isinstance(url_or_urls, str):
+        urls = [url_or_urls]
+    else:
+        urls = url_or_urls
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://www.google.com/'
+    }
+    
+    # Try each URL until one works
+    for url in urls:
+        try:
+            response = requests.get(url, timeout=10, headers=headers, allow_redirects=True)
+            if response.status_code == 200 and response.content:
+                img = Image.open(io.BytesIO(response.content))
+                img = img.convert("RGBA")
+                # Resize maintaining aspect ratio
+                img.thumbnail((size, size), Image.Resampling.LANCZOS)
+                return img
+        except Exception:
+            # Try next URL
+            continue
+    
+    # All URLs failed
+    return None
 
 
 def create_team_matchup_image(
@@ -104,12 +164,15 @@ def create_team_matchup_image(
         home_logo = get_logo_image(home_team[1], size=120)
         
         # Check which logos failed
+        away_urls_str = str(away_team[1]) if isinstance(away_team[1], list) else away_team[1]
+        home_urls_str = str(home_team[1]) if isinstance(home_team[1], list) else home_team[1]
+        
         if not away_logo and not home_logo:
-            return None, f"Failed to download both logos: {away_team[0]} ({away_team[1]}) and {home_team[0]} ({home_team[1]})"
+            return None, f"Failed to download both logos: {away_team[0]} and {home_team[0]}"
         if not away_logo:
-            return None, f"Failed to download away team logo: {away_team[0]} ({away_team[1]})"
+            return None, f"Failed to download away team logo: {away_team[0]} (tried: {away_urls_str})"
         if not home_logo:
-            return None, f"Failed to download home team logo: {home_team[0]} ({home_team[1]})"
+            return None, f"Failed to download home team logo: {home_team[0]} (tried: {home_urls_str})"
         
         # Create base image
         img = Image.new("RGB", (width, height), color="#f8f9fa")
