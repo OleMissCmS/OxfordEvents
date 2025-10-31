@@ -6,6 +6,8 @@ import re
 import urllib.parse
 import csv
 import io
+import requests
+from typing import Optional, Dict, Any, Tuple
 
 # Page config
 st.set_page_config(
@@ -246,13 +248,89 @@ with col4:
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# Helper
-def _event_image_url(ev: dict) -> str:
+# Helper - curl-like URL diagnostics (defined early for sidebar use)
+def _curl_test_url(url: str, timeout: int = 5) -> Dict[str, Any]:
+    """
+    Test a URL like curl -I would: returns status, headers, content-type, size.
+    """
+    result = {
+        "url": url,
+        "status_code": None,
+        "content_type": None,
+        "content_length": None,
+        "headers": {},
+        "error": None,
+        "accessible": False
+    }
+    
+    try:
+        response = requests.head(url, timeout=timeout, allow_redirects=True)
+        result["status_code"] = response.status_code
+        result["content_type"] = response.headers.get("Content-Type", "unknown")
+        result["content_length"] = response.headers.get("Content-Length", "unknown")
+        result["headers"] = dict(response.headers)
+        result["accessible"] = 200 <= response.status_code < 400
+    except requests.exceptions.Timeout:
+        result["error"] = "Timeout"
+    except requests.exceptions.ConnectionError:
+        result["error"] = "Connection Error"
+    except requests.exceptions.RequestException as e:
+        result["error"] = str(e)
+    except Exception as e:
+        result["error"] = f"Unexpected: {type(e).__name__}: {e}"
+    
+    return result
+
+# Helper - event image URL with validation
+def _event_image_url(ev: dict, validate: bool = False) -> Tuple[str, Optional[Dict[str, Any]]]:
+    """
+    Get event image URL, optionally validate it.
+    Returns (url, diagnostics_dict) or (url, None).
+    """
     url = (ev.get("image") or ev.get("img") or "").strip()
     if url:
-        return url
+        if validate:
+            diag = _curl_test_url(url)
+            if not diag["accessible"]:
+                # Fallback to placeholder if validation fails
+                url = "https://placehold.co/800x1000/1f2937/ffffff?text=Oxford+Event"
+            return url, diag
+        return url, None
     # poster-like placeholder (4:5)
-    return "https://placehold.co/800x1000/1f2937/ffffff?text=Oxford+Event"
+    placeholder = "https://placehold.co/800x1000/1f2937/ffffff?text=Oxford+Event"
+    return placeholder, None
+
+# Debug panel (curl-like diagnostics) - after events are loaded
+with st.sidebar:
+    with st.expander("🔧 Debug Tools", expanded=False):
+        # Debug mode toggle
+        st.session_state["debug_mode"] = st.checkbox("Enable Debug Mode", value=st.session_state.get("debug_mode", False), key="debug_toggle")
+        
+        st.markdown("### URL Diagnostics (curl-like)")
+        st.caption("Test any URL to see status code, headers, content-type (like curl -I)")
+        debug_url = st.text_input("Test URL", placeholder="https://example.com/image.jpg", key="debug_url")
+        if debug_url:
+            with st.spinner("Testing URL..."):
+                diag = _curl_test_url(debug_url)
+                if diag["accessible"]:
+                    st.success(f"✅ {diag['status_code']} - {diag['content_type']}")
+                else:
+                    st.error(f"❌ Status: {diag['status_code']} - {diag.get('error', 'Failed')}")
+                st.json(diag)
+        
+        st.markdown("---")
+        st.markdown("### App Diagnostics")
+        if st.button("Clear Cache"):
+            st.cache_data.clear()
+            st.success("Cache cleared!")
+        
+        st.markdown("**Current State:**")
+        st.json({
+            "events_count": len(events),
+            "sources_count": len(EVENT_SOURCES),
+            "timestamp": datetime.now().isoformat(),
+            "debug_mode": st.session_state.get("debug_mode", False)
+        })
 
 # Event grid - using Streamlit components for proper rendering
 if events:
@@ -274,16 +352,22 @@ if events:
                     # Use Streamlit components with a bordered card
                     with st.container(border=True):
                         # Image header (poster) with diagnostics & safe fallback
-                        st.write("boot-ok-1")
-                        _img = _event_image_url(event)
-                        if not isinstance(_img, str) or not _img.strip():
-                            _img = "https://placehold.co/800x1000/1f2937/ffffff?text=Oxford+Event"
-                        st.write("img-debug", {"type": type(_img).__name__, "len": len(_img) if isinstance(_img, str) else None, "head": _img[:64] if isinstance(_img, str) else None})
+                        _img, _diag = _event_image_url(event, validate=False)
+                        # If diagnostics available, show in debug mode
+                        if _diag and st.session_state.get("debug_mode", False):
+                            with st.expander(f"🔍 Image Diagnostics: {_img[:50]}..."):
+                                st.json(_diag)
                         try:
                             st.image(_img, use_container_width=True)
                         except Exception as e:
-                            st.exception(e)
-                            st.markdown(f"<img src='{_img}' style='width:100%;border-radius:8px' />", unsafe_allow_html=True)
+                            # If image fails, validate URL and show diagnostics
+                            _img_new, _diag_new = _event_image_url(event, validate=True)
+                            if _diag_new:
+                                st.error(f"Image failed to load: {_diag_new.get('error', 'Unknown error')}")
+                                with st.expander("📋 Full Diagnostics"):
+                                    st.json(_diag_new)
+                            # Fallback to HTML img tag
+                            st.markdown(f"<img src='{_img_new}' style='width:100%;border-radius:8px' alt='Event image' />", unsafe_allow_html=True)
 
                         # Date pill at top
                         st.markdown(f"**{event_date}**  · {event_time}")
