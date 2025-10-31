@@ -62,130 +62,7 @@ st.markdown("""
     margin-bottom: 1rem;
 }
 
-/* Filter section */
-.filter-section {
-    background: white;
-    padding: 1.25rem;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-/* Quick filter buttons */
-.quick-filter-btn {
-    background: #f1f5f9;
-    color: #475569;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    margin: 0.25rem;
-    transition: all 0.2s ease;
-    cursor: pointer;
-}
-
-.quick-filter-btn:hover {
-    background: #e2e8f0;
-    border-color: #94a3b8;
-}
-
-.quick-filter-btn.active {
-    background: #3b82f6;
-    color: white;
-    border-color: #3b82f6;
-}
-
-/* Event cards */
-.event-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.event-card {
-    background: white;
-    border-radius: 8px;
-    padding: 1.25rem;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease;
-}
-
-.event-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border-color: #cbd5e1;
-}
-
-.event-title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: #1e293b;
-    margin: 0 0 0.75rem 0;
-    line-height: 1.3;
-}
-
-.event-meta {
-    font-size: 0.875rem;
-    color: #64748b;
-    margin-bottom: 0.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.event-description {
-    font-size: 0.875rem;
-    color: #475569;
-    margin-bottom: 1rem;
-    line-height: 1.5;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-/* Action buttons */
-.action-buttons {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 1rem;
-}
-
-.btn-primary {
-    background: #3b82f6;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-primary:hover {
-    background: #2563eb;
-}
-
-.btn-secondary {
-    background: white;
-    color: #475569;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-secondary:hover {
-    background: #f8fafc;
-    border-color: #94a3b8;
-}
+/* Event cards - now using inline styles */
 
 /* Stats section */
 .stats-section {
@@ -214,14 +91,6 @@ st.markdown("""
     margin: 0.25rem 0 0 0;
 }
 
-/* Search bar */
-.search-container {
-    background: white;
-    padding: 1.25rem;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
-    border: 1px solid #e2e8f0;
-}
 
 /* Responsive */
 @media (max-width: 768px) {
@@ -309,35 +178,30 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Quick filters
-st.markdown('<div class="filter-section">', unsafe_allow_html=True)
-col1, col2, col3, col4, col5 = st.columns(5)
+# Combined filters and search
+col1, col2, col3, col4, col5, col6 = st.columns([1, 1, 1, 1, 1, 2])
 
 with col1:
-    if st.button("Today", key="today", use_container_width=True):
+    if st.button("Today", key="today"):
         st.session_state["date_filter"] = "today"
 
 with col2:
-    if st.button("This Week", key="week", use_container_width=True):
+    if st.button("This Week", key="week"):
         st.session_state["date_filter"] = "week"
 
 with col3:
-    if st.button("This Month", key="month", use_container_width=True):
+    if st.button("This Month", key="month"):
         st.session_state["date_filter"] = "month"
 
 with col4:
-    if st.button("All", key="all", use_container_width=True):
+    if st.button("All", key="all"):
         st.session_state["date_filter"] = "all"
 
 with col5:
-    category = st.selectbox("Category", ["All", "Sports", "Music", "Arts", "Community"], key="category_filter")
+    category = st.selectbox("Category", ["All", "Sports", "Music", "Arts", "Community"], key="category_filter", label_visibility="collapsed")
 
-st.markdown('</div>', unsafe_allow_html=True)
-
-# Search
-st.markdown('<div class="search-container">', unsafe_allow_html=True)
-search = st.text_input("Search events", placeholder="Search by event name, venue, or description", key="search")
-st.markdown('</div>', unsafe_allow_html=True)
+with col6:
+    search = st.text_input("Search", placeholder="event name, venue...", key="search", label_visibility="collapsed")
 
 # Load events
 events = load_events()
@@ -378,44 +242,51 @@ with col4:
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# Event grid
-st.markdown('<div class="event-grid">', unsafe_allow_html=True)
+# Event grid - using Streamlit columns for proper layout
+if events:
+    # Create 3-column grid
+    for i in range(0, len(events), 3):
+        cols = st.columns(3)
+        for j in range(3):
+            if i + j < len(events):
+                event = events[i + j]
+                with cols[j]:
+                    # Format date
+                    try:
+                        event_date = dtp.parse(event["start_iso"]).strftime("%a, %b %d")
+                        event_time = dtp.parse(event["start_iso"]).strftime("%I:%M %p")
+                    except:
+                        event_date = "TBA"
+                        event_time = ""
 
-for event in events:
-    # Format date
-    try:
-        event_date = dtp.parse(event["start_iso"]).strftime("%a, %b %d")
-        event_time = dtp.parse(event["start_iso"]).strftime("%I:%M %p")
-    except:
-        event_date = "TBA"
-        event_time = ""
+                    # Event card using Streamlit components
+                    st.markdown(f"""
+                    <div style="background: white; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+                        <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 600; color: #1e293b;">{event["title"]}</h4>
 
-    st.markdown(f"""
-    <div class="event-card">
-        <h3 class="event-title">{event["title"]}</h3>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.25rem; font-size: 0.8rem; color: #64748b;">
+                            <span>📅 {event_date}</span>
+                            <span>🕐 {event_time}</span>
+                        </div>
 
-        <div class="event-meta">
-            <span>📅 {event_date}</span>
-            <span>🕐 {event_time}</span>
-            <span>📍 {event["location"]}</span>
-        </div>
+                        <div style="margin-bottom: 0.25rem; font-size: 0.8rem; color: #64748b;">
+                            📍 {event["location"]}
+                        </div>
 
-        <div class="event-meta">
-            <span>💰 {event["cost"]}</span>
-            <span>🏷️ {event["category"]}</span>
-        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; font-size: 0.8rem;">
+                            <span style="background: {'#dcfce7' if 'Free' in event['cost'] else '#fef3c7'}; color: {'#166534' if 'Free' in event['cost'] else '#92400e'}; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-weight: 500;">{event["cost"]}</span>
+                            <span style="background: #e0e7ff; color: #3730a3; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-weight: 500;">{event["category"]}</span>
+                        </div>
 
-        <p class="event-description">{event["description"]}</p>
+                        <p style="margin: 0 0 0.75rem 0; font-size: 0.8rem; color: #475569; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{event["description"]}</p>
 
-        <div class="action-buttons">
-            <button class="btn-primary">📅 Add to Calendar</button>
-            <button class="btn-secondary">🔗 Details</button>
-            <button class="btn-secondary">📍 Map</button>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-st.markdown('</div>', unsafe_allow_html=True)
+                        <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
+                            <button style="background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 500; cursor: pointer;">📅 Add to Calendar</button>
+                            <button style="background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 500; cursor: pointer;">🔗 Details</button>
+                            <button style="background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 500; cursor: pointer;">📍 Map</button>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
 # Footer
 st.markdown("---")
