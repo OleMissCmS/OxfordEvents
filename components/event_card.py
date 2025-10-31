@@ -16,24 +16,31 @@ def render_event_card(event: Dict[str, Any], debug_mode: bool = False) -> None:
         
         # Event image
         _img, error = get_event_image(event)
-        if error and debug_mode:
-            st.warning(f"Image error: {error}")
+        if error:
+            if debug_mode:
+                st.warning(f"Image error: {error}")
+            # Use placeholder if image generation failed
+            _img = "https://placehold.co/400x250/f8f9fa/6C757D?text=Event"
         
         # Render image (handle both URL strings and BytesIO buffers)
-        try:
-            if isinstance(_img, io.BytesIO):
-                _img.seek(0)
-                st.image(_img, use_container_width=True)
-            else:
-                st.image(_img, use_container_width=True)
-        except Exception as e:
-            if debug_mode:
-                st.error(f"Failed to load image: {e}")
-            # Fallback to HTML img tag
-            if isinstance(_img, str):
-                st.markdown(f'<img src="{_img}" class="event-image" alt="Event image" />', unsafe_allow_html=True)
-            else:
-                st.markdown('<div class="event-image"></div>', unsafe_allow_html=True)
+        if _img:
+            try:
+                if isinstance(_img, io.BytesIO):
+                    _img.seek(0)
+                    st.image(_img, use_container_width=True)
+                else:
+                    st.image(_img, use_container_width=True)
+            except Exception as e:
+                if debug_mode:
+                    st.error(f"Failed to load image: {e}")
+                # Fallback to HTML img tag
+                if isinstance(_img, str):
+                    st.markdown(f'<img src="{_img}" class="event-image" alt="Event image" />', unsafe_allow_html=True)
+                else:
+                    st.markdown('<div class="event-image"></div>', unsafe_allow_html=True)
+        else:
+            # No image available
+            st.markdown('<div class="event-image"></div>', unsafe_allow_html=True)
         
         # Card content
         st.markdown('<div style="padding: 1rem;">', unsafe_allow_html=True)
