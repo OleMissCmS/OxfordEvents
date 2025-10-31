@@ -24,9 +24,7 @@ st.markdown("""
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.stApp {
-    background: #f8fafc;
-}
+/* Let Streamlit manage background via theme to keep text readable in light/dark modes */
 
 .main .block-container {
     padding-top: 1rem;
@@ -44,14 +42,12 @@ st.markdown("""
 .header h1 {
     font-size: 2rem;
     font-weight: 700;
-    color: #1e293b;
     margin: 0 0 0.5rem 0;
     letter-spacing: -0.025em;
 }
 
 .header p {
     font-size: 1rem;
-    color: #64748b;
     margin: 0;
 }
 
@@ -259,9 +255,11 @@ if events:
                         event_date = "TBA"
                         event_time = ""
 
-                    # Use Streamlit components instead of raw HTML
-                    with st.container():
-                        st.subheader(event["title"], divider=None)
+                    # Use Streamlit components with a bordered card
+                    with st.container(border=True):
+                        # Date pill at top
+                        st.markdown(f"**{event_date}**  · {event_time}")
+                        st.markdown(f"### {event['title']}")
 
                         # Date and location
                         col1, col2 = st.columns(2)
@@ -287,16 +285,16 @@ if events:
                         else:
                             st.caption(event["description"])
 
-                        # Action buttons - use Streamlit buttons
+                        # Action buttons - compact buttons (not full width)
                         btn_cols = st.columns(3)
                         with btn_cols[0]:
-                            if st.button("📅 Calendar", key=f"cal_{i}_{j}", use_container_width=True):
+                            if st.button("📅 Calendar", key=f"cal_{i}_{j}"):
                                 st.info("Calendar integration coming soon!")
                         with btn_cols[1]:
-                            if st.button("🔗 Details", key=f"det_{i}_{j}", use_container_width=True):
+                            if st.button("🔗 Details", key=f"det_{i}_{j}"):
                                 st.info(f"More info: {event.get('link', 'No link available')}")
                         with btn_cols[2]:
-                            if st.button("📍 Map", key=f"map_{i}_{j}", use_container_width=True):
+                            if st.button("📍 Map", key=f"map_{i}_{j}"):
                                 st.info(f"Location: {event['location']}")
 
                     st.markdown("---")
