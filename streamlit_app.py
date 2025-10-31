@@ -238,6 +238,14 @@ with col4:
 
 st.markdown('</div>', unsafe_allow_html=True)
 
+# Helper
+def _event_image_url(ev: dict) -> str:
+    url = (ev.get("image") or ev.get("img") or "").strip()
+    if url:
+        return url
+    # subtle neutral placeholder
+    return "https://placehold.co/600x360/edf2f7/475569?text=Oxford+Event"
+
 # Event grid - using Streamlit components for proper rendering
 if events:
     # Create 3-column grid
@@ -257,9 +265,18 @@ if events:
 
                     # Use Streamlit components with a bordered card
                     with st.container(border=True):
+                        # Image header
+                        st.image(_event_image_url(event), use_container_width=True)
+
                         # Date pill at top
                         st.markdown(f"**{event_date}**  · {event_time}")
-                        st.markdown(f"### {event['title']}")
+                        # Title as link to details when available
+                        title = event.get("title") or "Event"
+                        link = event.get("link")
+                        if link:
+                            st.markdown(f"#### [{title}]({link})")
+                        else:
+                            st.markdown(f"#### {title}")
 
                         # Date and location
                         col1, col2 = st.columns(2)
@@ -291,8 +308,12 @@ if events:
                             if st.button("📅 Calendar", key=f"cal_{i}_{j}"):
                                 st.info("Calendar integration coming soon!")
                         with btn_cols[1]:
-                            if st.button("🔗 Details", key=f"det_{i}_{j}"):
-                                st.info(f"More info: {event.get('link', 'No link available')}")
+                            # Prefer opening link directly if available
+                            if link:
+                                st.link_button("🔗 Details", link, use_container_width=True)
+                            else:
+                                if st.button("🔗 Details", key=f"det_{i}_{j}"):
+                                    st.info("No link available")
                         with btn_cols[2]:
                             if st.button("📍 Map", key=f"map_{i}_{j}"):
                                 st.info(f"Location: {event['location']}")
