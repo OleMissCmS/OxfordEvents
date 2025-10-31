@@ -272,8 +272,12 @@ if events:
 
                     # Use Streamlit components with a bordered card
                     with st.container(border=True):
-                        # Image header (poster)
-                        st.image(_event_image_url(event), use_container_width=True)
+                        # Image header (poster) with safe fallback
+                        _img = _event_image_url(event)
+                        try:
+                            st.image(_img, use_container_width=True)
+                except Exception:
+                            st.markdown(f"<img src='{_img}' style='width:100%;border-radius:8px' />", unsafe_allow_html=True)
 
                         # Date pill at top
                         st.markdown(f"**{event_date}**  · {event_time}")
