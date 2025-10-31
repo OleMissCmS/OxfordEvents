@@ -12,7 +12,7 @@ import io
 import plotly.express as px
 import plotly.graph_objects as go
 
-VERSION = "v5.1.0"
+VERSION = "v5.2.0"
 
 st.set_page_config(page_title="Upcoming in Oxford", page_icon="📅", layout="wide", initial_sidebar_state="expanded")
 hero("What's happening, Oxford?")
@@ -218,8 +218,8 @@ selected_cats_display = st.sidebar.multiselect("Categories", options=categories_
 selected_cats = [cat.split(" (")[0] for cat in selected_cats_display]
 st.session_state["categories_selected"] = selected_cats
 
-# Quick category filter chips - Modern design
-st.markdown('<div class="quick-filter-container">', unsafe_allow_html=True)
+# Quick category filter chips - Clean design
+st.markdown('<div class="quick-filter-box">', unsafe_allow_html=True)
 st.markdown("#### 🏷️ Quick Category Filters")
 st.markdown("*Click to toggle categories*")
 
@@ -464,13 +464,13 @@ if len(sel) > 0:
     st.markdown(f"### 📋 Showing {len(view)} of {total} events")
     st.markdown("---")
 
-# Empty state - Modern design
+# Empty state - Clean design
 if len(sel) == 0:
     st.markdown("---")
     st.markdown("""
-    <div style="text-align:center;padding:3rem;background:linear-gradient(135deg,#f5f7fa 0%,#e9ecef 100%);border-radius:16px;margin:2rem 0;">
-        <h2 style="color:#4B5563;margin-bottom:1rem;">🎭 No events match your filters</h2>
-        <p style="color:#6B7280;margin-bottom:2rem;">Try adjusting your search criteria</p>
+    <div style="text-align:center;padding:2.5rem;background:white;border-radius:12px;margin:2rem 0;border:1px solid #E2E8F0;">
+        <h2 style="color:#0F172A;margin-bottom:0.75rem;font-weight:600;">🎭 No events match your filters</h2>
+        <p style="color:#64748B;margin-bottom:1.5rem;">Try adjusting your search criteria</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -577,7 +577,7 @@ for i, ev in enumerate(view):
             st.rerun()
     
     if i < len(view) - 1:
-        st.markdown("<div style='margin:2rem 0;border-top:1px solid #e5e7eb;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin:1.5rem 0;border-top:1px solid #E2E8F0;'></div>", unsafe_allow_html=True)
 
 if end_idx < total:
     if st.button("Load more", use_container_width=True):
