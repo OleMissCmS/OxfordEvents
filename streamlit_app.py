@@ -12,7 +12,7 @@ import io
 import plotly.express as px
 import plotly.graph_objects as go
 
-VERSION = "v5.0.0"
+VERSION = "v5.1.0"
 
 st.set_page_config(page_title="Upcoming in Oxford", page_icon="📅", layout="wide", initial_sidebar_state="expanded")
 hero("What's happening, Oxford?")
@@ -78,15 +78,26 @@ try:
 except:
     pass
 
-# Helper functions
-def set_quick_date_filter(days_offset=0, days_span=1):
-    """Set date filter to a quick range"""
+# Helper functions - FIXED to work properly
+def set_quick_date_filter_today():
     today = date.today()
-    start = today + timedelta(days=days_offset)
-    end = start + timedelta(days=days_span - 1)
-    st.session_state["date_min"] = start
-    st.session_state["date_max"] = end
-    st.rerun()
+    st.session_state["date_min"] = today
+    st.session_state["date_max"] = today
+
+def set_quick_date_filter_week():
+    today = date.today()
+    st.session_state["date_min"] = today
+    st.session_state["date_max"] = today + timedelta(days=6)
+
+def set_quick_date_filter_month():
+    today = date.today()
+    st.session_state["date_min"] = today
+    st.session_state["date_max"] = today + timedelta(days=29)
+
+def set_quick_date_filter_next7():
+    today = date.today()
+    st.session_state["date_min"] = today
+    st.session_state["date_max"] = today + timedelta(days=6)
 
 def set_weekend(offset_weeks: int = 0):
     today = date.today()
@@ -102,22 +113,18 @@ with st.sidebar:
                        default=st.session_state.get("groups_selected", sorted(groups)),
                        help="Quick filter by source grouping.", key="groups_selected")
         
-        # Quick date filter buttons
-        st.markdown("**Quick date filters**")
+        # Quick date filter buttons - FIXED
+        st.markdown("**⚡ Quick date filters**")
         col1, col2 = st.columns(2)
         col3, col4 = st.columns(2)
         with col1:
-            if st.button("📅 Today", use_container_width=True, help="Show events today"):
-                set_quick_date_filter(0, 1)
+            st.button("📅 Today", on_click=set_quick_date_filter_today, use_container_width=True, help="Show events today", type="primary")
         with col2:
-            if st.button("📆 This Week", use_container_width=True, help="Show events this week"):
-                set_quick_date_filter(0, 7)
+            st.button("📆 This Week", on_click=set_quick_date_filter_week, use_container_width=True, help="Show events this week", type="primary")
         with col3:
-            if st.button("🗓️ This Month", use_container_width=True, help="Show events this month"):
-                set_quick_date_filter(0, 30)
+            st.button("🗓️ This Month", on_click=set_quick_date_filter_month, use_container_width=True, help="Show events this month", type="primary")
         with col4:
-            if st.button("⏭️ Next 7 Days", use_container_width=True, help="Show next 7 days"):
-                set_quick_date_filter(0, 7)
+            st.button("⏭️ Next 7 Days", on_click=set_quick_date_filter_next7, use_container_width=True, help="Show next 7 days", type="primary")
 
         st.session_state.setdefault("date_min", today)
         st.session_state.setdefault("date_max", today + timedelta(days=21))
@@ -211,8 +218,11 @@ selected_cats_display = st.sidebar.multiselect("Categories", options=categories_
 selected_cats = [cat.split(" (")[0] for cat in selected_cats_display]
 st.session_state["categories_selected"] = selected_cats
 
-# Quick category filter chips
-st.markdown("#### Quick filters")
+# Quick category filter chips - Modern design
+st.markdown('<div class="quick-filter-container">', unsafe_allow_html=True)
+st.markdown("#### 🏷️ Quick Category Filters")
+st.markdown("*Click to toggle categories*")
+
 import math
 chip_cols = st.columns(min(len(all_categories), 6) or 1)
 for idx, cat in enumerate(all_categories):
@@ -220,7 +230,11 @@ for idx, cat in enumerate(all_categories):
     label = f"{cat} ({count})"
     col = chip_cols[idx % len(chip_cols)]
     with col:
-        if st.button(label, key=f"chip_{idx}", use_container_width=True):
+        # Determine if category is selected
+        is_selected = cat in st.session_state["categories_selected"]
+        button_type = "primary" if is_selected else "secondary"
+        
+        if st.button(label, key=f"chip_{idx}", use_container_width=True, type=button_type):
             cur = set(st.session_state["categories_selected"])
             if cat in cur: 
                 cur.remove(cat)
@@ -228,11 +242,19 @@ for idx, cat in enumerate(all_categories):
                 cur.add(cat)
             st.session_state["categories_selected"] = sorted(cur)
             st.rerun()
+st.markdown('</div>', unsafe_allow_html=True)
 
 sel1 = [e for e in sel0 if ((e.get("category") or "Uncategorized") in st.session_state["categories_selected"])]
 
-# Search
-q = st.text_input("🔍 Search titles & descriptions", value=st.session_state.get("q",""), key="q", placeholder="e.g., music, parade, lecture, 'Proud Larry'")
+# Search - Modern design
+st.markdown("### 🔍 Search Events")
+q = st.text_input(
+    "Search titles & descriptions", 
+    value=st.session_state.get("q",""), 
+    key="q", 
+    placeholder="e.g., music, parade, lecture, 'Proud Larry'",
+    help="Enter keywords to search in event titles and descriptions"
+)
 def _match(ev, q):
     if not q: return True
     hay = f"{ev.get('title','')} {ev.get('description','')}"
@@ -394,7 +416,11 @@ end_idx = min(page*PAGE_SIZE, total)
 view = collapsed[:end_idx]
 
 # Main content area
-st.caption(f"Last updated: {fetched_at} | Total sources: {total_sources}")
+# Header section with stats and actions
+header_col1, header_col2, header_col3 = st.columns([2, 1, 1])
+with header_col1:
+    st.markdown(f"### 🎉 **{len(sel)} Events Found**")
+    st.caption(f"📅 Last updated: {fetched_at[:16]} | 📊 Total sources: {total_sources}")
 
 # Export and share buttons
 export_col1, export_col2, export_col3 = st.columns([1, 1, 2])
@@ -433,21 +459,34 @@ with export_col3:
         st.code(share_url, language=None)
         st.success("Link copied! Share this URL to preserve your filter settings.")
 
-st.markdown("### Upcoming events")
-st.caption(f"Showing {len(view)} of {total} events")
+# Event list header
+if len(sel) > 0:
+    st.markdown(f"### 📋 Showing {len(view)} of {total} events")
+    st.markdown("---")
 
-# Empty state
+# Empty state - Modern design
 if len(sel) == 0:
-    st.info("🎭 No events match your filters. Try:")
+    st.markdown("---")
+    st.markdown("""
+    <div style="text-align:center;padding:3rem;background:linear-gradient(135deg,#f5f7fa 0%,#e9ecef 100%);border-radius:16px;margin:2rem 0;">
+        <h2 style="color:#4B5563;margin-bottom:1rem;">🎭 No events match your filters</h2>
+        <p style="color:#6B7280;margin-bottom:2rem;">Try adjusting your search criteria</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("- Adjusting date range")
-        st.markdown("- Clearing category filters")
-        st.markdown("- Checking different source groups")
+        st.markdown("**Suggestions:**")
+        st.markdown("- 📅 Adjust date range")
+        st.markdown("- 🏷️ Clear category filters")
+        st.markdown("- 📊 Check different source groups")
     with col2:
-        st.markdown("- Removing search terms")
-        st.markdown("- Showing more sources")
-    if st.button("🔄 Reset All Filters", use_container_width=True):
+        st.markdown("**More options:**")
+        st.markdown("- 🔍 Remove search terms")
+        st.markdown("- 👁️ Show more sources")
+        st.markdown("- ⚡ Use quick date filters")
+    
+    if st.button("🔄 Reset All Filters", use_container_width=True, type="primary"):
         st.session_state["categories_selected"] = all_categories
         st.session_state["groups_selected"] = sorted(groups)
         st.session_state["date_min"] = today
@@ -523,20 +562,22 @@ if venue_filter:
         del st.session_state["venue_filter"]
         st.rerun()
 
-# Render events
+# Render events with modern spacing
 for i, ev in enumerate(view):
     event_card(ev, i)
     
+    # Calendar and share buttons
     render_calendar_buttons(ev, i)
     
     # Venue filter button
     venue = ev.get("location", "")
     if venue:
-        if st.button(f"📍 Filter by venue: {venue}", key=f"venue_{i}", use_container_width=True):
+        if st.button(f"📍 Filter by: {venue[:35]}", key=f"venue_{i}", use_container_width=True, help=f"Filter events at {venue}"):
             st.session_state["venue_filter"] = venue.lower()
             st.rerun()
     
-    st.markdown("---")
+    if i < len(view) - 1:
+        st.markdown("<div style='margin:2rem 0;border-top:1px solid #e5e7eb;'></div>", unsafe_allow_html=True)
 
 if end_idx < total:
     if st.button("Load more", use_container_width=True):
