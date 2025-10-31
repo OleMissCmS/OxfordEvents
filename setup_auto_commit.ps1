@@ -5,48 +5,56 @@ Write-Host "Setting up automatic Git commits..." -ForegroundColor Cyan
 
 # Check if Git is installed
 try {
-    $gitVersion = git --version
-    Write-Host "✓ Git found: $gitVersion" -ForegroundColor Green
+    $gitVersion = git --version 2>&1
+    Write-Host "[OK] Git found: $gitVersion" -ForegroundColor Green
 } catch {
-    Write-Host "✗ Git is not installed or not in PATH" -ForegroundColor Red
+    Write-Host "[ERROR] Git is not installed or not in PATH" -ForegroundColor Red
     Write-Host "Please install Git from: https://git-scm.com/download/win" -ForegroundColor Yellow
     exit 1
 }
 
 # Check if this is a git repository
 if (-not (Test-Path ".git")) {
-    Write-Host "✗ This is not a git repository" -ForegroundColor Red
-    Write-Host "Initializing git repository..." -ForegroundColor Yellow
-    git init
+    Write-Host "[WARN] This is not a git repository" -ForegroundColor Yellow
+    Write-Host "Initializing git repository..." -ForegroundColor Cyan
+    git init 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "✗ Failed to initialize repository" -ForegroundColor Red
+        Write-Host "[ERROR] Failed to initialize repository" -ForegroundColor Red
         exit 1
     }
-    Write-Host "✓ Repository initialized" -ForegroundColor Green
+    Write-Host "[OK] Repository initialized" -ForegroundColor Green
+} else {
+    Write-Host "[OK] Git repository found" -ForegroundColor Green
 }
 
 # Check if remote is configured
-$remoteUrl = git remote get-url origin 2>$null
-if (-not $remoteUrl) {
+$remoteUrl = $null
+try {
+    $remoteUrl = git remote get-url origin 2>&1 | Where-Object { $_ -notmatch "error" }
+} catch {
+    $remoteUrl = $null
+}
+
+if (-not $remoteUrl -or $remoteUrl -match "error") {
     Write-Host ""
     Write-Host "No GitHub remote configured." -ForegroundColor Yellow
     $repoUrl = Read-Host "Enter your GitHub repository URL (e.g., https://github.com/username/repo.git)"
     
     if ($repoUrl) {
-        git remote add origin $repoUrl
+        git remote add origin $repoUrl 2>&1 | Out-Null
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "✓ Remote added: $repoUrl" -ForegroundColor Green
+            Write-Host "[OK] Remote added: $repoUrl" -ForegroundColor Green
         } else {
-            Write-Host "✗ Failed to add remote" -ForegroundColor Red
+            Write-Host "[ERROR] Failed to add remote" -ForegroundColor Red
         }
     }
 } else {
-    Write-Host "✓ Remote found: $remoteUrl" -ForegroundColor Green
+    Write-Host "[OK] Remote found: $remoteUrl" -ForegroundColor Green
 }
 
 # Configure git for automatic commits
 Write-Host ""
-Write-Host "Configuring Git..." -ForegroundColor Cyan
+Write-Host "Configuring Git hooks..." -ForegroundColor Cyan
 
 # Set up git hooks directory
 $hooksDir = ".git\hooks"
@@ -54,41 +62,30 @@ if (-not (Test-Path $hooksDir)) {
     New-Item -ItemType Directory -Path $hooksDir -Force | Out-Null
 }
 
-# Create post-commit hook to auto-push
-$postCommitHook = @"
-#!/bin/sh
-# Auto-push hook - automatically pushes after every commit
-git push origin main 2>&1 || git push origin master 2>&1
-"@
+# Create post-commit hook to auto-push (batch file for Windows)
+$hookBatchPath = "$hooksDir\post-commit.bat"
+$batchLines = @(
+    "@echo off",
+    "powershell -ExecutionPolicy Bypass -Command `"& { git push origin main 2>&1; if ($LASTEXITCODE -ne 0) { git push origin master 2>&1 } }`""
+)
 
-# For Windows, we'll use a PowerShell version instead
-$postCommitHookPs1 = @"
-# Auto-push hook - automatically pushes after every commit
-git push origin main 2>&1
-if (`$LASTEXITCODE -ne 0) {
-    git push origin master 2>&1
-}
-"@
-
-# Write PowerShell hook (Windows)
-$hookPath = "$hooksDir\post-commit"
-$postCommitHookPs1 | Out-File -FilePath $hookPath -Encoding UTF8
-Write-Host "✓ Created post-commit hook" -ForegroundColor Green
+$batchLines | Out-File -FilePath $hookBatchPath -Encoding ASCII
+Write-Host "[OK] Created post-commit hook" -ForegroundColor Green
 
 # Create a startup script for the file watcher
-$startupScript = @"
-# Auto-start script for automatic commits
-# Run this to start monitoring and auto-committing changes
+$startupLines = @(
+    "# Auto-start script for automatic commits",
+    "# Run this to start monitoring and auto-committing changes",
+    "",
+    "`$scriptPath = Join-Path `$PSScriptRoot 'auto_commit.ps1'",
+    "Start-Process powershell -ArgumentList '-NoExit', '-File', `$scriptPath -WindowStyle Normal"
+)
 
-`$scriptPath = Join-Path `$PSScriptRoot "auto_commit.ps1"
-Start-Process powershell -ArgumentList "-NoExit", "-File", "`$scriptPath" -WindowStyle Normal
-"@
-
-$startupScript | Out-File -FilePath "start_auto_commit.ps1" -Encoding UTF8
-Write-Host "✓ Created start_auto_commit.ps1" -ForegroundColor Green
+$startupLines | Out-File -FilePath "start_auto_commit.ps1" -Encoding UTF8
+Write-Host "[OK] Created start_auto_commit.ps1" -ForegroundColor Green
 
 Write-Host ""
-Write-Host "✓ Automatic commit setup complete!" -ForegroundColor Green
+Write-Host "[OK] Automatic commit setup complete!" -ForegroundColor Green
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  1. Make sure your GitHub credentials are configured" -ForegroundColor White
@@ -101,6 +98,5 @@ Write-Host "  - Monitor all file changes" -ForegroundColor White
 Write-Host "  - Auto-commit changes after 30 seconds of inactivity" -ForegroundColor White
 Write-Host "  - Auto-push to GitHub after each commit" -ForegroundColor White
 Write-Host ""
-Write-Host "⚠ WARNING: This will commit ALL changes automatically!" -ForegroundColor Yellow
+Write-Host "[WARNING] This will commit ALL changes automatically!" -ForegroundColor Yellow
 Write-Host "  Make sure you're okay with this behavior before starting." -ForegroundColor Yellow
-
