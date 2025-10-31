@@ -6,6 +6,7 @@ import re
 import urllib.parse
 import csv
 import io
+import json
 import requests
 from typing import Optional, Dict, Any, Tuple
 from PIL import Image, ImageDraw
@@ -130,6 +131,105 @@ st.markdown("""
     opacity: 0.6;
 }
 
+/* Filter chips (Bandsintown style) */
+.filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 0;
+    align-items: center;
+}
+
+.filter-chip {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid #e5e7eb;
+    background: white;
+    color: #374151;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.filter-chip:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+    transform: translateY(-1px);
+}
+
+.filter-chip.active {
+    background: #1f2937;
+    color: white;
+    border-color: #1f2937;
+}
+
+.filter-chip.active:hover {
+    background: #374151;
+    border-color: #374151;
+}
+
+.filter-search-wrapper {
+    flex: 1;
+    min-width: 200px;
+}
+
+/* Style Streamlit buttons as chips */
+.filter-chips-container button.stButton {
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.filter-chips-container button.stButton > button {
+    padding: 0.5rem 1rem !important;
+    border-radius: 20px !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    border: 1px solid #e5e7eb !important;
+    background: white !important;
+    color: #374151 !important;
+    transition: all 0.2s !important;
+    white-space: nowrap !important;
+    width: auto !important;
+}
+
+.filter-chips-container button.stButton > button:hover {
+    background: #f3f4f6 !important;
+    border-color: #d1d5db !important;
+    transform: translateY(-1px);
+}
+
+/* Active state via data attribute (set via JavaScript) */
+.filter-chips-container button.stButton[data-active="true"] > button {
+    background: #1f2937 !important;
+    color: white !important;
+    border-color: #1f2937 !important;
+}
+
+.filter-chips-container button.stButton[data-active="true"] > button:hover {
+    background: #374151 !important;
+    border-color: #374151 !important;
+}
+
+/* Style search input within filter chips */
+.filter-chips-container .stTextInput {
+    flex: 1;
+    min-width: 200px;
+    margin-left: 0.5rem;
+}
+
+.filter-chips-container .stTextInput > div > div > input {
+    padding: 0.5rem 1rem !important;
+    border-radius: 20px !important;
+    border: 1px solid #e5e7eb !important;
+    font-size: 0.875rem !important;
+}
+
 /* Stats section */
 .stats-section {
     background: white;
@@ -244,33 +344,140 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Combined filters and search (chip-like)
-col1, col2, col3, col4, col5, col6 = st.columns([1, 1, 1, 1, 1, 3])
-
-with col1:
-    if st.button("Today", key="today"):
-        st.session_state["date_filter"] = "today"
-
-with col2:
-    if st.button("This Week", key="week"):
-        st.session_state["date_filter"] = "week"
-
-with col3:
-    if st.button("This Month", key="month"):
-        st.session_state["date_filter"] = "month"
-
-with col4:
-    if st.button("All", key="all"):
-        st.session_state["date_filter"] = "all"
-
-with col5:
-    category = st.selectbox("Category", ["All", "Sports", "Music", "Arts", "Community"], key="category_filter", label_visibility="collapsed")
-
-with col6:
-    search = st.text_input("Search", placeholder="event name, venue...", key="search", label_visibility="collapsed")
-
-# Load events
+# Load events first
 events = load_events()
+
+# Initialize filter state
+if "date_filter" not in st.session_state:
+    st.session_state["date_filter"] = "all"
+if "category_filter" not in st.session_state:
+    st.session_state["category_filter"] = "All"
+
+# Read URL params for initial filter state (before rendering)
+query_params = st.query_params
+if "date_filter" in query_params:
+    st.session_state["date_filter"] = query_params["date_filter"]
+if "category_filter" in query_params:
+    st.session_state["category_filter"] = query_params["category_filter"]
+
+# Get all unique categories from events
+all_categories = sorted(set([e.get("category", "Other") for e in events if e.get("category")]))
+category_options = ["All"] + all_categories
+
+# Callback functions for filter chips
+def set_date_filter(value):
+    st.session_state["date_filter"] = value
+    st.rerun()
+
+def set_category_filter(value):
+    st.session_state["category_filter"] = value
+    st.rerun()
+
+# Filter chips (Bandsintown style)
+st.markdown('<div class="filter-chips filter-chips-container">', unsafe_allow_html=True)
+
+# Date filter chips
+date_filters = [
+    ("Today", "today"),
+    ("This Week", "week"),
+    ("This Month", "month"),
+    ("All Dates", "all")
+]
+
+for label, value in date_filters:
+    st.button(label, key=f"date_{value}", on_click=set_date_filter, args=(value,))
+
+# Separator
+st.markdown('<span style="margin: 0 0.5rem; color: #9ca3af; font-size: 0.875rem;">|</span>', unsafe_allow_html=True)
+
+# Category filter chips
+for cat in category_options:
+    st.button(cat, key=f"cat_{cat}", on_click=set_category_filter, args=(cat,))
+
+# Search
+search = st.text_input("Search", placeholder="Search events...", key="search", label_visibility="collapsed")
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# JavaScript to set active state based on session state
+current_date_filter = st.session_state.get("date_filter", "all")
+current_cat_filter = st.session_state.get("category_filter", "All")
+
+# Map filter values to button labels
+date_label_map = {v: l for l, v in date_filters}
+active_date_label = date_label_map.get(current_date_filter, "All Dates")
+
+st.markdown(f"""
+<script>
+(function() {{
+    setTimeout(function() {{
+        const filterContainer = document.querySelector('.filter-chips-container');
+        if (!filterContainer) return;
+        
+        const buttons = filterContainer.querySelectorAll('.stButton button');
+        buttons.forEach(btn => {{
+            const btnText = btn.textContent.trim();
+            const stBtn = btn.closest('.stButton');
+            
+            // Check if this is an active date filter button
+            if ({json.dumps([l for l, _ in date_filters])}.includes(btnText)) {{
+                if (btnText === '{active_date_label}') {{
+                    stBtn.setAttribute('data-active', 'true');
+                }} else {{
+                    stBtn.setAttribute('data-active', 'false');
+                }}
+            }}
+            // Check if this is an active category filter button
+            else if ({json.dumps(category_options)}.includes(btnText)) {{
+                if (btnText === '{current_cat_filter}') {{
+                    stBtn.setAttribute('data-active', 'true');
+                }} else {{
+                    stBtn.setAttribute('data-active', 'false');
+                }}
+            }}
+        }});
+    }}, 200);
+}})();
+</script>
+""", unsafe_allow_html=True)
+
+# Apply filters to events
+filtered_events = events.copy()
+
+# Date filter
+date_filter = st.session_state.get("date_filter", "all")
+if date_filter != "all":
+    today = date.today()
+    def parse_event_date(ev):
+        try:
+            return dtp.parse(ev.get("start_iso", "")).date()
+        except:
+            return None
+    
+    if date_filter == "today":
+        filtered_events = [e for e in filtered_events if parse_event_date(e) == today]
+    elif date_filter == "week":
+        week_end = today + timedelta(days=7)
+        filtered_events = [e for e in filtered_events if parse_event_date(e) and today <= parse_event_date(e) <= week_end]
+    elif date_filter == "month":
+        month_end = today + timedelta(days=30)
+        filtered_events = [e for e in filtered_events if parse_event_date(e) and today <= parse_event_date(e) <= month_end]
+
+# Category filter
+category_filter = st.session_state.get("category_filter", "All")
+if category_filter != "All":
+    filtered_events = [e for e in filtered_events if e.get("category") == category_filter]
+
+# Search filter
+search_term = st.session_state.get("search", "").lower()
+if search_term:
+    filtered_events = [
+        e for e in filtered_events
+        if search_term in (e.get("title", "") + " " + e.get("location", "") + " " + e.get("description", "")).lower()
+    ]
+
+# Update events to filtered
+events = filtered_events
 
 # Stats
 try:
