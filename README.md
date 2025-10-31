@@ -1,1 +1,0 @@
-# OxfordEvents v4.6\n\nAll requested sources added; retains caching, dedupe, football fallback, Sources panel + Source multi-select.\n
