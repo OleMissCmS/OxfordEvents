@@ -226,8 +226,9 @@ def get_event_image(event: dict) -> Tuple[Any, Optional[str]]:
     if url:
         return url, None
     
-    # Fallback placeholder
-    placeholder = "https://placehold.co/400x250/f8f9fa/6C757D?text=Event"
+    # Fallback to category-specific placeholder
+    from utils.placeholder_images import get_placeholder_image
+    placeholder = get_placeholder_image(category or "default")
     return placeholder, None
 
 

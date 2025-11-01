@@ -10,11 +10,26 @@ BANDSINTOWN_CSS = """
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* Clean white background - let Streamlit theme manage */
+/* Force white background everywhere */
+.stApp {
+    background-color: #FFFFFF !important;
+}
+
+.stMainFrame {
+    background-color: #FFFFFF !important;
+}
+
+/* Clean white background container */
 .main .block-container {
     padding-top: 1rem;
     padding-bottom: 2rem;
     max-width: 1400px;
+    background-color: #FFFFFF;
+}
+
+/* Remove dark theme */
+[data-baseweb="theme"] {
+    background-color: #FFFFFF !important;
 }
 
 /* Top accent bar - subtle blue */
@@ -46,23 +61,27 @@ BANDSINTOWN_CSS = """
     font-size: 1rem;
 }
 
-/* Event cards - clean white with subtle borders */
+/* Event cards - smaller, condensed like Bandsintown */
 .event-card {
     background: white;
     border-radius: 8px;
     overflow: hidden;
     border: 1px solid #e9ecef;
-    transition: box-shadow 0.2s;
+    transition: box-shadow 0.2s, transform 0.2s;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 .event-card:hover {
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     border-color: #dee2e6;
+    transform: translateY(-2px);
 }
 
 .event-image {
     width: 100%;
-    height: 180px;
+    height: 200px;
     object-fit: cover;
     background: #f8f9fa;
 }
@@ -73,14 +92,14 @@ BANDSINTOWN_CSS = """
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-weight: 600;
-    margin-top: 0.5rem;
+    margin: 0.5rem 0 0.25rem 0;
 }
 
 .event-title {
-    font-size: 1.125rem;
+    font-size: 1rem;
     font-weight: 600;
     color: #333333;
-    margin: 0.5rem 0 0.25rem 0;
+    margin: 0.25rem 0;
     line-height: 1.4;
 }
 .event-title a {
@@ -115,7 +134,7 @@ BANDSINTOWN_CSS = """
     opacity: 0.6;
 }
 
-/* Filter chips - light background with blue active state */
+/* Filter chips - horizontal like Bandsintown */
 .filter-chips {
     display: flex;
     flex-wrap: wrap;
@@ -137,7 +156,7 @@ BANDSINTOWN_CSS = """
     font-size: 0.875rem !important;
     font-weight: 500 !important;
     border: 1px solid #dee2e6 !important;
-    background: white !important;
+    background: #f8f9fa !important;
     color: #333333 !important;
     transition: all 0.2s !important;
     white-space: nowrap !important;
@@ -145,7 +164,7 @@ BANDSINTOWN_CSS = """
 }
 
 .filter-chips-container button.stButton > button:hover {
-    background: #f8f9fa !important;
+    background: #e9ecef !important;
     border-color: #ced4da !important;
     transform: translateY(-1px);
 }
@@ -204,6 +223,13 @@ BANDSINTOWN_CSS = """
     margin: 0.25rem 0 0 0;
 }
 
+/* Tickets button - Bandsintown style (pinkish-red) */
+div[data-testid="stButton"] button {
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    padding: 0.5rem 1rem !important;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .event-grid {
@@ -224,4 +250,3 @@ BANDSINTOWN_CSS = """
 footer {visibility: hidden;}
 </style>
 """
-
