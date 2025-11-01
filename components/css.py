@@ -69,9 +69,9 @@ BANDSINTOWN_CSS = """
     border: 1px solid #e9ecef;
     transition: box-shadow 0.2s, transform 0.2s;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    height: 100%;
     display: flex;
     flex-direction: column;
+    margin-bottom: 1rem;
 }
 .event-card:hover {
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -81,7 +81,7 @@ BANDSINTOWN_CSS = """
 
 .event-image {
     width: 100%;
-    height: 200px;
+    height: 150px;
     object-fit: cover;
     background: #f8f9fa;
 }

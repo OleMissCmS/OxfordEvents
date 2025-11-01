@@ -45,7 +45,7 @@ def render_event_card(event: Dict[str, Any], debug_mode: bool = False) -> None:
             st.markdown('<div class="event-image"></div>', unsafe_allow_html=True)
         
         # Card content
-        st.markdown('<div style="padding: 1rem;">', unsafe_allow_html=True)
+        st.markdown('<div style="padding: 0.75rem;">', unsafe_allow_html=True)
         
         # Format date
         try:
