@@ -91,15 +91,11 @@ st.markdown("""
 events = load_events()
 
 # Initialize filter state
-if "date_filter" not in st.session_state:
-    st.session_state["date_filter"] = "all"
 if "category_filter" not in st.session_state:
     st.session_state["category_filter"] = "All"
 
 # Read URL params for initial filter state
 query_params = st.query_params
-if "date_filter" in query_params:
-    st.session_state["date_filter"] = query_params["date_filter"]
 if "category_filter" in query_params:
     st.session_state["category_filter"] = query_params["category_filter"]
 
@@ -107,26 +103,16 @@ if "category_filter" in query_params:
 all_categories = sorted(set([e.get("category", "Other") for e in events if e.get("category")]))
 category_options = ["All"] + all_categories
 
-# Date filter options
-date_filters = [
-    ("Today", "today"),
-    ("This Week", "week"),
-    ("This Month", "month"),
-    ("All Dates", "all")
-]
-
 # Render filter chips
 render_filter_chips(
-    date_filters,
     category_options,
-    st.session_state.get("date_filter", "all"),
     st.session_state.get("category_filter", "All")
 )
 
 # Apply filters
 filtered_events = apply_all_filters(
     events,
-    date_filter=st.session_state.get("date_filter", "all"),
+    date_filter="all",  # No date filtering
     category_filter=st.session_state.get("category_filter", "All"),
     search_term=st.session_state.get("search", "")
 )

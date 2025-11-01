@@ -152,33 +152,20 @@ BANDSINTOWN_CSS = """
 
 .filter-chips-container button.stButton > button {
     padding: 0.5rem 1rem !important;
-    border-radius: 20px !important;
+    border-radius: 999px !important;  /* Super pill-shaped */
     font-size: 0.875rem !important;
     font-weight: 500 !important;
-    border: 1px solid #dee2e6 !important;
-    background: #f8f9fa !important;
-    color: #333333 !important;
+    border: 1px solid #dee2e6 !important;  /* Default, JavaScript will override */
+    background: transparent !important;  /* Transparent by default */
+    color: #333333 !important;  /* Default, JavaScript will override */
     transition: all 0.2s !important;
     white-space: nowrap !important;
     width: auto !important;
 }
 
 .filter-chips-container button.stButton > button:hover {
-    background: #e9ecef !important;
-    border-color: #ced4da !important;
     transform: translateY(-1px);
-}
-
-/* Active state - blue like Bandsintown */
-.filter-chips-container button.stButton[data-active="true"] > button {
-    background: #007BFF !important;
-    color: white !important;
-    border-color: #007BFF !important;
-}
-
-.filter-chips-container button.stButton[data-active="true"] > button:hover {
-    background: #0056b3 !important;
-    border-color: #0056b3 !important;
+    opacity: 0.8;
 }
 
 /* Search input styling */
