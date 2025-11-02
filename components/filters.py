@@ -67,7 +67,7 @@ def _render_filter_active_states(
                 const btnText = btn.textContent.trim();
                 
                 // Check if this is a category filter button
-                if ({json.dumps(category_options)}.includes(btnText)) {{
+                if ({{json.dumps(category_options)}}.includes(btnText)) {{
                     const colors = colorMap[btnText] || {{bg: "#f5f5f5", text: "#666666", border: "#dddddd"}};
                     
                     if (btnText === '{current_cat_filter}') {{
