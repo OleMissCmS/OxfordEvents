@@ -46,36 +46,31 @@ EVENT_SOURCES = [
 @st.cache_data(ttl=7200)
 def load_events():
     """Load and cache events"""
-    try:
-        from lib.aggregator import collect_events
-        return collect_events()
-    except Exception as e:
-        st.error(f"Error loading events: {e}")
-        # Fallback to mock data
-        from datetime import date, timedelta
-        today = date.today()
-        return [
-            {
-                "title": "Ole Miss Football vs Alabama",
-                "start_iso": (today + timedelta(days=7)).isoformat(),
-                "location": "Vaught-Hemingway Stadium",
-                "cost": "Free",
-                "category": "Sports",
-                "source": "Ole Miss Athletics",
-                "link": "https://olemisssports.com",
-                "description": "Rebels take on the Crimson Tide in a SEC matchup."
-            },
-            {
-                "title": "Square Books Author Reading",
-                "start_iso": (today + timedelta(days=3)).isoformat(),
-                "location": "Square Books",
-                "cost": "Free",
-                "category": "Arts & Culture",
-                "source": "Visit Oxford",
-                "link": "https://squarebooks.com",
-                "description": "Join us for an evening with bestselling author discussing their latest work."
-            }
-        ]
+    # Simplified to always return mock data for now
+    from datetime import date, timedelta
+    today = date.today()
+    return [
+        {
+            "title": "Ole Miss Football vs Alabama",
+            "start_iso": (today + timedelta(days=7)).isoformat(),
+            "location": "Vaught-Hemingway Stadium",
+            "cost": "Free",
+            "category": "Sports",
+            "source": "Ole Miss Athletics",
+            "link": "https://olemisssports.com",
+            "description": "Rebels take on the Crimson Tide in a SEC matchup."
+        },
+        {
+            "title": "Square Books Author Reading",
+            "start_iso": (today + timedelta(days=3)).isoformat(),
+            "location": "Square Books",
+            "cost": "Free",
+            "category": "Arts & Culture",
+            "source": "Visit Oxford",
+            "link": "https://squarebooks.com",
+            "description": "Join us for an evening with bestselling author discussing their latest work."
+        }
+    ]
 
 
 # Header (Bandsintown style)
