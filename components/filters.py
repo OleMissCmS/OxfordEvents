@@ -96,16 +96,24 @@ def _render_filter_active_states(
                 
                 // Check if this is a category filter button
                 if ({json.dumps(category_options)}.includes(btnText)) {{
+                    const colorMap = {json.dumps({cat: CATEGORY_COLORS.get(cat, {"bg": "#f5f5f5", "text": "#666666", "border": "#dddddd"}) for cat in category_options})};
+                    const colors = colorMap[btnText] || {{bg: "#f5f5f5", text: "#666666", border: "#dddddd"}};
                     const safeCat = btnText.replace(/ /g, '_').replace(/&/g, '');
                     
                     if (btnText === '{current_cat_filter}') {{
                         stBtn.setAttribute('data-active', 'true');
                         btn.setAttribute('data-category', safeCat);
                         btn.setAttribute('data-active', 'true');
+                        btn.style.backgroundColor = colors.bg;
+                        btn.style.color = colors.text;
+                        btn.style.borderColor = colors.border;
                     }} else {{
                         stBtn.setAttribute('data-active', 'false');
                         btn.setAttribute('data-category', safeCat);
                         btn.setAttribute('data-active', 'false');
+                        btn.style.backgroundColor = 'transparent';
+                        btn.style.color = colors.text;
+                        btn.style.borderColor = colors.border;
                     }}
                 }}
             }});
