@@ -57,7 +57,11 @@
             {% for event in events %}
             <div class="event-card" data-category="{{ event.category }}" data-title="{{ event.title|lower }}" data-location="{{ event.location|lower }}">
                 <div class="event-image">
+                    {% if event.category == 'Sports' %}
+                    <img src="{{ url_for('sports_image', title=event.title) }}" alt="{{ event.title }}">
+                    {% else %}
                     <img src="{{ url_for('static', filename='images/placeholder.svg') }}" alt="{{ event.title }}">
+                    {% endif %}
                 </div>
                 <div class="event-content">
                     <div class="event-date">{{ event.start_iso }}</div>

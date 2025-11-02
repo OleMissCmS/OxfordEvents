@@ -7,7 +7,6 @@ import re
 from typing import Optional, Tuple, Dict, Any
 from PIL import Image, ImageDraw
 import requests
-import streamlit as st
 
 # Team name mappings to logo URLs (multiple fallback sources)
 TEAM_NAMES = {
@@ -75,7 +74,6 @@ TEAM_NAMES = {
 }
 
 
-@st.cache_data
 def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str, str]]]:
     """
     Detect two teams from event title.

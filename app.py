@@ -6,6 +6,8 @@ from flask import Flask, render_template, jsonify
 from datetime import datetime, timedelta, date
 import json
 import os
+from lib.event_scraper import collect_all_events
+from utils.image_processing import detect_sports_teams, create_team_matchup_image
 
 app = Flask(__name__)
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
@@ -32,70 +34,92 @@ EVENT_SOURCES = [
 
 
 def load_events():
-    """Load mock events for now"""
-    today = date.today()
-    return [
-        {
-            "title": "Ole Miss Football vs Alabama",
-            "start_iso": (today + timedelta(days=7)).isoformat(),
-            "location": "Vaught-Hemingway Stadium",
-            "cost": "Free",
-            "category": "Sports",
-            "source": "Ole Miss Athletics",
-            "link": "https://olemisssports.com",
-            "description": "Rebels take on the Crimson Tide in a SEC matchup."
-        },
-        {
-            "title": "Square Books Author Reading",
-            "start_iso": (today + timedelta(days=3)).isoformat(),
-            "location": "Square Books",
-            "cost": "Free",
-            "category": "Arts & Culture",
-            "source": "Visit Oxford",
-            "link": "https://squarebooks.com",
-            "description": "Join us for an evening with bestselling author discussing their latest work."
-        },
-        {
-            "title": "Proud Larry's Live Music",
-            "start_iso": (today + timedelta(days=5)).isoformat(),
-            "location": "Proud Larry's",
-            "cost": "$10",
-            "category": "Music",
-            "source": "SeatGeek",
-            "link": "https://proudlarrys.com",
-            "description": "Local band performing original songs and covers."
-        },
-        {
-            "title": "Ole Miss Basketball vs Arkansas",
-            "start_iso": (today + timedelta(days=2)).isoformat(),
-            "location": "The Pavilion",
-            "cost": "$15",
-            "category": "Sports",
-            "source": "Ole Miss Athletics",
-            "link": "https://olemisssports.com",
-            "description": "Men's basketball game against Arkansas."
-        },
-        {
-            "title": "Oxford Farmers Market",
-            "start_iso": (today + timedelta(days=1)).isoformat(),
-            "location": "Oxford Square",
+    """Load events from all sources"""
+    try:
+        # Try to fetch real events
+        events = collect_all_events(EVENT_SOURCES)
+        
+        # If no events found, return mock data
+        if not events:
+            today = date.today()
+            events = [
+                {
+                    "title": "Ole Miss Football vs Alabama",
+                    "start_iso": (today + timedelta(days=7)).isoformat(),
+                    "location": "Vaught-Hemingway Stadium",
+                    "cost": "Free",
+                    "category": "Sports",
+                    "source": "Ole Miss Athletics",
+                    "link": "https://olemisssports.com",
+                    "description": "Rebels take on the Crimson Tide in a SEC matchup."
+                },
+                {
+                    "title": "Square Books Author Reading",
+                    "start_iso": (today + timedelta(days=3)).isoformat(),
+                    "location": "Square Books",
+                    "cost": "Free",
+                    "category": "Arts & Culture",
+                    "source": "Visit Oxford",
+                    "link": "https://squarebooks.com",
+                    "description": "Join us for an evening with bestselling author discussing their latest work."
+                },
+                {
+                    "title": "Proud Larry's Live Music",
+                    "start_iso": (today + timedelta(days=5)).isoformat(),
+                    "location": "Proud Larry's",
+                    "cost": "$10",
+                    "category": "Music",
+                    "source": "SeatGeek",
+                    "link": "https://proudlarrys.com",
+                    "description": "Local band performing original songs and covers."
+                },
+                {
+                    "title": "Ole Miss Basketball vs Arkansas",
+                    "start_iso": (today + timedelta(days=2)).isoformat(),
+                    "location": "The Pavilion",
+                    "cost": "$15",
+                    "category": "Sports",
+                    "source": "Ole Miss Athletics",
+                    "link": "https://olemisssports.com",
+                    "description": "Men's basketball game against Arkansas."
+                },
+                {
+                    "title": "Oxford Farmers Market",
+                    "start_iso": (today + timedelta(days=1)).isoformat(),
+                    "location": "Oxford Square",
+                    "cost": "Free",
+                    "category": "Community",
+                    "source": "Visit Oxford",
+                    "link": "https://visitoxfordms.com",
+                    "description": "Weekly farmers market with local produce, crafts, and food."
+                },
+                {
+                    "title": "The Lyric Oxford - Concert",
+                    "start_iso": (today + timedelta(days=10)).isoformat(),
+                    "location": "The Lyric Oxford",
+                    "cost": "$25",
+                    "category": "Music",
+                    "source": "Ticketmaster",
+                    "link": "https://www.thelyricoxford.com",
+                    "description": "Live concert featuring local and touring artists."
+                }
+            ]
+    except Exception as e:
+        print(f"Error loading events: {e}")
+        # Fallback to mock data
+        today = date.today()
+        events = [{
+            "title": "Error Loading Events",
+            "start_iso": today.isoformat(),
+            "location": "Oxford, MS",
             "cost": "Free",
             "category": "Community",
-            "source": "Visit Oxford",
-            "link": "https://visitoxfordms.com",
-            "description": "Weekly farmers market with local produce, crafts, and food."
-        },
-        {
-            "title": "The Lyric Oxford - Concert",
-            "start_iso": (today + timedelta(days=10)).isoformat(),
-            "location": "The Lyric Oxford",
-            "cost": "$25",
-            "category": "Music",
-            "source": "Ticketmaster",
-            "link": "https://www.thelyricoxford.com",
-            "description": "Live concert featuring local and touring artists."
-        }
-    ]
+            "source": "System",
+            "link": "#",
+            "description": "Unable to load events at this time."
+        }]
+    
+    return events
 
 
 @app.route('/')
@@ -118,6 +142,25 @@ def api_events():
     """API endpoint for events"""
     events = load_events()
     return jsonify(events)
+
+
+@app.route('/api/sports-image/<path:title>')
+def sports_image(title):
+    """Generate sports matchup image"""
+    try:
+        teams = detect_sports_teams(title)
+        if teams:
+            away, home = teams
+            matchup_img, error = create_team_matchup_image(away, home)
+            if matchup_img:
+                from flask import send_file
+                return send_file(matchup_img, mimetype='image/png')
+    except:
+        pass
+    
+    # Return placeholder if no matchup image
+    from flask import send_from_directory
+    return send_from_directory('static/images', 'placeholder.svg')
 
 
 if __name__ == '__main__':
