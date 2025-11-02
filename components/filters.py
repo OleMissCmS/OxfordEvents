@@ -23,11 +23,14 @@ def render_filter_chips(
     current_cat_filter: str
 ) -> None:
     """Render category filter chips as pill-shaped buttons with pastel colors."""
+    
+    # Inject CSS for category-specific colors and states
+    _inject_category_styles(category_options)
+    
     st.markdown('<div class="filter-chips filter-chips-container">', unsafe_allow_html=True)
     
     # Category filter chips
     for cat in category_options:
-        color_scheme = CATEGORY_COLORS.get(cat, {"bg": "#f5f5f5", "text": "#666666", "border": "#dddddd"})
         st.button(cat, key=f"cat_{cat}", on_click=_set_category_filter, args=(cat,))
     
     # Search
@@ -35,7 +38,7 @@ def render_filter_chips(
     
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # JavaScript to set active state and colors
+    # JavaScript to set active state
     _render_filter_active_states(category_options, current_cat_filter)
 
 
@@ -45,13 +48,39 @@ def _set_category_filter(value):
     st.rerun()
 
 
+def _inject_category_styles(category_options: List[str]) -> None:
+    """Inject CSS for category-specific button styles."""
+    styles = []
+    for cat in category_options:
+        colors = CATEGORY_COLORS.get(cat, {"bg": "#f5f5f5", "text": "#666666", "border": "#dddddd"})
+        safe_cat = cat.replace(" ", "_").replace("&", "")
+        
+        # Active state
+        styles.append(f"""
+        button[data-category="{safe_cat}"][data-active="true"] {{
+            background-color: {colors['bg']} !important;
+            color: {colors['text']} !important;
+            border-color: {colors['border']} !important;
+        }}
+        """)
+        
+        # Inactive state
+        styles.append(f"""
+        button[data-category="{safe_cat}"][data-active="false"] {{
+            background-color: transparent !important;
+            color: {colors['text']} !important;
+            border-color: {colors['border']} !important;
+        }}
+        """)
+    
+    st.markdown(f"<style>{''.join(styles)}</style>", unsafe_allow_html=True)
+
+
 def _render_filter_active_states(
     category_options: List[str],
     current_cat_filter: str
 ) -> None:
-    """Render JavaScript to set active filter states and apply pastel colors."""
-    category_colors_json = json.dumps(CATEGORY_COLORS)
-    
+    """Render JavaScript to set active filter states."""
     st.markdown(f"""
     <script>
     (function() {{
@@ -59,7 +88,6 @@ def _render_filter_active_states(
             const filterContainer = document.querySelector('.filter-chips-container');
             if (!filterContainer) return;
             
-            const colors = {category_colors_json};
             const buttons = filterContainer.querySelectorAll('.stButton button');
             
             buttons.forEach(btn => {{
@@ -68,24 +96,20 @@ def _render_filter_active_states(
                 
                 // Check if this is a category filter button
                 if ({json.dumps(category_options)}.includes(btnText)) {{
-                    const colorScheme = colors[btnText] || {{bg: "#f5f5f5", text: "#666666", border: "#dddddd"}};
+                    const safeCat = btnText.replace(/ /g, '_').replace(/&/g, '');
                     
                     if (btnText === '{current_cat_filter}') {{
-                        // Active state - filled background
                         stBtn.setAttribute('data-active', 'true');
-                        btn.style.backgroundColor = colorScheme.bg + ' !important';
-                        btn.style.color = colorScheme.text + ' !important';
-                        btn.style.borderColor = colorScheme.border + ' !important';
+                        btn.setAttribute('data-category', safeCat);
+                        btn.setAttribute('data-active', 'true');
                     }} else {{
-                        // Inactive state - border only
                         stBtn.setAttribute('data-active', 'false');
-                        btn.style.backgroundColor = 'transparent !important';
-                        btn.style.color = colorScheme.text + ' !important';
-                        btn.style.borderColor = colorScheme.border + ' !important';
+                        btn.setAttribute('data-category', safeCat);
+                        btn.setAttribute('data-active', 'false');
                     }}
                 }}
             }});
-        }}, 200);
+        }}, 500);
     }})();
     </script>
     """, unsafe_allow_html=True)
