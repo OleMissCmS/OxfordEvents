@@ -71,14 +71,178 @@ def fetch_rss_events(url: str, source_name: str) -> List[Dict[str, Any]]:
     return events
 
 
-def fetch_html_events(url: str, source_name: str) -> List[Dict[str, Any]]:
+def fetch_html_events(url: str, source_name: str, parser: str = None) -> List[Dict[str, Any]]:
     """
-    Fetch events from HTML pages (basic parser)
-    Currently returns empty list - would need site-specific parsing
+    Fetch events from HTML pages using site-specific parsers
     """
-    # TODO: Implement HTML parsing for each specific site
-    # For now, return empty
-    return []
+    events = []
+    try:
+        # Add headers to avoid being blocked
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+        }
+        response = requests.get(url, timeout=10, headers=headers)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Use parser-specific logic
+            if parser == 'bandsintown':
+                events = _parse_bandsintown(soup, source_name, url)
+            elif parser == 'visit_oxford':
+                events = _parse_visit_oxford(soup, source_name, url)
+            elif parser == 'simple_list':
+                # Generic parser - try to extract basic event info
+                events = _parse_generic(soup, source_name, url)
+    except Exception as e:
+        print(f"Error fetching HTML from {url}: {e}")
+    
+    return events
+
+
+def _parse_bandsintown(soup, source_name: str, base_url: str) -> List[Dict[str, Any]]:
+    """Parse Bandsintown HTML"""
+    events = []
+    try:
+        # Bandsintown uses specific event containers
+        # Look for event cards or listings
+        event_elements = soup.find_all(['div', 'article'], class_=lambda x: x and ('event' in x.lower() or 'concert' in x.lower()))
+        
+        for elem in event_elements:
+            try:
+                # Try to extract title
+                title_elem = elem.find(['h2', 'h3', 'h4'], class_=lambda x: x and ('title' in x.lower() or 'name' in x.lower()))
+                title = title_elem.get_text(strip=True) if title_elem else ''
+                
+                if not title:
+                    # Try finding any heading
+                    title_elem = elem.find(['h1', 'h2', 'h3', 'h4'])
+                    title = title_elem.get_text(strip=True) if title_elem else ''
+                
+                # Try to extract date
+                date_elem = elem.find(class_=lambda x: x and 'date' in x.lower())
+                date_str = date_elem.get_text(strip=True) if date_elem else ''
+                
+                # Try to extract venue
+                venue_elem = elem.find(class_=lambda x: x and 'venue' in x.lower())
+                venue = venue_elem.get_text(strip=True) if venue_elem else 'Oxford, MS'
+                
+                # Try to extract link
+                link_elem = elem.find('a', href=True)
+                link = link_elem['href'] if link_elem else base_url
+                if link.startswith('/'):
+                    link = 'https://www.bandsintown.com' + link
+                
+                if title and date_str:
+                    # Try to parse date
+                    try:
+                        parsed_date = dtp.parse(date_str)
+                        event = {
+                            "title": title,
+                            "start_iso": parsed_date.isoformat(),
+                            "location": venue,
+                            "description": "",
+                            "category": "Music",
+                            "source": source_name,
+                            "link": link,
+                            "cost": "Varies"
+                        }
+                        events.append(event)
+                    except:
+                        # Skip if we can't parse the date
+                        pass
+            except:
+                continue
+    except Exception as e:
+        print(f"Error parsing Bandsintown: {e}")
+    
+    return events
+
+
+def _parse_visit_oxford(soup, source_name: str, base_url: str) -> List[Dict[str, Any]]:
+    """Parse Visit Oxford HTML"""
+    events = []
+    try:
+        # Visit Oxford specific parsing
+        event_elements = soup.find_all(['article', 'div', 'li'], class_=lambda x: x and 'event' in x.lower() if x else False)
+        
+        for elem in event_elements:
+            try:
+                # Extract title
+                title_elem = elem.find(['h2', 'h3', 'a'], class_=lambda x: x and 'title' in x.lower() if x else False)
+                if not title_elem:
+                    title_elem = elem.find(['h2', 'h3', 'h4'])
+                title = title_elem.get_text(strip=True) if title_elem else ''
+                
+                # Extract date
+                date_elem = elem.find(class_=lambda x: x and 'date' in x.lower())
+                date_str = date_elem.get_text(strip=True) if date_elem else ''
+                
+                # Extract location
+                location_elem = elem.find(class_=lambda x: x and ('location' in x.lower() or 'venue' in x.lower()))
+                location = location_elem.get_text(strip=True) if location_elem else 'Oxford, MS'
+                
+                # Extract link
+                link_elem = elem.find('a', href=True)
+                link = link_elem['href'] if link_elem else base_url
+                if link.startswith('/'):
+                    link = base_url.rstrip('/') + link
+                
+                if title and date_str:
+                    try:
+                        parsed_date = dtp.parse(date_str)
+                        event = {
+                            "title": title,
+                            "start_iso": parsed_date.isoformat(),
+                            "location": location,
+                            "description": "",
+                            "category": "Community",
+                            "source": source_name,
+                            "link": link,
+                            "cost": "Free"  # Default for community events
+                        }
+                        events.append(event)
+                    except:
+                        pass
+            except:
+                continue
+    except Exception as e:
+        print(f"Error parsing Visit Oxford: {e}")
+    
+    return events
+
+
+def _parse_generic(soup, source_name: str, base_url: str) -> List[Dict[str, Any]]:
+    """Generic HTML parser for events"""
+    events = []
+    try:
+        # Look for common event patterns
+        event_elements = soup.find_all(['article', 'div'], class_=lambda x: x and ('event' in x.lower() if x else False))
+        
+        for elem in event_elements:
+            try:
+                title_elem = elem.find(['h1', 'h2', 'h3', 'h4'])
+                title = title_elem.get_text(strip=True) if title_elem else ''
+                
+                if title:
+                    event = {
+                        "title": title,
+                        "start_iso": None,
+                        "location": "Oxford, MS",
+                        "description": "",
+                        "category": "Community",
+                        "source": source_name,
+                        "link": base_url,
+                        "cost": "Free"
+                    }
+                    events.append(event)
+            except:
+                continue
+    except:
+        pass
+    
+    return events
 
 
 def fetch_seatgeek_events(city: str, state: str) -> List[Dict[str, Any]]:
@@ -117,12 +281,20 @@ def fetch_seatgeek_events(city: str, state: str) -> List[Dict[str, Any]]:
 
 def fetch_ticketmaster_events(city: str, state_code: str) -> List[Dict[str, Any]]:
     """Fetch events from Ticketmaster API"""
+    import os
     events = []
     try:
         # Ticketmaster Discovery API endpoint
         url = "https://app.ticketmaster.com/discovery/v2/events.json"
+        
+        # Get API key from environment variable
+        api_key = os.environ.get('TICKETMASTER_API_KEY', '')
+        if not api_key:
+            print("No TICKETMASTER_API_KEY found in environment variables")
+            return events
+        
         params = {
-            'apikey': '',  # TODO: Add API key
+            'apikey': api_key,
             'city': city,
             'stateCode': state_code,
             'size': 100
@@ -171,8 +343,9 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         
         elif source_type == 'html':
             url = source.get('url')
+            parser = source.get('parser')
             if url:
-                events = fetch_html_events(url, source_name)
+                events = fetch_html_events(url, source_name, parser=parser)
                 all_events.extend(events)
         
         elif source_type == 'api':

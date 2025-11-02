@@ -71,6 +71,42 @@ TEAM_NAMES = {
         "https://a.espncdn.com/i/teamlogos/ncaa/500/2633.png",
         "https://logos-world.net/wp-content/uploads/2020/06/Tennessee-Volunteers-Logo.png",
     ]),
+    "texas a&m": ("Texas A&M", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/245.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Texas-A-M-Aggies-Logo.png",
+    ]),
+    "aggies": ("Texas A&M", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/245.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Texas-A-M-Aggies-Logo.png",
+    ]),
+    "kentucky": ("Kentucky", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/96.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Kentucky-Wildcats-Logo.png",
+    ]),
+    "wildcats": ("Kentucky", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/96.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Kentucky-Wildcats-Logo.png",
+    ]),
+    "missouri": ("Missouri", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/142.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Missouri-Tigers-Logo.png",
+    ]),
+    "vanderbilt": ("Vanderbilt", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/238.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Vanderbilt-Commodores-Logo.png",
+    ]),
+    "commodores": ("Vanderbilt", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/238.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/Vanderbilt-Commodores-Logo.png",
+    ]),
+    "south carolina": ("South Carolina", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/2579.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/South-Carolina-Gamecocks-Logo.png",
+    ]),
+    "gamecocks": ("South Carolina", [
+        "https://a.espncdn.com/i/teamlogos/ncaa/500/2579.png",
+        "https://logos-world.net/wp-content/uploads/2020/06/South-Carolina-Gamecocks-Logo.png",
+    ]),
 }
 
 
