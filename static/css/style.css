@@ -1,0 +1,324 @@
+/* Bandsintown-inspired CSS with pastel filter pills */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #FFFFFF;
+    color: #333333;
+    line-height: 1.6;
+}
+
+/* Container */
+.main-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0.5rem 1rem 2rem 1rem;
+}
+
+/* Accent Bar */
+.accent-bar {
+    height: 4px;
+    background: linear-gradient(90deg, #007BFF 0%, #0056b3 100%);
+    margin-bottom: 0;
+}
+
+/* Hero Section */
+.hero {
+    background: #FFFFFF;
+    color: #333333;
+    padding: 1rem;
+    border-radius: 0 0 8px 8px;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.hero h1 {
+    font-size: 2.25rem;
+    margin: 0 0 0.5rem 0;
+    letter-spacing: -0.02em;
+    color: #333333;
+    font-weight: 700;
+}
+
+.hero p {
+    margin: 0;
+    color: #6C757D;
+    font-size: 1rem;
+}
+
+/* Filter Section */
+.filter-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+}
+
+.filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.filter-pill {
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 2px solid;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    font-family: 'Inter', sans-serif;
+}
+
+.filter-pill:hover {
+    transform: translateY(-1px);
+    opacity: 0.8;
+}
+
+/* Pastel Color Pills */
+.filter-pill[data-category="All"] {
+    border-color: #90caf9;
+    color: #1976d2;
+}
+.filter-pill[data-category="All"].active {
+    background-color: #e3f2fd;
+}
+
+.filter-pill[data-category="Music"] {
+    border-color: #ce93d8;
+    color: #7b1fa2;
+}
+.filter-pill[data-category="Music"].active {
+    background-color: #f3e5f5;
+}
+
+.filter-pill[data-category="Arts & Culture"],
+.filter-pill[data-category="Arts"] {
+    border-color: #ffb74d;
+    color: #e65100;
+}
+.filter-pill[data-category="Arts & Culture"].active,
+.filter-pill[data-category="Arts"].active {
+    background-color: #fff3e0;
+}
+
+.filter-pill[data-category="Community"] {
+    border-color: #81c784;
+    color: #388e3c;
+}
+.filter-pill[data-category="Community"].active {
+    background-color: #e8f5e9;
+}
+
+.filter-pill[data-category="Sports"] {
+    border-color: #f48fb1;
+    color: #c2185b;
+}
+.filter-pill[data-category="Sports"].active {
+    background-color: #fce4ec;
+}
+
+/* Search Box */
+.search-box {
+    flex: 1;
+    min-width: 200px;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    border: 1px solid #dee2e6;
+    font-size: 0.875rem;
+    background: white;
+    font-family: 'Inter', sans-serif;
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: #007BFF;
+}
+
+/* Stats Section */
+.stats-section {
+    background: white;
+    padding: 1.25rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.stat {
+    text-align: center;
+    padding: 0.75rem;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333333;
+    margin: 0;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #6C757D;
+    margin: 0.25rem 0 0 0;
+}
+
+/* Events Grid */
+.events-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+/* Event Cards */
+.event-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e9ecef;
+    transition: box-shadow 0.2s, transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+}
+
+.event-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: #dee2e6;
+    transform: translateY(-2px);
+}
+
+.event-image {
+    width: 100%;
+    height: 150px;
+    background: #f8f9fa;
+    overflow: hidden;
+}
+
+.event-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.event-content {
+    padding: 1rem;
+}
+
+.event-date {
+    font-size: 0.75rem;
+    color: #6C757D;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.event-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333333;
+    margin: 0.25rem 0;
+    line-height: 1.4;
+}
+
+.event-title a {
+    color: #333333;
+    text-decoration: none;
+}
+
+.event-title a:hover {
+    color: #007BFF;
+}
+
+.event-venue {
+    font-size: 0.875rem;
+    color: #6C757D;
+    margin: 0.25rem 0;
+}
+
+.event-meta {
+    font-size: 0.75rem;
+    color: #6C757D;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.event-description {
+    font-size: 0.875rem;
+    color: #6C757D;
+    margin: 0.5rem 0;
+    line-height: 1.5;
+}
+
+.btn-tickets {
+    display: inline-block;
+    margin-top: 0.75rem;
+    padding: 0.6rem 1rem;
+    background-color: #007BFF;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.btn-tickets:hover {
+    background-color: #0056b3;
+    color: white;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    padding: 1.5rem 0;
+    color: #6C757D;
+    font-size: 0.875rem;
+    border-top: 1px solid #e9ecef;
+    margin-top: 2rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .hero h1 {
+        font-size: 1.5rem;
+    }
+    
+    .events-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .filter-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-box {
+        width: 100%;
+    }
+}
+
+/* Hidden class for filtering */
+.hidden {
+    display: none !important;
+}
+
