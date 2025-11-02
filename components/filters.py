@@ -4,6 +4,7 @@ Filter UI components
 
 import json
 import streamlit as st
+import streamlit.components.v1 as components
 from typing import List
 
 
@@ -36,8 +37,7 @@ def render_filter_chips(
     st.markdown('</div>', unsafe_allow_html=True)
     
     # JavaScript to set active state and apply colors
-    # Temporarily disabled - Streamlit strips script tags
-    # _render_filter_active_states(category_options, current_cat_filter)
+    _render_filter_active_states(category_options, current_cat_filter)
 
 
 def _set_category_filter(value):
@@ -54,7 +54,7 @@ def _render_filter_active_states(
     # Create color map for JavaScript
     color_map = json.dumps({cat: CATEGORY_COLORS.get(cat, {"bg": "#f5f5f5", "text": "#666666", "border": "#dddddd"}) for cat in category_options})
     
-    st.markdown(f"""
+    html = f"""
     <script>
     (function() {{
         setTimeout(function() {{
@@ -87,4 +87,5 @@ def _render_filter_active_states(
         }}, 2000);
     }})();
     </script>
-    """, unsafe_allow_html=True)
+    """
+    components.html(html, height=0)
