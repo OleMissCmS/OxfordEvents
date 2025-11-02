@@ -109,7 +109,7 @@ def _render_filter_active_states(
                     }}
                 }}
             }});
-        }}, 500);
+        }}, 1500);
     }})();
     </script>
     """, unsafe_allow_html=True)
