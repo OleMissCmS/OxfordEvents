@@ -68,7 +68,7 @@ def _render_filter_active_states(
                 
                 // Check if this is a category filter button
                 if ({json.dumps(category_options)}.includes(btnText)) {{
-                    const colors = colorMap[btnText] || {{"bg": "#f5f5f5", "text": "#666666", "border": "#dddddd"}};
+                    const colors = colorMap[btnText] || {json.dumps({"bg": "#f5f5f5", "text": "#666666", "border": "#dddddd"})};
                     
                     if (btnText === '{current_cat_filter}') {{
                         // Active state: filled background
