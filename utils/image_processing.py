@@ -337,6 +337,17 @@ VENUE_IMAGES = {
     "library": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800",
     "gertrude": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800",
     "performing arts": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800",
+    # Ole Miss venues
+    "turner center": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800",
+    "turner": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800",
+    "bryant hall": "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=800",
+    "bryant": "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=800",
+    "law center": "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=800",
+    "khayat": "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=800",
+    "catfish row museum": "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800",
+    "catfish row": "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800",
+    "south campus recreation center": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800",
+    "recreation center": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800",
 }
 
 def search_location_image(location: str) -> Optional[str]:
