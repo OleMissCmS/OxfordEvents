@@ -155,9 +155,9 @@ BANDSINTOWN_CSS = """
     border-radius: 999px !important;  /* Super pill-shaped */
     font-size: 0.875rem !important;
     font-weight: 500 !important;
-    border: 1px solid #dee2e6 !important;  /* Default, JavaScript will override */
+    border: 2px solid !important;  /* Default border, will be overridden by JS */
     background: transparent !important;  /* Transparent by default */
-    color: #333333 !important;  /* Default, JavaScript will override */
+    color: inherit !important;  /* Will be set by JS */
     transition: all 0.2s !important;
     white-space: nowrap !important;
     width: auto !important;
