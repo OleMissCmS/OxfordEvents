@@ -4,3 +4,8 @@ showErrorDetails = true
 [browser]
 gatherUsageStats = false
 
+[server]
+runOnSave = true
+
+[runner]
+magicEnabled = true

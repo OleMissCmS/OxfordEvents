@@ -4,11 +4,10 @@ Bandsintown-inspired CSS styles with light, clean colors
 
 BANDSINTOWN_CSS = """
 <style>
-/* Temporarily disabled Google Fonts for debugging */
-/* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'); */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 * {
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* Force white background everywhere */

@@ -36,8 +36,7 @@ def render_filter_chips(
     st.markdown('</div>', unsafe_allow_html=True)
     
     # JavaScript to set active state and apply colors
-    # Temporarily disabled for debugging
-    # _render_filter_active_states(category_options, current_cat_filter)
+    _render_filter_active_states(category_options, current_cat_filter)
 
 
 def _set_category_filter(value):
