@@ -111,7 +111,7 @@ def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str
     return None
 
 
-@st.cache_data
+# Caching disabled to prevent infinite hangs on network failures
 def get_logo_image(url_or_urls, size: int = 120) -> Optional[Image.Image]:
     """
     Download and resize team logo.
