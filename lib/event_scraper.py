@@ -42,6 +42,8 @@ def fetch_ics_events(url: str, source_name: str) -> List[Dict[str, Any]]:
 
 def fetch_rss_events(url: str, source_name: str) -> List[Dict[str, Any]]:
     """Fetch events from an RSS feed"""
+    from lib.categorizer import categorize_event
+    
     events = []
     try:
         feed = feedparser.parse(url)
@@ -57,12 +59,18 @@ def fetch_rss_events(url: str, source_name: str) -> List[Dict[str, Any]]:
             else:
                 clean_desc = ''
             
+            # Remove unwanted phrases
+            clean_desc = clean_desc.replace('View on site', '').replace('Email this event', '').strip()
+            
+            # Smart categorization
+            category = categorize_event(entry.title, clean_desc, source_name)
+            
             event = {
                 "title": entry.title,
                 "start_iso": None,
                 "location": entry.get('location', ''),
                 "description": clean_desc,
-                "category": "University",
+                "category": category,
                 "source": source_name,
                 "link": entry.link,
                 "cost": "Free"

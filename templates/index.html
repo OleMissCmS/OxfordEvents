@@ -21,14 +21,14 @@
 
         <!-- Filter Section -->
         <div class="filter-section">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search events...">
+            </div>
             <div class="filter-chips" id="filterChips">
                 <button class="filter-pill active" data-category="All">All</button>
                 {% for category in categories %}
                 <button class="filter-pill" data-category="{{ category }}">{{ category }}</button>
                 {% endfor %}
-            </div>
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Search events...">
             </div>
         </div>
 
@@ -60,11 +60,11 @@
                     {% if event.category == 'Sports' %}
                     <img src="{{ url_for('sports_image', title=event.title) }}" alt="{{ event.title }}">
                     {% else %}
-                    <img src="{{ url_for('static', filename='images/placeholder.svg') }}" alt="{{ event.title }}">
+                    <img src="{{ url_for('category_image', category=event.category, title=event.title) }}" alt="{{ event.title }}">
                     {% endif %}
                 </div>
                 <div class="event-content">
-                    <div class="event-date">{{ event.start_iso }}</div>
+                    <div class="event-date">{{ event.start_iso|format_datetime }}</div>
                     <h3 class="event-title">
                         <a href="{{ event.link }}" target="_blank">{{ event.title }}</a>
                     </h3>
@@ -73,8 +73,12 @@
                         <span class="event-time">{{ event.cost }}</span>
                         <span class="event-category">{{ event.category }}</span>
                     </div>
-                    <div class="event-description">{{ event.description }}</div>
+                    <div class="event-description">{{ event.description|truncate_description }}</div>
                     <a href="{{ event.link }}" class="btn-tickets" target="_blank">Tickets</a>
+                    <div class="calendar-links">
+                        <a href="{{ event|google_calendar_link }}" target="_blank" class="calendar-btn google-cal">Google Calendar</a>
+                        <a href="{{ event|ics_calendar_link }}" class="calendar-btn apple-cal">Apple Calendar</a>
+                    </div>
                 </div>
             </div>
             {% endfor %}

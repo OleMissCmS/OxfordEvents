@@ -2,7 +2,7 @@
 Flask application for Oxford Events
 """
 
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, url_for
 from datetime import datetime, timedelta, date
 import json
 import os
@@ -11,6 +11,71 @@ from utils.image_processing import detect_sports_teams, create_team_matchup_imag
 
 app = Flask(__name__)
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+
+# Custom Jinja2 filters
+@app.template_filter('format_datetime')
+def format_datetime(value):
+    """Format ISO datetime to readable format like 'Nov 3, 2025 7pm'"""
+    if not value:
+        return ""
+    try:
+        dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        # Format: "Nov 3, 2025 7:00 PM" - Windows compatible
+        formatted = dt.strftime("%b %d, %Y %I:%M %p").replace(" 0", " ").replace(":00", "")
+        return formatted
+    except:
+        try:
+            # Try parsing with dateutil if ISO fails
+            from dateutil import parser as dtp
+            dt = dtp.parse(value)
+            formatted = dt.strftime("%b %d, %Y %I:%M %p").replace(" 0", " ").replace(":00", "")
+            return formatted
+        except:
+            return value
+
+@app.template_filter('truncate_description')
+def truncate_description(value, max_words=100):
+    """Truncate description to max_words"""
+    if not value:
+        return ""
+    words = value.split()
+    if len(words) <= max_words:
+        return value
+    return " ".join(words[:max_words]) + "..."
+
+@app.template_filter('google_calendar_link')
+def google_calendar_link(event):
+    """Generate Google Calendar link for event"""
+    try:
+        dt = datetime.fromisoformat(event['start_iso'].replace('Z', '+00:00'))
+    except:
+        try:
+            from dateutil import parser as dtp
+            dt = dtp.parse(event['start_iso'])
+        except:
+            return "#"
+    
+    # Google Calendar format
+    start_str = dt.strftime('%Y%m%dT%H%M%S')
+    end_dt = dt + timedelta(hours=2)  # Default 2 hour event
+    end_str = end_dt.strftime('%Y%m%dT%H%M%S')
+    
+    params = {
+        'action': 'TEMPLATE',
+        'text': event['title'],
+        'dates': f"{start_str}/{end_str}",
+        'details': event.get('description', ''),
+        'location': event.get('location', '')
+    }
+    
+    base_url = "https://calendar.google.com/calendar/render"
+    query_string = "&".join([f"{k}={v.replace(' ', '+')}" for k, v in params.items()])
+    return f"{base_url}?{query_string}"
+
+@app.template_filter('ics_calendar_link')
+def ics_calendar_link(event):
+    """Generate .ics calendar download link for event"""
+    return url_for('generate_ics', title=event['title'])
 
 # Event sources
 EVENT_SOURCES = [
@@ -162,6 +227,64 @@ def sports_image(title):
     # Return placeholder if no matchup image
     from flask import send_from_directory
     return send_from_directory('static/images', 'placeholder.svg')
+
+
+@app.route('/api/category-image/<category>/<path:title>')
+def category_image(category, title):
+    """Generate smart category placeholder image"""
+    from utils.smart_image_generator import generate_category_image
+    from flask import send_file
+    
+    try:
+        img_buffer, error = generate_category_image(category, title)
+        if img_buffer:
+            return send_file(img_buffer, mimetype='image/png')
+    except:
+        pass
+    
+    # Return plain placeholder if category image fails
+    from flask import send_from_directory
+    return send_from_directory('static/images', 'placeholder.svg')
+
+
+@app.route('/calendar/<path:title>.ics')
+def generate_ics(title):
+    """Generate .ics calendar file for an event"""
+    from flask import Response
+    
+    # Find the event
+    events = load_events()
+    event = next((e for e in events if e['title'] == title), None)
+    
+    if not event or not event.get('start_iso'):
+        return "Event not found", 404
+    
+    try:
+        from dateutil import parser as dtp
+        dt = dtp.parse(event['start_iso'])
+        end_dt = dt + timedelta(hours=2)  # Default 2 hour duration
+    except:
+        return "Invalid date", 400
+    
+    # Generate ICS content
+    ics_content = f"""BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Oxford Events//Event Calendar//EN
+BEGIN:VEVENT
+DTSTART:{dt.strftime('%Y%m%dT%H%M%S')}
+DTEND:{end_dt.strftime('%Y%m%dT%H%M%S')}
+SUMMARY:{event['title']}
+DESCRIPTION:{event.get('description', '')[:100]}
+LOCATION:{event.get('location', '')}
+URL:{event.get('link', '')}
+END:VEVENT
+END:VCALENDAR"""
+    
+    from flask import make_response
+    response = make_response(ics_content)
+    response.headers['Content-Type'] = 'text/calendar; charset=utf-8'
+    response.headers['Content-Disposition'] = f'attachment; filename="{title[:50]}.ics"'
+    return response
 
 
 if __name__ == '__main__':

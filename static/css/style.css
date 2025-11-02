@@ -287,6 +287,49 @@ body {
     color: white;
 }
 
+/* Calendar links */
+.calendar-links {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.calendar-btn {
+    flex: 1;
+    min-width: 100px;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-decoration: none;
+    text-align: center;
+    transition: all 0.2s;
+    border: 1px solid #dee2e6;
+}
+
+.calendar-btn.google-cal {
+    background-color: white;
+    color: #4285f4;
+    border-color: #4285f4;
+}
+
+.calendar-btn.google-cal:hover {
+    background-color: #4285f4;
+    color: white;
+}
+
+.calendar-btn.apple-cal {
+    background-color: white;
+    color: #8E8E93;
+    border-color: #8E8E93;
+}
+
+.calendar-btn.apple-cal:hover {
+    background-color: #8E8E93;
+    color: white;
+}
+
 /* Footer */
 .footer {
     text-align: center;
