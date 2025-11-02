@@ -11,7 +11,7 @@ def collect_events() -> List[Dict[str, Any]]:
     Simplified event collection - returns mock data for now
     Replace with real data collection later
     """
-    today = datetime.now().date()
+    today = datetime.now(tz.tzlocal()).date()
     events = [
         {
             "title": "Ole Miss Football vs Alabama",
@@ -76,7 +76,7 @@ def collect_events() -> List[Dict[str, Any]]:
     ]
 
     # Filter to next 3 weeks
-    cutoff = datetime.now() + timedelta(days=21)
+    cutoff = datetime.now(tz.tzlocal()) + timedelta(days=21)
     filtered_events = []
     for event in events:
         if event.get("start_iso"):
