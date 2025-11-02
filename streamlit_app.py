@@ -69,6 +69,46 @@ def load_events():
             "source": "Visit Oxford",
             "link": "https://squarebooks.com",
             "description": "Join us for an evening with bestselling author discussing their latest work."
+        },
+        {
+            "title": "Proud Larry's Live Music",
+            "start_iso": (today + timedelta(days=5)).isoformat(),
+            "location": "Proud Larry's",
+            "cost": "$10",
+            "category": "Music",
+            "source": "SeatGeek",
+            "link": "https://proudlarrys.com",
+            "description": "Local band performing original songs and covers."
+        },
+        {
+            "title": "Ole Miss Basketball vs Arkansas",
+            "start_iso": (today + timedelta(days=2)).isoformat(),
+            "location": "The Pavilion",
+            "cost": "$15",
+            "category": "Sports",
+            "source": "Ole Miss Athletics",
+            "link": "https://olemisssports.com",
+            "description": "Men's basketball game against Arkansas."
+        },
+        {
+            "title": "Oxford Farmers Market",
+            "start_iso": (today + timedelta(days=1)).isoformat(),
+            "location": "Oxford Square",
+            "cost": "Free",
+            "category": "Community",
+            "source": "Visit Oxford",
+            "link": "https://visitoxfordms.com",
+            "description": "Weekly farmers market with local produce, crafts, and food."
+        },
+        {
+            "title": "The Lyric Oxford - Concert",
+            "start_iso": (today + timedelta(days=10)).isoformat(),
+            "location": "The Lyric Oxford",
+            "cost": "$25",
+            "category": "Music",
+            "source": "Ticketmaster",
+            "link": "https://www.thelyricoxford.com",
+            "description": "Live concert featuring local and touring artists."
         }
     ]
 

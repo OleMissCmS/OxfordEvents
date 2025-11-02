@@ -21,7 +21,7 @@ BANDSINTOWN_CSS = """
 
 /* Clean white background container */
 .main .block-container {
-    padding-top: 1rem;
+    padding-top: 0.5rem;
     padding-bottom: 2rem;
     max-width: 1400px;
     background-color: #FFFFFF;
@@ -43,7 +43,7 @@ BANDSINTOWN_CSS = """
 .hero {
     background: #FFFFFF;
     color: #333333;
-    padding: 2rem 1rem;
+    padding: 1rem;
     border-radius: 0 0 8px 8px;
     margin-bottom: 1rem;
     border-bottom: 1px solid #e9ecef;
