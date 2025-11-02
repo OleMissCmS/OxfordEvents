@@ -4,6 +4,7 @@ Image processing utilities for event images, including sports team logos
 
 import io
 import re
+import base64
 from typing import Optional, Tuple, Dict, Any
 from PIL import Image, ImageDraw
 import requests
@@ -241,6 +242,7 @@ def get_event_image(event: dict) -> Tuple[Any, Optional[str]]:
     """
     title = event.get("title", "")
     category = event.get("category", "")
+    location = event.get("location", "")
     
     # Check if this is a sports event
     is_sports = category == "Sports" or "vs" in title.lower() or "@" in title.lower()
@@ -259,6 +261,11 @@ def get_event_image(event: dict) -> Tuple[Any, Optional[str]]:
     url = (event.get("image") or event.get("img") or "").strip()
     if url:
         return url, None
+    
+    # Try to get location-specific image
+    location_img = search_location_image(location)
+    if location_img:
+        return location_img, None
     
     # Fallback to category-specific placeholder
     from utils.placeholder_images import get_placeholder_image
@@ -297,4 +304,61 @@ def curl_test_url(url: str, timeout: int = 5) -> Dict[str, Any]:
         result["error"] = f"Unexpected: {type(e).__name__}: {e}"
     
     return result
+
+
+# Known venue images - can be expanded with actual image URLs
+VENUE_IMAGES = {
+    # Oxford venues from Bandsintown + local places
+    "kennon observatory": "https://images.unsplash.com/photo-1446776653964-20c1d3a81b06?w=800",
+    "the lyric oxford": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800",
+    "lyric": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800",
+    "proud larry's": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800",
+    "proud larry": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800",
+    "vaught-hemingway stadium": "https://images.unsplash.com/photo-1530035415911-95194de4ebcc?w=800",
+    "vaught": "https://images.unsplash.com/photo-1530035415911-95194de4ebcc?w=800",
+    "hemingway": "https://images.unsplash.com/photo-1530035415911-95194de4ebcc?w=800",
+    "swayze field": "https://images.unsplash.com/photo-1566577134770-3d85bb3a9cc4?w=800",
+    "swayze": "https://images.unsplash.com/photo-1566577134770-3d85bb3a9cc4?w=800",
+    "the pavilion": "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800",
+    "pavilion": "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800",
+    "square books": "https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=800",
+    "square": "https://images.unsplash.com/photo-1483808161634-29aa1b0e585e?w=800",
+    "landers center": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800",
+    "landers": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800",
+    "cadence bank arena": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800",
+    "cadence": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800",
+    "heindl center": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800",
+    "heindl": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800",
+    "ford center": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800",
+    "ford": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800",
+    "hillcrest": "https://images.unsplash.com/photo-1474650918787-cf5ee6380121?w=800",
+    "houston high school": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800",
+    "houston": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800",
+    "library": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800",
+    "gertrude": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800",
+    "performing arts": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800",
+}
+
+def search_location_image(location: str) -> Optional[str]:
+    """
+    Search for an image of a location.
+    Returns the first image URL found or None.
+    """
+    if not location or location.lower() in ['', 'oxford, ms', 'oxford', 'tbd', 'tba', 'venue tbd']:
+        return None
+    
+    try:
+        # Clean location name
+        location_clean = location.split(',')[0].strip().lower()
+        location_clean = location_clean.split('-')[0].strip()
+        
+        # Check if we have a known image for this venue
+        for venue_key, image_url in VENUE_IMAGES.items():
+            if venue_key in location_clean:
+                return image_url
+        
+        # If no match found, return None to use category placeholder
+        return None
+    except Exception as e:
+        return None
 

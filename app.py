@@ -233,8 +233,19 @@ def sports_image(title):
 def category_image(category, title):
     """Generate smart category placeholder image"""
     from utils.smart_image_generator import generate_category_image
-    from flask import send_file
+    from utils.image_processing import search_location_image
+    from flask import send_file, request
     
+    # Try to get location image first
+    location = request.args.get('location', '')
+    if location:
+        location_img = search_location_image(location)
+        if location_img:
+            # Redirect to location image
+            from flask import redirect
+            return redirect(location_img)
+    
+    # Try to generate category-specific image
     try:
         img_buffer, error = generate_category_image(category, title)
         if img_buffer:

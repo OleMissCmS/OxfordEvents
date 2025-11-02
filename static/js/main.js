@@ -7,13 +7,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Filter by category
     filterPills.forEach(pill => {
         pill.addEventListener('click', function() {
-            // Update active state
+            // Toggle active state - if already active, turn it off
+            const wasActive = this.classList.contains('active');
             filterPills.forEach(p => p.classList.remove('active'));
-            this.classList.add('active');
             
-            // Filter events
-            const category = this.getAttribute('data-category');
-            filterEvents(category, searchInput.value);
+            if (!wasActive) {
+                // Was not active, make it active
+                this.classList.add('active');
+                const category = this.getAttribute('data-category');
+                filterEvents(category, searchInput.value);
+            } else {
+                // Was active, show all
+                filterEvents('All', searchInput.value);
+            }
         });
     });
     

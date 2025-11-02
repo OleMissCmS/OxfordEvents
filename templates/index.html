@@ -60,7 +60,7 @@
                     {% if event.category == 'Sports' %}
                     <img src="{{ url_for('sports_image', title=event.title) }}" alt="{{ event.title }}">
                     {% else %}
-                    <img src="{{ url_for('category_image', category=event.category, title=event.title) }}" alt="{{ event.title }}">
+                    <img src="{{ url_for('category_image', category=event.category, title=event.title, location=event.location) }}" alt="{{ event.title }}">
                     {% endif %}
                 </div>
                 <div class="event-content">
@@ -74,7 +74,9 @@
                         <span class="event-category">{{ event.category }}</span>
                     </div>
                     <div class="event-description">{{ event.description|truncate_description }}</div>
+                    {% if event.cost != 'Free' %}
                     <a href="{{ event.link }}" class="btn-tickets" target="_blank">Tickets</a>
+                    {% endif %}
                     <div class="calendar-links">
                         <a href="{{ event|google_calendar_link }}" target="_blank" class="calendar-btn google-cal">Google Calendar</a>
                         <a href="{{ event|ics_calendar_link }}" class="calendar-btn apple-cal">Apple Calendar</a>

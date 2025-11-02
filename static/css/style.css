@@ -84,47 +84,63 @@ body {
     opacity: 0.8;
 }
 
-/* Pastel Color Pills */
+/* Lighter Pastel Color Pills */
 .filter-pill[data-category="All"] {
-    border-color: #90caf9;
-    color: #1976d2;
+    border-color: #b3d9ff;
+    color: #4a90e2;
 }
 .filter-pill[data-category="All"].active {
-    background-color: #e3f2fd;
+    background-color: #e6f2ff;
 }
 
 .filter-pill[data-category="Music"] {
-    border-color: #ce93d8;
-    color: #7b1fa2;
+    border-color: #e1bee7;
+    color: #9c27b0;
 }
 .filter-pill[data-category="Music"].active {
-    background-color: #f3e5f5;
+    background-color: #f8e1f5;
 }
 
 .filter-pill[data-category="Arts & Culture"],
 .filter-pill[data-category="Arts"] {
-    border-color: #ffb74d;
-    color: #e65100;
+    border-color: #ffe0b2;
+    color: #ff9800;
 }
 .filter-pill[data-category="Arts & Culture"].active,
 .filter-pill[data-category="Arts"].active {
-    background-color: #fff3e0;
+    background-color: #fff8e1;
 }
 
 .filter-pill[data-category="Community"] {
-    border-color: #81c784;
-    color: #388e3c;
+    border-color: #c8e6c9;
+    color: #4caf50;
 }
 .filter-pill[data-category="Community"].active {
-    background-color: #e8f5e9;
+    background-color: #f1f8e9;
 }
 
 .filter-pill[data-category="Sports"] {
-    border-color: #f48fb1;
-    color: #c2185b;
+    border-color: #f8bbd9;
+    color: #e91e63;
 }
 .filter-pill[data-category="Sports"].active {
     background-color: #fce4ec;
+}
+
+.filter-pill[data-category="Education"] {
+    border-color: #b2ebf2;
+    color: #00bcd4;
+}
+.filter-pill[data-category="Education"].active {
+    background-color: #e0f7fa;
+}
+
+.filter-pill[data-category="University"] {
+    border-color: #bbdefb;
+    color: #2196f3;
+}
+.filter-pill[data-category="University"].active {
+    background-color: #e3f2fd;
 }
 
 /* Search Box */
