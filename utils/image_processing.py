@@ -208,18 +208,18 @@ def get_event_image(event: dict) -> Tuple[Any, Optional[str]]:
     title = event.get("title", "")
     category = event.get("category", "")
     
-    # Check if it's a sports event with team matchup
-    is_sports = category == "Sports" or "vs" in title.lower() or "@" in title.lower()
-    
-    if is_sports:
-        teams = detect_sports_teams(title)
-        if teams:
-            away, home = teams
-            matchup_img, error = create_team_matchup_image(away, home)
-            if matchup_img:
-                return matchup_img, None
-            # If matchup image creation fails, return the specific error
-            return None, error or f"Failed to create matchup image for {away[0]} vs {home[0]}"
+    # TEMPORARILY DISABLED: Sports logo generation to prevent hangs
+    # is_sports = category == "Sports" or "vs" in title.lower() or "@" in title.lower()
+    # 
+    # if is_sports:
+    #     teams = detect_sports_teams(title)
+    #     if teams:
+    #         away, home = teams
+    #         matchup_img, error = create_team_matchup_image(away, home)
+    #         if matchup_img:
+    #             return matchup_img, None
+    #         # If matchup image creation fails, return the specific error
+    #         return None, error or f"Failed to create matchup image for {away[0]} vs {home[0]}"
     
     # Try to get regular event image
     url = (event.get("image") or event.get("img") or "").strip()
