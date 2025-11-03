@@ -827,6 +827,12 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     # Sort by date
     result = sorted(filtered_events, key=lambda x: x.get("start_iso", ""))
     
+    # Add image URLs to events (pre-generate and cache)
+    try:
+        result = _add_image_urls_to_events(result)
+    except Exception as e:
+        print(f"[collect_all_events] Warning: Could not add image URLs: {e}")
+    
     # Clear status when complete
     try:
         from lib.status_tracker import clear_status
@@ -835,6 +841,63 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         pass
     
     return result
+
+
+def _add_image_urls_to_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Add image URLs to events by checking database cache or generating new images.
+    This creates persistent links between events and their images.
+    """
+    import hashlib
+    try:
+        from lib.database import get_session, EventImage
+        
+        session = get_session()
+        
+        for event in events:
+            # Create unique hash for this event
+            event_key = f"{event.get('title', '')}_{event.get('start_iso', '')}_{event.get('location', '')}"
+            event_hash = hashlib.sha256(event_key.encode()).hexdigest()[:16]
+            
+            # Check if image exists in database
+            event_image = session.query(EventImage).filter_by(event_hash=event_hash).first()
+            
+            if event_image and event_image.image_url:
+                # Use cached image URL
+                event['image_url'] = event_image.image_url
+                event['image_type'] = event_image.image_type
+            else:
+                # Store event info in database (image will be generated on first request)
+                category = event.get('category', '')
+                title = event.get('title', '')
+                location = event.get('location', '')
+                
+                # Determine image type
+                if category in ['Sports', 'Ole Miss Athletics']:
+                    image_type = 'sports'
+                else:
+                    image_type = 'category'
+                
+                # Store placeholder (will be populated after first image generation)
+                event_image = EventImage(
+                    event_hash=event_hash,
+                    event_title=title,
+                    event_date=event.get('start_iso', ''),
+                    event_location=location,
+                    image_url=None,  # Will be populated after first generation
+                    image_type=image_type
+                )
+                session.merge(event_image)
+                event['image_type'] = image_type
+                event['image_hash'] = event_hash  # Store hash for later use
+            
+        session.commit()
+        session.close()
+    except Exception as e:
+        print(f"[_add_image_urls_to_events] Error: {e}")
+        # Continue without image URLs if database fails
+    
+    return events
 
 
 def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str, str]]]:
