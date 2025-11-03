@@ -674,6 +674,21 @@ def fetch_espn_schedule(url: str, source_name: str, sport_type: str = "football"
     return events
 
 
+def _convert_espn_to_olemiss_url(espn_url: str, sport_type: str) -> str:
+    """Convert ESPN URL to Ole Miss Athletics schedule URL"""
+    base_url = "https://olemisssports.com/sports"
+    
+    if sport_type == "football":
+        return f"{base_url}/football/schedule/2025"
+    elif "basketball" in sport_type.lower():
+        if "women" in espn_url.lower() or "wbb" in espn_url.lower():
+            return f"{base_url}/womens-basketball/schedule/2025-26"
+        else:
+            return f"{base_url}/mens-basketball/schedule/2025-26"
+    
+    return None
+
+
 def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Collect events from all sources"""
     all_events = []
@@ -720,7 +735,16 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             url = source.get('url')
             sport_type = source.get('sport_type', 'football')
             if url:
+                # Try ESPN scraper first (requires Chrome)
                 events = fetch_espn_schedule(url, source_name, sport_type=sport_type)
+                # If ESPN scraper failed, try Ole Miss Athletics site as fallback
+                if not events:
+                    from lib.olemiss_athletics_scraper import fetch_olemiss_schedule
+                    # Convert ESPN URL to Ole Miss Athletics URL
+                    olemiss_url = _convert_espn_to_olemiss_url(url, sport_type)
+                    if olemiss_url:
+                        print(f"[ESPN] Falling back to Ole Miss Athletics site: {olemiss_url}")
+                        events = fetch_olemiss_schedule(olemiss_url, source_name, sport_type=sport_type)
                 all_events.extend(events)
     
     # Filter to next 3 weeks

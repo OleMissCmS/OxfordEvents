@@ -93,7 +93,7 @@ EVENT_SOURCES = [
     {"name": "Ole Miss Soccer", "type": "ics", "url": "https://olemisssports.com/calendar.ashx/calendar.ics?path=soccer", "group": "University"},
     {"name": "Ole Miss Volleyball", "type": "ics", "url": "https://olemisssports.com/calendar.ashx/calendar.ics?path=volleyball", "group": "University"},
     {"name": "Ole Miss Tennis", "type": "ics", "url": "https://olemisssports.com/calendar.ashx/calendar.ics?path=tennis", "group": "University"},
-    # ESPN Ole Miss Athletics (Selenium-based, always most recent year)
+    # ESPN Ole Miss Athletics (Selenium-based with HTML fallback, always most recent year)
     {"name": "ESPN Ole Miss Football", "type": "espn", "url": "https://www.espn.com/college-football/team/schedule/_/id/145/ole-miss-rebels", "sport_type": "football", "group": "University"},
     {"name": "ESPN Ole Miss MBB", "type": "espn", "url": "https://www.espn.com/mens-college-basketball/team/schedule/_/id/145", "sport_type": "basketball", "group": "University"},
     {"name": "ESPN Ole Miss WBB", "type": "espn", "url": "https://www.espn.com/womens-college-basketball/team/schedule/_/id/145/ole-miss-rebels", "sport_type": "basketball", "group": "University"},
