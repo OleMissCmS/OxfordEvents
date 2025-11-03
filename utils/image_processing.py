@@ -173,9 +173,40 @@ def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str
     team1_result = find_team(team1_text)
     team2_result = find_team(team2_text)
     
+    # If both teams found, return them
     if team1_result[0] and team2_result[0]:
         # First team is away, second is home
         return team1_result, team2_result
+    
+    # If only one team found, try to fetch the other from database/wiki
+    # This handles cases like "Ole Miss vs Norfolk State" where Norfolk State isn't in hardcoded list
+    if team1_result[0] and not team2_result[0]:
+        # Try harder to find team2 - clean the text and try database/wiki
+        team2_clean = team2_text.strip()
+        try:
+            from utils.image_database import get_team_logo
+            logos = get_team_logo(team2_clean)
+            if logos:
+                name_parts = team2_clean.split()
+                name = ' '.join(word.capitalize() for word in name_parts)
+                team2_result = (name, logos)
+                return team1_result, team2_result
+        except Exception:
+            pass
+    
+    if team2_result[0] and not team1_result[0]:
+        # Try harder to find team1 - clean the text and try database/wiki
+        team1_clean = team1_text.strip()
+        try:
+            from utils.image_database import get_team_logo
+            logos = get_team_logo(team1_clean)
+            if logos:
+                name_parts = team1_clean.split()
+                name = ' '.join(word.capitalize() for word in name_parts)
+                team1_result = (name, logos)
+                return team1_result, team2_result
+        except Exception:
+            pass
     
     return None
 

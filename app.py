@@ -69,8 +69,8 @@ def format_datetime(value):
             return value
 
 @app.template_filter('truncate_description')
-def truncate_description(value, max_words=100):
-    """Truncate description to max_words"""
+def truncate_description(value, max_words=50):
+    """Truncate description to max_words (default 50)"""
     if not value:
         return ""
     words = value.split()

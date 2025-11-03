@@ -113,14 +113,28 @@ def fetch_olemiss_schedule(url: str, source_name: str, sport_type: str = "footba
                     opponent_clean = re.sub(r'\s+Oxford.*$', '', opponent_clean, flags=re.IGNORECASE)
                     opponent_clean = re.sub(r'\s+Miss\..*$', '', opponent_clean, flags=re.IGNORECASE)
                     
+                    # Determine location and title based on sport
                     if sport_type == "football":
                         location = "Vaught-Hemingway Stadium"
+                        title = f"Ole Miss vs {opponent_clean}"
                     elif "basketball" in sport_type.lower():
                         location = "The Pavilion"
+                        # Determine if men's or women's basketball based on sport_type or source
+                        sport_type_lower = sport_type.lower()
+                        source_lower = source_name.lower()
+                        if "women" in sport_type_lower or "wbb" in sport_type_lower or "women" in source_lower:
+                            title = f"Ole Miss Women's Basketball vs {opponent_clean}"
+                        elif "men" in sport_type_lower or "mbb" in sport_type_lower or "men" in source_lower:
+                            title = f"Ole Miss Men's Basketball vs {opponent_clean}"
+                        else:
+                            # Default to men's if unclear (check URL for hints)
+                            if "womens" in url.lower() or "women" in url.lower():
+                                title = f"Ole Miss Women's Basketball vs {opponent_clean}"
+                            else:
+                                title = f"Ole Miss Men's Basketball vs {opponent_clean}"
                     else:
                         location = "TBD"
-                    
-                    title = f"Ole Miss vs {opponent_clean}"
+                        title = f"Ole Miss vs {opponent_clean}"
                     
                     events.append({
                         "title": title,
@@ -220,22 +234,37 @@ def _parse_table_row(row, source_name: str, sport_type: str, base_url: str) -> D
             except:
                 return None
         
-        # Determine location
+        # Determine location and title based on sport
         if sport_type == "football":
             location = "Vaught-Hemingway Stadium"
+            title = f"Ole Miss vs {opponent_clean}"
         elif "basketball" in sport_type.lower():
             location = "The Pavilion"
+            # Determine if men's or women's basketball based on sport_type or source
+            sport_type_lower = sport_type.lower()
+            source_lower = source_name.lower()
+            if "women" in sport_type_lower or "wbb" in sport_type_lower or "women" in source_lower:
+                title = f"Ole Miss Women's Basketball vs {opponent_clean}"
+            elif "men" in sport_type_lower or "mbb" in sport_type_lower or "men" in source_lower:
+                title = f"Ole Miss Men's Basketball vs {opponent_clean}"
+            else:
+                # Default to men's if unclear (check URL for hints)
+                if "womens" in base_url.lower() or "women" in base_url.lower():
+                    title = f"Ole Miss Women's Basketball vs {opponent_clean}"
+                else:
+                    title = f"Ole Miss Men's Basketball vs {opponent_clean}"
         elif sport_type == "baseball":
             location = "Swayze Field"
+            title = f"Ole Miss vs {opponent_clean}"
         elif sport_type == "softball":
             location = "Ole Miss Softball Complex"
+            title = f"Ole Miss vs {opponent_clean}"
         elif sport_type == "volleyball":
             location = "The Pavilion"
+            title = f"Ole Miss vs {opponent_clean}"
         else:
             location = "TBD"
-        
-        # Build title
-        title = f"Ole Miss vs {opponent_clean}"
+            title = f"Ole Miss vs {opponent_clean}"
         
         return {
             "title": title,
