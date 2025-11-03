@@ -285,7 +285,7 @@ def fetch_google_image(query: str, num_results: int = 5) -> Optional[str]:
                 results = list(ddgs.images(
                     keywords=search_query,
                     max_results=num_results,
-                    safe_search='moderate'
+                    safesearch='moderate'
                 ))
             
             for result in results:

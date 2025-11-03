@@ -52,14 +52,17 @@ def get_images_dir():
 def get_database_dir():
     """Get directory for database files"""
     base = get_storage_base_path()
-    
-    if 'persistent' in base.lower() or base == 'data':
-        # On persistent disk or local dev: use persistent/data
+
+    if 'persistent' in base.lower():
+        # On persistent disk: use persistent/data
         db_dir = os.path.join(base, 'data')
+    elif base == 'data':
+        # Local dev: use data/ directly (not data/data)
+        db_dir = 'data'
     else:
         # Fallback to local data/
         db_dir = 'data'
-    
+
     os.makedirs(db_dir, exist_ok=True)
     return db_dir
 

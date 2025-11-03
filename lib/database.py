@@ -6,7 +6,7 @@ Uses SQLite for free, persistent storage
 from sqlalchemy import create_engine, Column, String, Text, DateTime, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import time
 
@@ -20,8 +20,8 @@ class TeamLogo(Base):
     team_name = Column(String(200), primary_key=True)
     logo_urls = Column(Text)  # JSON array of URLs
     source = Column(String(50))  # 'wikipedia', 'espn', etc.
-    fetched_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    fetched_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class VenueImage(Base):
@@ -31,8 +31,8 @@ class VenueImage(Base):
     venue_name = Column(String(200), primary_key=True)
     image_url = Column(String(500))
     source = Column(String(50))  # 'wikipedia', 'google', etc.
-    fetched_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    fetched_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class ImageCache(Base):
@@ -42,7 +42,7 @@ class ImageCache(Base):
     cache_key = Column(String(200), primary_key=True)
     image_data = Column(Text)  # Base64 encoded or file path
     content_type = Column(String(50), default='image/png')
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     expires_at = Column(DateTime)
 
 
@@ -56,8 +56,8 @@ class EventImage(Base):
     event_location = Column(String(200))
     image_url = Column(String(500))  # Cached image URL or path
     image_type = Column(String(50))  # 'sports', 'venue', 'category', 'custom'
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 # Database connection
