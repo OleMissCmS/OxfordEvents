@@ -12,6 +12,8 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote, urlparse
 import time
+from collections import defaultdict
+from threading import Lock
 
 # Use persistent disk storage if available
 try:
@@ -44,6 +46,13 @@ except Exception as e:
 # Ensure directories exist (in case storage.py fails)
 os.makedirs(DB_DIR, exist_ok=True)
 os.makedirs(IMAGES_DIR, exist_ok=True)
+
+# Rate limiting for DuckDuckGo requests
+_rate_limit_lock = Lock()
+_last_request_time = defaultdict(float)
+_min_request_interval = 2.0  # Minimum 2 seconds between DuckDuckGo requests
+_rate_limit_errors = defaultdict(int)  # Track rate limit errors per endpoint
+_max_rate_limit_errors = 5  # Stop trying after 5 rate limit errors
 
 
 def load_database(db_path: str) -> Dict:
@@ -268,11 +277,50 @@ def fetch_wikipedia_venue_image(venue_name: str) -> Optional[str]:
         return None
 
 
+def _check_rate_limit(endpoint: str = "default") -> bool:
+    """Check if we should throttle requests due to rate limiting"""
+    with _rate_limit_lock:
+        # If we've hit too many rate limit errors, stop trying
+        if _rate_limit_errors[endpoint] >= _max_rate_limit_errors:
+            return False
+        
+        # Check time since last request
+        last_time = _last_request_time[endpoint]
+        elapsed = time.time() - last_time
+        
+        if elapsed < _min_request_interval:
+            # Wait until minimum interval has passed
+            sleep_time = _min_request_interval - elapsed
+            time.sleep(sleep_time)
+        
+        return True
+
+
+def _record_rate_limit_error(endpoint: str = "default"):
+    """Record a rate limit error"""
+    with _rate_limit_lock:
+        _rate_limit_errors[endpoint] += 1
+
+
+def _record_successful_request(endpoint: str = "default"):
+    """Record a successful request"""
+    with _rate_limit_lock:
+        _last_request_time[endpoint] = time.time()
+        # Reset error count on success
+        _rate_limit_errors[endpoint] = 0
+
+
 def fetch_google_image(query: str, num_results: int = 5) -> Optional[str]:
     """
     Fetch image using DuckDuckGo (simple, no API key needed)
     Returns local file path if successful, None otherwise
+    Includes rate limiting to avoid 403/202 errors
     """
+    # Check rate limit first
+    if not _check_rate_limit("duckduckgo"):
+        print(f"[image_database] Rate limit exceeded for DuckDuckGo, skipping fetch for '{query}'")
+        return None
+    
     try:
         # Use duckduckgo-search library (simple, no API key)
         try:
@@ -280,13 +328,22 @@ def fetch_google_image(query: str, num_results: int = 5) -> Optional[str]:
             
             search_query = f"{query} oxford MS"
             
-            # Search for images
-            with DDGS() as ddgs:
-                results = list(ddgs.images(
-                    keywords=search_query,
-                    max_results=num_results,
-                    safesearch='moderate'
-                ))
+            # Search for images with rate limiting
+            try:
+                with DDGS() as ddgs:
+                    results = list(ddgs.images(
+                        keywords=search_query,
+                        max_results=num_results,
+                        safesearch='moderate'
+                    ))
+            except Exception as e:
+                error_str = str(e).lower()
+                if 'ratelimit' in error_str or '403' in error_str or '202' in error_str:
+                    _record_rate_limit_error("duckduckgo")
+                    print(f"[image_database] Rate limited by DuckDuckGo for '{query}', will retry later")
+                    return None
+                else:
+                    raise
             
             for result in results:
                 img_url = result.get('image', '') or result.get('url', '')
@@ -303,7 +360,11 @@ def fetch_google_image(query: str, num_results: int = 5) -> Optional[str]:
                 
                 if download_image(img_url, local_path):
                     print(f"[image_database] Successfully downloaded image from DuckDuckGo: {img_url[:80]}...")
+                    _record_successful_request("duckduckgo")
                     return f"/static/images/cache/{filename}"
+            
+            # If we got results but none downloaded successfully, still record success
+            _record_successful_request("duckduckgo")
         
         except ImportError:
             # Library not installed, try simple Bing search as fallback
