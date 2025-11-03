@@ -377,14 +377,28 @@ def fetch_espn_schedule(url: str, source_name: str, sport_type: str = "football"
         from selenium.webdriver.chrome.options import Options
         from webdriver_manager.chrome import ChromeDriverManager
         
-        # Configure Chrome options for headless mode
+        # Configure Chrome options for headless mode (Render-compatible)
         chrome_options = Options()
-        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--headless=new')  # Use new headless mode
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--disable-software-rasterizer')
+        chrome_options.add_argument('--disable-extensions')
         chrome_options.add_argument('--window-size=1920,1080')
-        chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+        chrome_options.add_argument('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+        
+        # For Render/Linux environments, Chrome might be at /usr/bin/chromium or /usr/bin/chromium-browser
+        import os
+        chrome_binary = None
+        for possible_path in ['/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome', '/usr/bin/chrome']:
+            if os.path.exists(possible_path):
+                chrome_binary = possible_path
+                break
+        
+        if chrome_binary:
+            chrome_options.binary_location = chrome_binary
+            print(f"[ESPN] Using Chrome binary at: {chrome_binary}")
         
         # Initialize driver
         # Use webdriver-manager to automatically handle driver downloads
@@ -392,10 +406,15 @@ def fetch_espn_schedule(url: str, source_name: str, sport_type: str = "football"
             from selenium.webdriver.chrome.service import Service as ChromeService
             service = ChromeService(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=chrome_options)
+            print(f"[ESPN] Chrome driver initialized successfully")
         except Exception as e:
             # Fallback: try without webdriver-manager (for systems with ChromeDriver in PATH)
-            print(f"Warning: Could not use webdriver-manager: {e}")
-            driver = webdriver.Chrome(options=chrome_options)
+            print(f"[ESPN] Warning: Could not use webdriver-manager: {e}")
+            try:
+                driver = webdriver.Chrome(options=chrome_options)
+            except Exception as e2:
+                print(f"[ESPN] Error: Failed to initialize Chrome driver: {e2}")
+                raise
         
         try:
             # Navigate to ESPN schedule page
@@ -635,12 +654,16 @@ def fetch_espn_schedule(url: str, source_name: str, sport_type: str = "football"
             driver.quit()
             
     except ImportError:
-        print(f"Selenium not available. Install with: pip install selenium webdriver-manager")
+        print(f"[ESPN] Selenium not available. Install with: pip install selenium webdriver-manager")
         # Return empty list if Selenium isn't installed
     except Exception as e:
-        print(f"Error fetching ESPN schedule from {url}: {e}")
+        print(f"[ESPN] Error fetching ESPN schedule from {url}: {e}")
         import traceback
+        print(f"[ESPN] Full traceback:")
         traceback.print_exc()
+    
+    if not events:
+        print(f"[ESPN] No events found for {source_name} - this may be normal if scraping failed or no upcoming games")
     
     return events
 
