@@ -14,7 +14,14 @@ def categorize_event(title: str, description: str = "", source: str = "") -> str
     text = f"{title} {description}".lower()  # Don't include source in keyword matching
     
     # Check if source indicates Ole Miss Athletics
-    if "ole miss" in source.lower() and any(sport in source.lower() for sport in ['football', 'basketball', 'baseball', 'softball', 'soccer', 'tennis', 'volleyball', 'track', 'mbb', 'wbb']):
+    source_lower = source.lower()
+    # Check for ESPN Ole Miss sources or Ole Miss sports sources
+    if ("espn" in source_lower and "ole miss" in source_lower) or \
+       ("ole miss" in source_lower and any(sport in source_lower for sport in ['football', 'basketball', 'baseball', 'softball', 'soccer', 'tennis', 'volleyball', 'track', 'mbb', 'wbb'])):
+        return "Ole Miss Athletics"
+    
+    # Also check if title/description indicates Ole Miss Athletics game
+    if "ole miss" in text and (" vs " in text or " vs. " in text) and any(sport in text for sport in ['football', 'basketball', 'game']):
         return "Ole Miss Athletics"
     
     # Sports keywords - be specific
