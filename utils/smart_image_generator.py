@@ -24,6 +24,7 @@ def generate_category_image(category: str, title: str = "") -> Tuple[Optional[io
             "Community": {"bg": "#28a745", "text": "#ffffff"},
             "Education": {"bg": "#17a2b8", "text": "#ffffff"},
             "University": {"bg": "#0056b3", "text": "#ffffff"},
+            "Ole Miss Athletics": {"bg": "#C8122E", "text": "#ffffff"},
         }
         
         category_colors = colors.get(category, {"bg": "#6C757D", "text": "#ffffff"})
@@ -40,6 +41,7 @@ def generate_category_image(category: str, title: str = "") -> Tuple[Optional[io
             "Community": "🏠",
             "Education": "📚",
             "University": "🎓",
+            "Ole Miss Athletics": "🏈",
         }
         
         icon = icons.get(category, "📅")

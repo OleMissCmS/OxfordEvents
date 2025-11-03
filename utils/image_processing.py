@@ -344,10 +344,12 @@ VENUE_IMAGES = {
     "bryant": "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=800",
     "law center": "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=800",
     "khayat": "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=800",
-    "catfish row museum": "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800",
-    "catfish row": "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800",
+    "robert c. khayat": "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=800",
+    "catfish row museum": "https://images.unsplash.com/photo-1517819846840-c2273c7669a6?w=800",
+    "catfish row": "https://images.unsplash.com/photo-1517819846840-c2273c7669a6?w=800",
     "south campus recreation center": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800",
     "recreation center": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800",
+    "lyceum": "https://images.unsplash.com/photo-1562774053-701939374585?w=800",
 }
 
 def search_location_image(location: str) -> Optional[str]:

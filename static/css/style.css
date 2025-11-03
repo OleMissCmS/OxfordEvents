@@ -143,6 +143,14 @@ body {
     background-color: #e3f2fd;
 }
 
+.filter-pill[data-category="Ole Miss Athletics"] {
+    border-color: #ffcdd2;
+    color: #d32f2f;
+}
+.filter-pill[data-category="Ole Miss Athletics"].active {
+    background-color: #ffebee;
+}
+
 /* Search Box */
 .search-box {
     flex: 1;
