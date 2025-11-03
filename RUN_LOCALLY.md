@@ -1,77 +1,78 @@
-# Running Oxford Events Locally
+# How to Run Oxford Events Locally
 
-## Prerequisites
+## Quick Start
 
-Install Python 3.9 or higher from [python.org](https://www.python.org/downloads/)
+**Local URL:** `http://localhost:5000` or `http://127.0.0.1:5000`
 
-During installation, check:
-- ✅ "Add Python to PATH"
-- ✅ "Install pip"
+## Step-by-Step Instructions
 
-## Setup Instructions
+### 1. Make sure you're in the project directory
 
-1. Open PowerShell or Command Prompt in this directory
-
-2. Create a virtual environment:
-   ```powershell
-   python -m venv venv
-   ```
-
-3. Activate the virtual environment:
-   
-   **PowerShell:**
-   ```powershell
-   .\venv\Scripts\Activate.ps1
-   ```
-   
-   **If you get an execution policy error:**
-   ```powershell
-   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-   .\venv\Scripts\Activate.ps1
-   ```
-   
-   **Command Prompt:**
-   ```cmd
-   venv\Scripts\activate
-   ```
-
-4. Install dependencies:
-   ```powershell
-   pip install -r requirements.txt
-   ```
-
-5. Run the Streamlit app:
-   ```powershell
-   streamlit run streamlit_app.py
-   ```
-
-6. Open your browser to the URL shown (usually http://localhost:8501)
-
-## Quick Test
-
-To test with the minimal app first:
 ```powershell
-streamlit run streamlit_app_minimal.py
+cd C:\Users\chads\Documents\GitHub\OxfordEvents
 ```
+
+### 2. Activate virtual environment (if using one)
+
+```powershell
+.\venv\Scripts\activate
+```
+
+### 3. Install dependencies (if not already installed)
+
+```powershell
+pip install -r requirements.txt
+```
+
+### 4. Run the Flask app
+
+**Option A: Using Python directly**
+```powershell
+python app.py
+```
+
+**Option B: Using Flask CLI**
+```powershell
+python -m flask --app app run
+```
+
+### 5. Open in browser
+
+Once you see "Running on http://127.0.0.1:5000", open your browser and go to:
+
+- http://localhost:5000
+- http://127.0.0.1:5000
+
+## Expected Behavior
+
+- First load: May take 10-30 seconds while it scrapes all 14 event sources
+- Subsequent loads: Fast (< 1 second) due to caching
+- You'll see 47+ events from Ole Miss and community sources
 
 ## Troubleshooting
 
-**Python not found:**
-- Reinstall Python and ensure "Add to PATH" is checked
-- Restart your terminal after installation
+### "Port 5000 is already in use"
+Change the port:
+```powershell
+python app.py
+# Then in app.py, change port=5000 to port=5001
+```
 
-**Streamlit command not found:**
-- Make sure venv is activated (you should see `(venv)` in your prompt)
-- Run `pip install -r requirements.txt` again
+### "ModuleNotFoundError"
+Install missing package:
+```powershell
+pip install <package-name>
+```
 
-**Port already in use:**
-- Use: `streamlit run streamlit_app.py --server.port 8502`
+### App doesn't start
+Check for errors in the terminal output.
 
-## Benefits of Running Locally
+## Stop the Server
 
-- ✅ No wait for Cloud deployments (instant feedback)
-- ✅ See errors in terminal immediately
-- ✅ Faster development cycle
-- ✅ Can debug with print statements
-- ✅ Works offline
+Press `Ctrl+C` in the terminal running the app.
 
+## Notes
+
+- The app uses Flask-Caching (10-minute cache) to prevent timeouts
+- Local instance pulls real data from all configured sources
+- Changes to code require restarting the app (Ctrl+C then run again)
