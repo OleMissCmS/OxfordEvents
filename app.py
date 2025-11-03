@@ -481,6 +481,9 @@ def category_image(category, title):
                 # Redirect to location image (these are external, no need to cache)
                 from flask import redirect
                 return redirect(location_img)
+        except Exception as e:
+            print(f"[category_image] Error searching for venue image: {e}")
+            pass
     
     # Try to generate category-specific image
     try:
