@@ -298,9 +298,9 @@ def sports_image(title):
     except Exception as e:
         print(f"Error generating sports image: {e}")
     
-        # Return placeholder if no matchup image
-        from flask import send_from_directory
-        return send_from_directory('static/images', 'placeholder.svg')
+    # Return placeholder if no matchup image
+    from flask import send_from_directory
+    return send_from_directory('static/images', 'placeholder.svg')
 
 
 @app.route('/static/images/cache/<path:filename>')
