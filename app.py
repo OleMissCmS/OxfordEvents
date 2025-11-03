@@ -254,6 +254,19 @@ def api_events():
     return jsonify(events)
 
 
+@app.route('/api/status')
+def api_status():
+    """API endpoint for loading status"""
+    try:
+        from lib.status_tracker import get_status
+        status = get_status()
+        if status:
+            return jsonify(status)
+        return jsonify({"status": "complete"})
+    except Exception:
+        return jsonify({"status": "unknown"})
+
+
 @app.route('/api/clear-cache')
 def clear_cache():
     """Clear the events cache - useful for testing"""

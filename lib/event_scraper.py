@@ -691,11 +691,34 @@ def _convert_espn_to_olemiss_url(espn_url: str, sport_type: str) -> str:
 
 def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Collect events from all sources"""
+    # Initialize status tracking
+    try:
+        from lib.status_tracker import set_status, clear_status
+        total_steps = len(sources) + 2  # Each source + filtering + finalizing
+        set_status(0, total_steps, "Starting to load events...", "")
+    except Exception:
+        pass
+    
     all_events = []
     
-    for source in sources:
+    for idx, source in enumerate(sources):
         source_type = source.get('type')
         source_name = source.get('name', 'Unknown')
+        
+        # Update status for this source
+        try:
+            from lib.status_tracker import set_status
+            source_type_name = {
+                'ics': 'calendar',
+                'rss': 'RSS feed',
+                'html': 'website',
+                'api': 'API',
+                'espn': 'sports schedule',
+                'olemiss': 'sports schedule'
+            }.get(source_type, 'source')
+            set_status(idx + 1, len(sources) + 2, f"Checking {source_name}...", f"Loading from {source_type_name}")
+        except Exception:
+            pass
         
         if source_type == 'ics':
             url = source.get('url')
@@ -809,8 +832,24 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     
     print(f"[collect_all_events] Filtered result: {len(filtered_events)} total events ({athletics_filtered} athletics)")
     
+    # Update status - filtering complete
+    try:
+        from lib.status_tracker import set_status
+        set_status(len(sources) + 1, len(sources) + 2, "Sorting events by date...", f"Found {len(filtered_events)} events")
+    except Exception:
+        pass
+    
     # Sort by date
-    return sorted(filtered_events, key=lambda x: x.get("start_iso", ""))
+    result = sorted(filtered_events, key=lambda x: x.get("start_iso", ""))
+    
+    # Clear status when complete
+    try:
+        from lib.status_tracker import clear_status
+        clear_status()
+    except Exception:
+        pass
+    
+    return result
 
 
 def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str, str]]]:

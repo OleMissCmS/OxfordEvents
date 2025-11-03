@@ -50,6 +50,25 @@ body {
     font-size: 1rem;
 }
 
+/* Loading Status */
+.loading-status {
+    margin-top: 0.75rem;
+    padding: 0.5rem 0;
+    color: #9E9E9E;
+    font-size: 0.875rem;
+    font-weight: 400;
+    line-height: 1.4;
+}
+
+.loading-status #statusText {
+    display: inline-block;
+}
+
+.loading-status .status-step {
+    color: #757575;
+    font-weight: 500;
+}
+
 /* Filter Section */
 .filter-section {
     display: flex;
