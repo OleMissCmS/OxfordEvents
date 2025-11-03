@@ -48,10 +48,15 @@ def fetch_rss_events(url: str, source_name: str) -> List[Dict[str, Any]]:
     try:
         feed = feedparser.parse(url)
         for entry in feed.entries[:50]:  # Limit to 50 events
+            # Extract location from title (format: "Event Name at Location")
+            location = ''
+            if ' at ' in entry.title:
+                location = entry.title.split(' at ', 1)[1].strip()
+            
             # Get raw description (may contain HTML)
             raw_desc = entry.get('summary', entry.get('description', ''))
             
-            # Strip HTML tags for cleaner display
+            # Parse HTML to clean description
             if raw_desc:
                 from bs4 import BeautifulSoup
                 soup = BeautifulSoup(raw_desc, 'html.parser')
@@ -68,7 +73,7 @@ def fetch_rss_events(url: str, source_name: str) -> List[Dict[str, Any]]:
             event = {
                 "title": entry.title,
                 "start_iso": None,
-                "location": entry.get('location', ''),
+                "location": location,
                 "description": clean_desc,
                 "category": category,
                 "source": source_name,
