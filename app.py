@@ -278,21 +278,42 @@ def clear_cache():
 
 @app.route('/api/sports-image/<path:title>')
 def sports_image(title):
-    """Generate sports matchup image with caching"""
+    """Generate sports matchup image with caching and database storage"""
     import hashlib
-    
+    from flask import request
+    from lib.database import get_session, EventImage
+
+    # Try to get event hash from query param (for database lookup)
+    event_hash = request.args.get('hash')
+    date_str = request.args.get('date', '')
+    location_str = request.args.get('location', '')
+
     # Create unique cache key
     cache_key = f'sports_image_{title}'
     cache_key_hash = hashlib.md5(cache_key.encode()).hexdigest()
-    
-    # Check cache first
+
+    # Check database first (if event_hash provided)
+    if event_hash:
+        try:
+            session = get_session()
+            event_image = session.query(EventImage).filter_by(event_hash=event_hash).first()
+            if event_image and event_image.image_url:
+                session.close()
+                # Redirect to cached image URL
+                from flask import redirect
+                return redirect(event_image.image_url)
+            session.close()
+        except Exception:
+            pass
+
+    # Check Flask cache
     cached_response = cache.get(cache_key_hash)
     if cached_response:
         from flask import Response
         response = Response(cached_response, mimetype='image/png')
         response.headers['Cache-Control'] = 'public, max-age=3600'
         return response
-    
+
     try:
         teams = detect_sports_teams(title)
         if teams:
@@ -303,6 +324,24 @@ def sports_image(title):
                 img_data = matchup_img.getvalue()
                 cache.set(cache_key_hash, img_data, timeout=3600)
                 
+                # Save to database if event_hash provided
+                if event_hash:
+                    try:
+                        session = get_session()
+                        event_image = EventImage(
+                            event_hash=event_hash,
+                            event_title=title,
+                            event_date=date_str,
+                            event_location=location_str,
+                            image_url=f"/api/sports-image/{title}?hash={event_hash}",
+                            image_type='sports'
+                        )
+                        session.merge(event_image)
+                        session.commit()
+                        session.close()
+                    except Exception:
+                        pass
+
                 from flask import send_file
                 response = send_file(matchup_img, mimetype='image/png')
                 response.headers['Cache-Control'] = 'public, max-age=3600'  # Cache for 1 hour

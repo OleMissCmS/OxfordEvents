@@ -807,6 +807,16 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     
     print(f"[collect_all_events] Filtered result: {len(filtered_events)} total events ({athletics_filtered} athletics)")
     
+    # Filter out training events
+    original_count = len(filtered_events)
+    filtered_events = [
+        event for event in filtered_events
+        if "training" not in event.get("title", "").lower() and 
+           "training" not in event.get("description", "").lower()
+    ]
+    if len(filtered_events) < original_count:
+        print(f"[collect_all_events] Filtered out {original_count - len(filtered_events)} training events")
+    
     # Update status - filtering complete
     try:
         from lib.status_tracker import set_status

@@ -46,6 +46,20 @@ class ImageCache(Base):
     expires_at = Column(DateTime)
 
 
+class EventImage(Base):
+    """Store image URLs for events - links events to their images persistently"""
+    __tablename__ = 'event_images'
+    
+    event_hash = Column(String(64), primary_key=True)  # Hash of title+date+location
+    event_title = Column(String(500))
+    event_date = Column(String(50))
+    event_location = Column(String(200))
+    image_url = Column(String(500))  # Cached image URL or path
+    image_type = Column(String(50))  # 'sports', 'venue', 'category', 'custom'
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 # Database connection
 _engine = None
 _session_factory = None
