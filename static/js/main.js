@@ -14,8 +14,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Check status immediately
         checkStatus();
         
-        // Then poll every 500ms
-        statusPollInterval = setInterval(checkStatus, 500);
+        // Then poll every 2 seconds (reduced from 500ms to prevent spam)
+        statusPollInterval = setInterval(checkStatus, 2000);
     }
     
     function checkStatus() {

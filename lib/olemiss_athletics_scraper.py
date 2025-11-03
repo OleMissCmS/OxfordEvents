@@ -27,15 +27,25 @@ def fetch_olemiss_schedule(url: str, source_name: str, sport_type: str = "footba
         }
         
         print(f"[Ole Miss Athletics] Fetching schedule from: {url}")
-        # Add a small delay to account for page loading
-        import time
-        response = requests.get(url, timeout=20, headers=headers)
+        # Reduced timeout to 10s - fail faster to avoid worker timeouts
+        try:
+            response = requests.get(url, timeout=10, headers=headers)
+        except requests.exceptions.Timeout:
+            print(f"[Ole Miss Athletics] Timeout fetching schedule from {url} (10s)")
+            return events
+        except requests.exceptions.RequestException as e:
+            print(f"[Ole Miss Athletics] Error fetching schedule from {url}: {e}")
+            return events
         
         if response.status_code != 200:
             print(f"[Ole Miss Athletics] Error: Got status code {response.status_code}")
             return events
         
-        soup = BeautifulSoup(response.content, 'html.parser')
+        try:
+            soup = BeautifulSoup(response.content, 'html.parser')
+        except Exception as e:
+            print(f"[Ole Miss Athletics] Error parsing HTML from {url}: {e}")
+            return events
         
         # Ole Miss Athletics pages use divs with game information
         # Look for schedule items - they contain date, opponent, and game info

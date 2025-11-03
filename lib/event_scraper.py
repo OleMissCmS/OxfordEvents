@@ -719,54 +719,56 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         except Exception:
             pass
         
-        if source_type == 'ics':
-            url = source.get('url')
-            if url:
-                events = fetch_ics_events(url, source_name)
-                all_events.extend(events)
-        
-        elif source_type == 'rss':
-            url = source.get('url')
-            if url:
-                events = fetch_rss_events(url, source_name)
-                all_events.extend(events)
-        
-        elif source_type == 'html':
-            url = source.get('url')
-            parser = source.get('parser')
-            if url:
-                events = fetch_html_events(url, source_name, parser=parser)
-                all_events.extend(events)
-        
-        elif source_type == 'api':
-            parser = source.get('parser')
-            if parser == 'seatgeek':
-                city = source.get('city')
-                state = source.get('state')
-                if city and state:
-                    events = fetch_seatgeek_events(city, state)
+        # Wrap each source fetch in try/except to prevent one failure from blocking others
+        try:
+            if source_type == 'ics':
+                url = source.get('url')
+                if url:
+                    events = fetch_ics_events(url, source_name)
                     all_events.extend(events)
-            elif parser == 'ticketmaster':
-                city = source.get('city')
-                state_code = source.get('stateCode')
-                if city and state_code:
-                    events = fetch_ticketmaster_events(city, state_code)
+            
+            elif source_type == 'rss':
+                url = source.get('url')
+                if url:
+                    events = fetch_rss_events(url, source_name)
                     all_events.extend(events)
-        
-        elif source_type == 'olemiss':
-            url = source.get('url')
-            sport_type = source.get('sport_type', 'football')
-            if url:
-                try:
+            
+            elif source_type == 'html':
+                url = source.get('url')
+                parser = source.get('parser')
+                if url:
+                    events = fetch_html_events(url, source_name, parser=parser)
+                    all_events.extend(events)
+            
+            elif source_type == 'api':
+                parser = source.get('parser')
+                if parser == 'seatgeek':
+                    city = source.get('city')
+                    state = source.get('state')
+                    if city and state:
+                        events = fetch_seatgeek_events(city, state)
+                        all_events.extend(events)
+                elif parser == 'ticketmaster':
+                    city = source.get('city')
+                    state_code = source.get('stateCode')
+                    if city and state_code:
+                        events = fetch_ticketmaster_events(city, state_code)
+                        all_events.extend(events)
+            
+            elif source_type == 'olemiss':
+                url = source.get('url')
+                sport_type = source.get('sport_type', 'football')
+                if url:
                     from lib.olemiss_athletics_scraper import fetch_olemiss_schedule
                     print(f"[collect_all_events] Fetching Ole Miss schedule: {source_name}")
                     events = fetch_olemiss_schedule(url, source_name, sport_type=sport_type)
                     print(f"[collect_all_events] {source_name}: {len(events)} events found")
                     all_events.extend(events)
-                except Exception as e:
-                    print(f"[collect_all_events] ERROR fetching {source_name}: {e}")
-                    import traceback
-                    traceback.print_exc()
+        except Exception as e:
+            # Log error but continue processing other sources
+            print(f"[collect_all_events] ERROR fetching {source_name}: {str(e)[:100]}")
+            # Continue to next source
+            continue
     
     # Filter to next 3 weeks
     now = datetime.now(tz.tzlocal())
