@@ -25,6 +25,7 @@ def set_status(step: int, total_steps: int, message: str, details: str = ""):
     global _current_status
     with _status_lock:
         _current_status = {
+            "status": "loading",
             "step": step,
             "total_steps": total_steps,
             "message": message,
@@ -36,12 +37,14 @@ def set_status(step: int, total_steps: int, message: str, details: str = ""):
 def get_status() -> Optional[Dict]:
     """Get the current status"""
     with _status_lock:
-        return _current_status.copy() if _current_status else None
+        if _current_status:
+            return _current_status.copy()
+        return {"status": "complete", "step": 0, "total_steps": 0, "message": "Loading complete", "details": ""}
 
 
 def clear_status():
     """Clear the status (when loading is complete)"""
     global _current_status
     with _status_lock:
-        _current_status = None
+        _current_status = {"status": "complete", "step": 0, "total_steps": 0, "message": "Loading complete", "details": ""}
 

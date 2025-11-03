@@ -22,16 +22,8 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch('/api/status')
             .then(response => response.json())
             .then(data => {
-                if (data.status === 'complete' || data.status === 'unknown') {
-                    // Loading complete, hide status
-                    if (loadingStatus) {
-                        loadingStatus.style.display = 'none';
-                    }
-                    if (statusPollInterval) {
-                        clearInterval(statusPollInterval);
-                        statusPollInterval = null;
-                    }
-                } else if (data.step !== undefined && data.total_steps !== undefined) {
+                // Show status if loading, hide if complete/unknown
+                if (data.status === 'loading' && data.step !== undefined && data.total_steps !== undefined) {
                     // Show status with step counter
                     if (loadingStatus) {
                         loadingStatus.style.display = 'block';
@@ -44,6 +36,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         const message = data.message || 'Loading...';
                         const details = data.details ? ` (${data.details})` : '';
                         statusText.innerHTML = stepText + message + details;
+                    }
+                } else {
+                    // Loading complete or unknown, hide status
+                    if (loadingStatus) {
+                        loadingStatus.style.display = 'none';
+                    }
+                    if (statusPollInterval) {
+                        clearInterval(statusPollInterval);
+                        statusPollInterval = null;
                     }
                 }
             })

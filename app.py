@@ -223,7 +223,21 @@ def load_events():
 @app.route('/')
 def index():
     """Main page"""
+    # Start status tracking for page load
+    try:
+        from lib.status_tracker import set_status
+        set_status(0, 1, "Loading events page...", "")
+    except Exception:
+        pass
+    
     events = load_events()
+    
+    # Clear status after events loaded (but before template render)
+    try:
+        from lib.status_tracker import clear_status
+        clear_status()
+    except Exception:
+        pass
     
     # Get unique categories
     categories = sorted(set(event['category'] for event in events))
@@ -248,11 +262,9 @@ def api_status():
     try:
         from lib.status_tracker import get_status
         status = get_status()
-        if status:
-            return jsonify(status)
-        return jsonify({"status": "complete"})
+        return jsonify(status)
     except Exception:
-        return jsonify({"status": "unknown"})
+        return jsonify({"status": "unknown", "step": 0, "total_steps": 0, "message": "Status unavailable", "details": ""})
 
 
 @app.route('/api/clear-cache')
@@ -395,10 +407,62 @@ def category_image(category, title):
     # Get event_hash if provided (for event-specific storage)
     event_hash = request.args.get('hash', '')
     
-    # Try to get location image first (with event_hash to avoid re-searching)
+    # Check EventImage database first (fast path - no searching)
+    if event_hash:
+        try:
+            from lib.database import get_session, EventImage
+            session = get_session()
+            event_image = session.query(EventImage).filter_by(event_hash=event_hash).first()
+            if event_image and event_image.image_url:
+                image_url = event_image.image_url
+                session.close()
+                if image_url and image_url.startswith('/'):
+                    from flask import redirect
+                    return redirect(image_url)
+            session.close()
+        except Exception:
+            pass
+    
+    # Try to get location image with timeout (don't block page load)
     if location:
-        location_img = search_location_image(location, event_hash=event_hash)
-        if location_img:
+        # Quick check: try event-specific storage without expensive searches
+        try:
+            from utils.image_database import get_event_venue_image
+            if event_hash:
+                quick_img = get_event_venue_image(event_hash, location)
+                if quick_img:
+                    from flask import redirect
+                    return redirect(quick_img)
+        except Exception:
+            pass
+        
+        # Only do expensive search with timeout - limit to 3 seconds max
+        try:
+            import threading
+            import queue
+            
+            result_queue = queue.Queue()
+            
+            def search_with_timeout():
+                try:
+                    img = search_location_image(location, event_hash=event_hash)
+                    result_queue.put(img)
+                except Exception:
+                    result_queue.put(None)
+            
+            # Start search in thread with 3 second timeout
+            search_thread = threading.Thread(target=search_with_timeout, daemon=True)
+            search_thread.start()
+            search_thread.join(timeout=3.0)
+            
+            # Get result if available, otherwise timeout
+            try:
+                location_img = result_queue.get_nowait()
+            except queue.Empty:
+                location_img = None
+                print(f"[category_image] Timeout searching for venue image: {location}")
+            
+            if location_img:
             # Store in EventImage if event_hash provided
             if event_hash:
                 try:

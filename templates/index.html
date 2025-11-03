@@ -62,18 +62,18 @@
             <div class="event-card" data-category="{{ event.category }}" data-title="{{ event.title|lower }}" data-location="{{ event.location|lower }}">
                 <div class="event-image">
                     {% if event.image_url %}
-                    <img src="{{ event.image_url }}" alt="{{ event.title }}">
+                    <img src="{{ event.image_url }}" alt="{{ event.title }}" loading="lazy">
                     {% elif event.category == 'Sports' or event.category == 'Ole Miss Athletics' %}
                     {% if event.image_hash %}
-                    <img src="{{ url_for('sports_image', title=event.title, hash=event.image_hash, date=event.start_iso, location=event.location) }}" alt="{{ event.title }}">
+                    <img src="{{ url_for('sports_image', title=event.title, hash=event.image_hash, date=event.start_iso, location=event.location) }}" alt="{{ event.title }}" loading="lazy">
                     {% else %}
-                    <img src="{{ url_for('sports_image', title=event.title) }}" alt="{{ event.title }}">
+                    <img src="{{ url_for('sports_image', title=event.title) }}" alt="{{ event.title }}" loading="lazy">
                     {% endif %}
                     {% else %}
                     {% if event.image_hash %}
-                    <img src="{{ url_for('category_image', category=event.category, title=event.title, location=event.location, hash=event.image_hash) }}" alt="{{ event.title }}">
+                    <img src="{{ url_for('category_image', category=event.category, title=event.title, location=event.location, hash=event.image_hash) }}" alt="{{ event.title }}" loading="lazy">
                     {% else %}
-                    <img src="{{ url_for('category_image', category=event.category, title=event.title, location=event.location) }}" alt="{{ event.title }}">
+                    <img src="{{ url_for('category_image', category=event.category, title=event.title, location=event.location) }}" alt="{{ event.title }}" loading="lazy">
                     {% endif %}
                     {% endif %}
                 </div>

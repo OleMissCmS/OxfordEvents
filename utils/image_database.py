@@ -489,13 +489,17 @@ def fetch_brave_image(query: str, num_results: int = 5) -> Optional[str]:
         return None
 
 
-def fetch_google_image(query: str, num_results: int = 5) -> Optional[str]:
+def fetch_google_image(query: str, num_results: int = 5, timeout: int = 8) -> Optional[str]:
     """
     Fetch image using multiple search engines as fallbacks.
     Tries: DuckDuckGo -> Bing -> Google -> Brave
     Returns local file path if successful, None otherwise
+    Has overall timeout to prevent blocking page load
     """
-    # Try each search engine in order until one succeeds
+    import time
+    start_time = time.time()
+    
+    # Try each search engine in order until one succeeds or timeout
     search_engines = [
         ("DuckDuckGo", fetch_duckduckgo_image),
         ("Bing", fetch_bing_image),
@@ -504,6 +508,11 @@ def fetch_google_image(query: str, num_results: int = 5) -> Optional[str]:
     ]
     
     for engine_name, fetch_func in search_engines:
+        # Check timeout
+        if time.time() - start_time > timeout:
+            print(f"[image_database] Timeout ({timeout}s) exceeded for '{query}', skipping remaining engines")
+            break
+        
         try:
             print(f"[image_database] Trying {engine_name} for '{query}'...")
             result = fetch_func(query, num_results)
@@ -659,9 +668,9 @@ def get_venue_image(venue_name: str, event_hash: str = None) -> Optional[str]:
     image_path = fetch_wikipedia_venue_image(venue_name)
     
     if not image_path:
-        # Try multiple search engines as fallback (DuckDuckGo -> Bing -> Google -> Brave)
+        # Try multiple search engines as fallback with short timeout (don't block page load)
         print(f"[image_database] Trying multiple search engines for: {venue_name}")
-        image_path = fetch_google_image(venue_name)
+        image_path = fetch_google_image(venue_name, timeout=5)  # 5 second max timeout
     
     if image_path:
         # Save to venue database
