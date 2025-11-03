@@ -11,10 +11,17 @@ def categorize_event(title: str, description: str = "", source: str = "") -> str
     Returns a category string.
     """
     # Combine all text for analysis
-    text = f"{title} {description}".lower()  # Don't include source in keyword matching
+    text = f"{title} {description}".lower()
+    source_lower = source.lower()
+    
+    # Check source-specific categories first
+    if source_lower == "ticketmaster":
+        return "Ticketmaster"
+    
+    if source_lower == "bandsintown":
+        return "Bandsintown"
     
     # Check if source indicates Ole Miss Athletics
-    source_lower = source.lower()
     # Check for ESPN Ole Miss sources or Ole Miss sports sources
     if ("espn" in source_lower and "ole miss" in source_lower) or \
        ("ole miss" in source_lower and any(sport in source_lower for sport in ['football', 'basketball', 'baseball', 'softball', 'soccer', 'tennis', 'volleyball', 'track', 'mbb', 'wbb'])):
@@ -24,6 +31,10 @@ def categorize_event(title: str, description: str = "", source: str = "") -> str
     if "ole miss" in text and (" vs " in text or " vs. " in text) and any(sport in text for sport in ['football', 'basketball', 'game']):
         return "Ole Miss Athletics"
     
+    # Check for Performance category (Proud Larry's or The Lyric)
+    if "proud larry" in text or "the lyric" in text.lower() or "lyric oxford" in text:
+        return "Performance"
+    
     # Sports keywords - be specific
     sports_keywords = [
         'football', 'basketball', 'baseball', 'softball', 'soccer', 'tennis', 
@@ -32,13 +43,18 @@ def categorize_event(title: str, description: str = "", source: str = "") -> str
         'tailgate', 'athletics', 'pickleball', 'fitness', 'hockey', 'ice hockey'
     ]
     
-    # Music keywords
+    # Music keywords (but not Performance venues)
     music_keywords = [
         'concert', 'music', 'band', 'dj', 'album', 'song', 'performer', 'artist',
-        'proud larry', 'lyric oxford', 'live music', 'acoustic', 'jazz', 'rock',
-        'folk', 'country', 'blues', 'hip hop', 'rap', 'orchestra', 'symphony',
-        'percussion', 'ensembles', 'singers', 'choral', 'guitar', 'piano', 'drum',
-        'bass', 'violin', 'singer', 'fleetwood', 'tribute'
+        'live music', 'acoustic', 'jazz', 'rock', 'folk', 'country', 'blues', 
+        'hip hop', 'rap', 'orchestra', 'symphony', 'percussion', 'ensembles', 
+        'singers', 'choral', 'guitar', 'piano', 'drum', 'bass', 'violin', 
+        'singer', 'fleetwood', 'tribute'
+    ]
+    
+    # Performance keywords (Proud Larry's, The Lyric)
+    performance_keywords = [
+        'proud larry', 'the lyric', 'lyric oxford'
     ]
     
     # Arts & Culture keywords
@@ -63,7 +79,9 @@ def categorize_event(title: str, description: str = "", source: str = "") -> str
     ]
     
     # Check in priority order (most specific first)
-    if any(keyword in text for keyword in music_keywords):
+    if any(keyword in text for keyword in performance_keywords):
+        return "Performance"
+    elif any(keyword in text for keyword in music_keywords):
         return "Music"
     elif any(keyword in text for keyword in arts_keywords):
         return "Arts & Culture"

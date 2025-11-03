@@ -75,7 +75,7 @@ def fetch_rss_events(url: str, source_name: str) -> List[Dict[str, Any]]:
             # Remove unwanted phrases
             clean_desc = clean_desc.replace('View on site', '').replace('Email this event', '').strip()
             
-            # Smart categorization
+            # Smart categorization (after processing description)
             category = categorize_event(entry.title, clean_desc, source_name)
             
             event = {
@@ -134,61 +134,175 @@ def fetch_html_events(url: str, source_name: str, parser: str = None) -> List[Di
 
 
 def _parse_bandsintown(soup, source_name: str, base_url: str) -> List[Dict[str, Any]]:
-    """Parse Bandsintown HTML"""
+    """Parse Bandsintown HTML - uses data-test attributes"""
     events = []
     try:
-        # Bandsintown uses specific event containers
-        # Look for event cards or listings
-        event_elements = soup.find_all(['div', 'article'], class_=lambda x: x and ('event' in x.lower() or 'concert' in x.lower()))
+        # Bandsintown uses React with data-test attributes
+        # Look for event containers with data-test="popularEvent"
+        event_containers = soup.find_all('div', {'data-test': 'popularEvent'})
         
-        for elem in event_elements:
+        for container in event_containers:
             try:
-                # Try to extract title
-                title_elem = elem.find(['h2', 'h3', 'h4'], class_=lambda x: x and ('title' in x.lower() or 'name' in x.lower()))
-                title = title_elem.get_text(strip=True) if title_elem else ''
+                # Extract event link
+                link_elem = container.find('a', {'data-test': 'popularEvent__link'})
+                if not link_elem:
+                    link_elem = container.find('a', href=lambda x: x and '/e/' in str(x) if x else False)
                 
-                if not title:
-                    # Try finding any heading
-                    title_elem = elem.find(['h1', 'h2', 'h3', 'h4'])
-                    title = title_elem.get_text(strip=True) if title_elem else ''
-                
-                # Try to extract date
-                date_elem = elem.find(class_=lambda x: x and 'date' in x.lower())
-                date_str = date_elem.get_text(strip=True) if date_elem else ''
-                
-                # Try to extract venue
-                venue_elem = elem.find(class_=lambda x: x and 'venue' in x.lower())
-                venue = venue_elem.get_text(strip=True) if venue_elem else 'Oxford, MS'
-                
-                # Try to extract link
-                link_elem = elem.find('a', href=True)
-                link = link_elem['href'] if link_elem else base_url
+                link = link_elem.get('href', '') if link_elem else base_url
                 if link.startswith('/'):
                     link = 'https://www.bandsintown.com' + link
+                elif not link.startswith('http'):
+                    link = base_url
                 
-                if title and date_str:
+                # Extract artist name
+                artist_elem = container.find('div', {'data-test': 'popularEvent__info__artistName'})
+                artist = artist_elem.get_text(strip=True) if artist_elem else ''
+                
+                # Extract venue name
+                venue_elem = container.find('p', {'data-test': 'popularEvent__info__venueName'})
+                if not venue_elem:
+                    venue_elem = container.find('div', {'data-test': 'popularEvent__info__venueName'})
+                venue = venue_elem.get_text(strip=True) if venue_elem else 'Oxford, MS'
+                
+                # Extract date
+                date_str = None
+                date_elem = container.find('div', {'data-test': 'popularEvent__date'})
+                if date_elem:
+                    # First try to find time element with datetime attribute
+                    time_elem = date_elem.find('time')
+                    if time_elem:
+                        date_str = time_elem.get('datetime', '')
+                    
+                    # If no datetime attribute, parse the text (format: "Nov 7 - 7:00 pm")
+                    if not date_str:
+                        date_text = date_elem.get_text(strip=True)
+                        if date_text:
+                            # Parse format like "Nov 7 - 7:00 pm" or "Nov 7" or "Nov 7, 2025"
+                            import re
+                            from datetime import datetime
+                            
+                            # Try to extract month, day, and time
+                            # Pattern: "Nov 7" or "Nov 7 - 7:00 pm" or "Nov 7, 2025"
+                            date_match = re.search(r'([A-Za-z]{3})\s+(\d{1,2})(?:\s*-\s*(\d{1,2}):(\d{2})\s*(am|pm))?', date_text, re.IGNORECASE)
+                            if date_match:
+                                month_str = date_match.group(1)
+                                day = int(date_match.group(2))
+                                
+                                # Get current year and month
+                                now = datetime.now()
+                                current_year = now.year
+                                current_month = now.month
+                                
+                                # Convert month string to number
+                                month_map = {
+                                    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+                                    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+                                }
+                                month = month_map.get(month_str.lower()[:3])
+                                
+                                # If the event month is earlier in the year than current month,
+                                # assume it's next year (e.g., if it's Nov 2025 and event is Jan, it's Jan 2026)
+                                if month and month < current_month:
+                                    current_year = current_year + 1
+                                
+                                if month:
+                                    # Extract time if available
+                                    hour = None
+                                    minute = None
+                                    if date_match.group(3):
+                                        hour = int(date_match.group(3))
+                                        minute = int(date_match.group(4)) if date_match.group(4) else 0
+                                        ampm = date_match.group(5).lower() if date_match.group(5) else 'pm'
+                                        
+                                        # Convert to 24-hour format
+                                        if ampm == 'pm' and hour != 12:
+                                            hour += 12
+                                        elif ampm == 'am' and hour == 12:
+                                            hour = 0
+                                    
+                                    # Create datetime object
+                                    if hour is not None:
+                                        try:
+                                            parsed_date = datetime(current_year, month, day, hour, minute or 0)
+                                            date_str = parsed_date.strftime('%Y-%m-%dT%H:%M:%S')
+                                        except ValueError:
+                                            # Invalid date (e.g., Feb 30), try without time
+                                            parsed_date = datetime(current_year, month, day, 19, 0)
+                                            date_str = parsed_date.strftime('%Y-%m-%dT%H:%M:%S')
+                                    else:
+                                        # No time specified, default to 7pm
+                                        parsed_date = datetime(current_year, month, day, 19, 0)
+                                        date_str = parsed_date.strftime('%Y-%m-%dT%H:%M:%S')
+                            else:
+                                # Fallback: try standard dateutil parsing
+                                date_str = date_text
+                
+                # Also check link for date information
+                if not date_str and link:
+                    # Try to extract date from URL pattern
+                    import re
+                    date_match = re.search(r'(\d{4}-\d{2}-\d{2})', link)
+                    if date_match:
+                        date_str = date_match.group(1)
+                
+                # Create title from artist name
+                title = artist if artist else f"Concert at {venue}"
+                
+                if title and (date_str or link):
                     # Try to parse date
-                    try:
-                        parsed_date = dtp.parse(date_str)
+                    start_iso = None
+                    if date_str:
+                        try:
+                            # If date_str is already in ISO format, use it directly
+                            if 'T' in date_str:
+                                start_iso = date_str
+                            else:
+                                parsed_date = dtp.parse(date_str)
+                                start_iso = parsed_date.isoformat()
+                        except:
+                            # Try extracting from link or other sources
+                            pass
+                    
+                    # If we have a valid date or at least a title and venue, create event
+                    if start_iso or (title and venue):
                         event = {
                             "title": title,
-                            "start_iso": parsed_date.isoformat(),
+                            "start_iso": start_iso or None,
                             "location": venue,
                             "description": "",
-                            "category": "Music",
+                            "category": "Bandsintown",
                             "source": source_name,
                             "link": link,
                             "cost": "Varies"
                         }
-                        events.append(event)
-                    except:
-                        # Skip if we can't parse the date
-                        pass
-            except:
+                        if start_iso:  # Only add if we have a valid date
+                            events.append(event)
+            except Exception as e:
+                print(f"[Bandsintown] Error parsing event container: {e}")
                 continue
+        
+        # Also try to extract from JavaScript data if available
+        if not events:
+            # Look for window.__data which contains event data
+            scripts = soup.find_all('script')
+            for script in scripts:
+                if script.string and 'window.__data' in script.string:
+                    try:
+                        import json
+                        import re
+                        # Extract JSON data from script
+                        match = re.search(r'window\.__data\s*=\s*({.*?});', script.string, re.DOTALL)
+                        if match:
+                            data = json.loads(match.group(1))
+                            # Navigate through data structure to find events
+                            # This structure varies, so we'll try common paths
+                            print("[Bandsintown] Found JavaScript data, but parsing structure varies")
+                    except:
+                        pass
     except Exception as e:
-        print(f"Error parsing Bandsintown: {e}")
+        print(f"[Bandsintown] Error parsing: {e}")
     
+    print(f"[Bandsintown] Parsed {len(events)} events")
     return events
 
 
@@ -322,8 +436,11 @@ def fetch_ticketmaster_events(city: str, state_code: str) -> List[Dict[str, Any]
         # Get API key from environment variable
         api_key = os.environ.get('TICKETMASTER_API_KEY', '')
         if not api_key:
-            print("No TICKETMASTER_API_KEY found in environment variables")
+            print("[Ticketmaster] WARNING: No TICKETMASTER_API_KEY found in environment variables")
+            print("[Ticketmaster] Make sure the secret file is named 'TICKETMASTER_API_KEY' in Render")
             return events
+        
+        print(f"[Ticketmaster] API key found (first 8 chars: {api_key[:8]}...)")
         
         params = {
             'apikey': api_key,
@@ -332,24 +449,50 @@ def fetch_ticketmaster_events(city: str, state_code: str) -> List[Dict[str, Any]
             'size': 100
         }
         response = requests.get(url, params=params, timeout=10)
+        
         if response.status_code == 200:
             data = response.json()
-            for item in data.get('_embedded', {}).get('events', []):
+            events_list = data.get('_embedded', {}).get('events', [])
+            print(f"[Ticketmaster] API returned {len(events_list)} events")
+            
+            for item in events_list:
                 event = {
                     "title": item.get('name', ''),
                     "start_iso": item.get('dates', {}).get('start', {}).get('localDateTime'),
                     "location": f"{item.get('_embedded', {}).get('venues', [{}])[0].get('name', '')}, {city}",
                     "description": item.get('info', ''),
-                    "category": item.get('classifications', [{}])[0].get('segment', {}).get('name', 'Music'),
+                    "category": "Ticketmaster",  # Use dedicated Ticketmaster category
                     "source": "Ticketmaster",
                     "link": item.get('url', ''),
                     "cost": f"${item.get('priceRanges', [{}])[0].get('min', 0)}" if item.get('priceRanges') else "Varies"
                 }
                 if event['start_iso']:
                     events.append(event)
+        elif response.status_code == 401:
+            print(f"[Ticketmaster] ERROR: Unauthorized (401) - API key may be invalid or expired")
+            try:
+                error_data = response.json()
+                print(f"[Ticketmaster] API Error: {error_data}")
+            except:
+                print(f"[Ticketmaster] Response: {response.text[:200]}")
+        elif response.status_code == 403:
+            print(f"[Ticketmaster] ERROR: Forbidden (403) - API key may not have permission for this endpoint")
+        else:
+            print(f"[Ticketmaster] ERROR: Got status code {response.status_code}")
+            try:
+                error_data = response.json()
+                print(f"[Ticketmaster] API Error: {error_data}")
+            except:
+                print(f"[Ticketmaster] Response: {response.text[:200]}")
+                
+    except requests.exceptions.RequestException as e:
+        print(f"[Ticketmaster] Network error: {e}")
     except Exception as e:
-        print(f"Error fetching Ticketmaster events: {e}")
+        print(f"[Ticketmaster] Error fetching events: {e}")
+        import traceback
+        traceback.print_exc()
     
+    print(f"[Ticketmaster] Successfully processed {len(events)} events")
     return events
 
 
@@ -737,7 +880,18 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 url = source.get('url')
                 parser = source.get('parser')
                 if url:
-                    events = fetch_html_events(url, source_name, parser=parser)
+                    # Use enhanced scraper for Visit Oxford (follows links)
+                    if parser == 'visit_oxford':
+                        try:
+                            from lib.visit_oxford_scraper import fetch_visit_oxford_events
+                            events = fetch_visit_oxford_events(url, source_name)
+                            print(f"[collect_all_events] {source_name} (Enhanced): {len(events)} events found")
+                        except Exception as e:
+                            print(f"[collect_all_events] Enhanced scraper failed for {source_name}, using fallback: {e}")
+                            # Fallback to regular HTML scraper
+                            events = fetch_html_events(url, source_name, parser=parser)
+                    else:
+                        events = fetch_html_events(url, source_name, parser=parser)
                     all_events.extend(events)
             
             elif source_type == 'api':
@@ -770,17 +924,52 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             # Continue to next source
             continue
     
+    # Filter out duplicates (especially Ole Miss Athletic events from Visit Oxford)
+    print(f"[collect_all_events] Removing duplicates from {len(all_events)} total events")
+    
+    seen_events = {}
+    deduplicated_events = []
+    
+    for event in all_events:
+        # Create a key based on title, date, and location for duplicate detection
+        title = event.get('title', '').lower().strip()
+        date = event.get('start_iso', '')
+        location = event.get('location', '').lower().strip()
+        
+        # Skip Ole Miss Athletic events from Visit Oxford (they're duplicates)
+        source_lower = event.get('source', '').lower()
+        if 'visit oxford' in source_lower:
+            title_lower = title.lower()
+            # Check if it's an athletic event
+            if any(keyword in title_lower for keyword in ['ole miss', 'rebels']) and \
+               any(sport in title_lower for sport in [' vs ', ' vs. ', ' game', 'football', 'basketball', 'baseball']):
+                print(f"[collect_all_events] Filtering duplicate athletic event from Visit Oxford: {event.get('title')}")
+                continue
+        
+        # Create deduplication key
+        key = f"{title}_{date}_{location}"
+        
+        # Skip if we've seen this exact event before
+        if key in seen_events:
+            print(f"[collect_all_events] Filtering duplicate: {event.get('title')}")
+            continue
+        
+        seen_events[key] = True
+        deduplicated_events.append(event)
+    
+    print(f"[collect_all_events] After deduplication: {len(deduplicated_events)} events")
+    
     # Filter to next 3 weeks
     now = datetime.now(tz.tzlocal())
     cutoff = now + timedelta(days=21)
     filtered_events = []
     
-    print(f"[collect_all_events] Filtering {len(all_events)} events to next 3 weeks (now={now.isoformat()}, cutoff={cutoff.isoformat()})")
+    print(f"[collect_all_events] Filtering {len(deduplicated_events)} events to next 3 weeks (now={now.isoformat()}, cutoff={cutoff.isoformat()})")
     
     athletics_count = 0
     athletics_filtered = 0
     
-    for event in all_events:
+    for event in deduplicated_events:
         if event.get("start_iso"):
             try:
                 event_date = dtp.parse(event["start_iso"])
