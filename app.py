@@ -256,19 +256,33 @@ def sports_image(title):
 
 
 @app.route('/api/category-image/<category>/<path:title>')
-@cache.cached(timeout=3600, key_prefix='category_image')  # Cache for 1 hour
 def category_image(category, title):
     """Generate smart category placeholder image with caching"""
     from utils.smart_image_generator import generate_category_image
     from utils.image_processing import search_location_image
     from flask import send_file, request
+    import hashlib
+    
+    # Get location for cache key uniqueness
+    location = request.args.get('location', '')
+    
+    # Create unique cache key including location and title
+    cache_key = f'category_image_{category}_{title}_{location}'
+    cache_key_hash = hashlib.md5(cache_key.encode()).hexdigest()
+    
+    # Check cache first
+    cached_response = cache.get(cache_key_hash)
+    if cached_response:
+        from flask import Response
+        response = Response(cached_response, mimetype='image/png')
+        response.headers['Cache-Control'] = 'public, max-age=3600'
+        return response
     
     # Try to get location image first
-    location = request.args.get('location', '')
     if location:
         location_img = search_location_image(location)
         if location_img:
-            # Redirect to location image
+            # Redirect to location image (these are external, no need to cache)
             from flask import redirect
             return redirect(location_img)
     
@@ -276,6 +290,10 @@ def category_image(category, title):
     try:
         img_buffer, error = generate_category_image(category, title)
         if img_buffer:
+            # Store in cache
+            img_data = img_buffer.getvalue()
+            cache.set(cache_key_hash, img_data, timeout=3600)
+            
             response = send_file(img_buffer, mimetype='image/png')
             response.headers['Cache-Control'] = 'public, max-age=3600'  # Cache for 1 hour
             return response

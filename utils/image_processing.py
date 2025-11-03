@@ -180,7 +180,7 @@ def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str
     return None
 
 
-# Caching disabled to prevent infinite hangs on network failures
+# Logo download with timeout and quick failure
 def get_logo_image(url_or_urls, size: int = 120) -> Optional[Image.Image]:
     """
     Download and resize team logo.
@@ -213,8 +213,8 @@ def get_logo_image(url_or_urls, size: int = 120) -> Optional[Image.Image]:
                     return img
                 continue
             
-            # Remote URL
-            response = requests.get(url, timeout=10, headers=headers, allow_redirects=True)
+            # Remote URL - reduced timeout for faster failure
+            response = requests.get(url, timeout=5, headers=headers, allow_redirects=True)
             if response.status_code == 200 and response.content:
                 img = Image.open(io.BytesIO(response.content))
                 img = img.convert("RGBA")
@@ -233,15 +233,16 @@ def create_team_matchup_image(
     away_team: Tuple[str, str], 
     home_team: Tuple[str, str], 
     width: int = 400, 
-    height: int = 300
+    height: int = 150  # Match display height
 ) -> Tuple[Optional[io.BytesIO], Optional[str]]:
     """
     Create composite image with away team (upper left), home team (lower right), diagonal divider.
     Returns (BytesIO buffer or None, error_message or None).
+    Image size matches display size (400x150) to prevent cropping.
     """
     try:
-        # Download logos with larger size and ensure they fit
-        logo_size = 140  # Slightly larger to ensure visibility
+        # Download logos with appropriate size for 150px height display
+        logo_size = 80  # Reduced to fit better in 150px height
         away_logo = get_logo_image(away_team[1], size=logo_size)
         home_logo = get_logo_image(home_team[1], size=logo_size)
         
@@ -256,19 +257,19 @@ def create_team_matchup_image(
         if not home_logo:
             return None, f"Failed to download home team logo: {home_team[0]} (tried: {home_urls_str})"
         
-        # Create base image
+        # Create base image matching display size
         img = Image.new("RGB", (width, height), color="#f8f9fa")
         draw = ImageDraw.Draw(img)
         
         # Draw diagonal line from bottom-left to top-right
-        draw.line([(0, height), (width, 0)], fill="#000000", width=3)
+        draw.line([(0, height), (width, 0)], fill="#000000", width=2)
         
-        # Calculate safe positioning with padding to prevent cropping
-        padding = 20  # Padding from edges
+        # Calculate safe positioning with generous padding for 150px height
+        padding = 15  # Padding from edges
         away_center_x = width // 4
-        away_center_y = height // 4
+        away_center_y = height // 3  # Slightly lower for better fit
         home_center_x = 3 * width // 4
-        home_center_y = 3 * height // 4
+        home_center_y = 2 * height // 3  # Slightly higher for better fit
         
         # Ensure logos don't get cut off - use center positioning with bounds checking
         # Away logo (upper left)
