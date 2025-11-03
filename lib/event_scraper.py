@@ -735,37 +735,79 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             url = source.get('url')
             sport_type = source.get('sport_type', 'football')
             if url:
-                # Try ESPN scraper first (requires Chrome)
-                events = fetch_espn_schedule(url, source_name, sport_type=sport_type)
-                # If ESPN scraper failed, try Ole Miss Athletics site as fallback
-                if not events:
-                    from lib.olemiss_athletics_scraper import fetch_olemiss_schedule
-                    # Convert ESPN URL to Ole Miss Athletics URL
-                    olemiss_url = _convert_espn_to_olemiss_url(url, sport_type)
-                    if olemiss_url:
-                        print(f"[ESPN] Falling back to Ole Miss Athletics site: {olemiss_url}")
-                        events = fetch_olemiss_schedule(olemiss_url, source_name, sport_type=sport_type)
-                all_events.extend(events)
+                try:
+                    # Try ESPN scraper first (requires Chrome)
+                    print(f"[collect_all_events] Fetching ESPN schedule: {source_name}")
+                    events = fetch_espn_schedule(url, source_name, sport_type=sport_type)
+                    print(f"[collect_all_events] ESPN {source_name}: {len(events)} events found")
+                    # If ESPN scraper failed, try Ole Miss Athletics site as fallback
+                    if not events:
+                        from lib.olemiss_athletics_scraper import fetch_olemiss_schedule
+                        # Convert ESPN URL to Ole Miss Athletics URL
+                        olemiss_url = _convert_espn_to_olemiss_url(url, sport_type)
+                        if olemiss_url:
+                            print(f"[ESPN] Falling back to Ole Miss Athletics site: {olemiss_url}")
+                            events = fetch_olemiss_schedule(olemiss_url, source_name, sport_type=sport_type)
+                            print(f"[collect_all_events] Fallback {source_name}: {len(events)} events found")
+                    all_events.extend(events)
+                except Exception as e:
+                    print(f"[collect_all_events] ERROR fetching ESPN {source_name}: {e}")
+                    import traceback
+                    traceback.print_exc()
         
         elif source_type == 'olemiss':
             url = source.get('url')
             sport_type = source.get('sport_type', 'football')
             if url:
-                from lib.olemiss_athletics_scraper import fetch_olemiss_schedule
-                events = fetch_olemiss_schedule(url, source_name, sport_type=sport_type)
-                all_events.extend(events)
+                try:
+                    from lib.olemiss_athletics_scraper import fetch_olemiss_schedule
+                    print(f"[collect_all_events] Fetching Ole Miss schedule: {source_name}")
+                    events = fetch_olemiss_schedule(url, source_name, sport_type=sport_type)
+                    print(f"[collect_all_events] {source_name}: {len(events)} events found")
+                    all_events.extend(events)
+                except Exception as e:
+                    print(f"[collect_all_events] ERROR fetching {source_name}: {e}")
+                    import traceback
+                    traceback.print_exc()
     
     # Filter to next 3 weeks
-    cutoff = datetime.now(tz.tzlocal()) + timedelta(days=21)
+    now = datetime.now(tz.tzlocal())
+    cutoff = now + timedelta(days=21)
     filtered_events = []
+    
+    print(f"[collect_all_events] Filtering {len(all_events)} events to next 3 weeks (now={now.isoformat()}, cutoff={cutoff.isoformat()})")
+    
+    athletics_count = 0
+    athletics_filtered = 0
+    
     for event in all_events:
         if event.get("start_iso"):
             try:
                 event_date = dtp.parse(event["start_iso"])
-                if event_date <= cutoff and event_date >= datetime.now(tz.tzlocal()):
+                # Ensure event_date is timezone-aware for comparison
+                if event_date.tzinfo is None:
+                    event_date = event_date.replace(tzinfo=tz.tzlocal())
+                
+                is_athletics = event.get("category") == "Ole Miss Athletics"
+                if is_athletics:
+                    athletics_count += 1
+                
+                if now <= event_date <= cutoff:
                     filtered_events.append(event)
-            except:
+                    if is_athletics:
+                        athletics_filtered += 1
+                elif is_athletics:
+                    # Log athletics events that are filtered out for debugging
+                    days_diff = (event_date - now).days
+                    if days_diff < 0:
+                        print(f"[collect_all_events] Athletics event filtered (past): {event.get('title')} - {event_date.isoformat()}")
+                    else:
+                        print(f"[collect_all_events] Athletics event filtered (too far): {event.get('title')} - {event_date.isoformat()} ({days_diff} days away)")
+            except Exception as e:
+                print(f"[collect_all_events] Error parsing date for event {event.get('title', 'unknown')}: {e}")
                 continue
+    
+    print(f"[collect_all_events] Filtered result: {len(filtered_events)} total events ({athletics_filtered} athletics)")
     
     # Sort by date
     return sorted(filtered_events, key=lambda x: x.get("start_iso", ""))
