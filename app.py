@@ -97,6 +97,10 @@ EVENT_SOURCES = [
     {"name": "ESPN Ole Miss Football", "type": "espn", "url": "https://www.espn.com/college-football/team/schedule/_/id/145/ole-miss-rebels", "sport_type": "football", "group": "University"},
     {"name": "ESPN Ole Miss MBB", "type": "espn", "url": "https://www.espn.com/mens-college-basketball/team/schedule/_/id/145", "sport_type": "basketball", "group": "University"},
     {"name": "ESPN Ole Miss WBB", "type": "espn", "url": "https://www.espn.com/womens-college-basketball/team/schedule/_/id/145/ole-miss-rebels", "sport_type": "basketball", "group": "University"},
+    # Ole Miss Athletics Direct Schedule Sources (HTML-based scraper)
+    {"name": "Ole Miss Baseball Schedule", "type": "olemiss", "url": "https://olemisssports.com/sports/baseball/schedule", "sport_type": "baseball", "group": "University"},
+    {"name": "Ole Miss Softball Schedule", "type": "olemiss", "url": "https://olemisssports.com/sports/softball/schedule", "sport_type": "softball", "group": "University"},
+    {"name": "Ole Miss Women's Volleyball Schedule", "type": "olemiss", "url": "https://olemisssports.com/sports/womens-volleyball/schedule", "sport_type": "volleyball", "group": "University"},
     # Ole Miss Events
     {"name": "Ole Miss Events", "type": "rss", "url": "https://eventcalendar.olemiss.edu/calendar.xml", "group": "University"},
     # Community

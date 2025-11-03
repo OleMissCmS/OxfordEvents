@@ -225,6 +225,12 @@ def _parse_table_row(row, source_name: str, sport_type: str, base_url: str) -> D
             location = "Vaught-Hemingway Stadium"
         elif "basketball" in sport_type.lower():
             location = "The Pavilion"
+        elif sport_type == "baseball":
+            location = "Swayze Field"
+        elif sport_type == "softball":
+            location = "Ole Miss Softball Complex"
+        elif sport_type == "volleyball":
+            location = "The Pavilion"
         else:
             location = "TBD"
         
@@ -330,6 +336,12 @@ def _parse_game_element(elem, source_name: str, sport_type: str, base_url: str, 
             location = "Vaught-Hemingway Stadium"
         elif "basketball" in sport_type.lower():
             location = "The Pavilion"
+        elif sport_type == "baseball":
+            location = "Swayze Field"
+        elif sport_type == "softball":
+            location = "Ole Miss Softball Complex"
+        elif sport_type == "volleyball":
+            location = "The Pavilion"
         else:
             location = "TBD"
         
@@ -388,6 +400,12 @@ def _parse_schedule_item(item, source_name: str, sport_type: str, base_url: str)
         if sport_type == "football":
             location = "Vaught-Hemingway Stadium"
         elif "basketball" in sport_type.lower():
+            location = "The Pavilion"
+        elif sport_type == "baseball":
+            location = "Swayze Field"
+        elif sport_type == "softball":
+            location = "Ole Miss Softball Complex"
+        elif sport_type == "volleyball":
             location = "The Pavilion"
         else:
             location = "TBD"

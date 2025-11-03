@@ -746,6 +746,14 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                         print(f"[ESPN] Falling back to Ole Miss Athletics site: {olemiss_url}")
                         events = fetch_olemiss_schedule(olemiss_url, source_name, sport_type=sport_type)
                 all_events.extend(events)
+        
+        elif source_type == 'olemiss':
+            url = source.get('url')
+            sport_type = source.get('sport_type', 'football')
+            if url:
+                from lib.olemiss_athletics_scraper import fetch_olemiss_schedule
+                events = fetch_olemiss_schedule(url, source_name, sport_type=sport_type)
+                all_events.extend(events)
     
     # Filter to next 3 weeks
     cutoff = datetime.now(tz.tzlocal()) + timedelta(days=21)
