@@ -3,6 +3,7 @@ Flask application for Oxford Events
 """
 
 from flask import Flask, render_template, jsonify, url_for
+from flask_caching import Cache
 from datetime import datetime, timedelta, date
 import json
 import os
@@ -11,6 +12,9 @@ from utils.image_processing import detect_sports_teams, create_team_matchup_imag
 
 app = Flask(__name__)
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+
+# Configure caching
+cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 600})
 
 # Custom Jinja2 filters
 @app.template_filter('format_datetime')
@@ -99,6 +103,7 @@ EVENT_SOURCES = [
 ]
 
 
+@cache.cached(timeout=600, key_prefix='all_events')
 def load_events():
     """Load events from all sources"""
     try:
