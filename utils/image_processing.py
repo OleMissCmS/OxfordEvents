@@ -202,6 +202,18 @@ def get_logo_image(url_or_urls, size: int = 120) -> Optional[Image.Image]:
     # Try each URL until one works
     for url in urls:
         try:
+            # Handle local file paths (from database)
+            if url.startswith('/static/images/cache/'):
+                # Local file path
+                file_path = url.replace('/static/images/cache/', 'static/images/cache/')
+                if os.path.exists(file_path):
+                    img = Image.open(file_path)
+                    img = img.convert("RGBA")
+                    img.thumbnail((size, size), Image.Resampling.LANCZOS)
+                    return img
+                continue
+            
+            # Remote URL
             response = requests.get(url, timeout=10, headers=headers, allow_redirects=True)
             if response.status_code == 200 and response.content:
                 img = Image.open(io.BytesIO(response.content))
