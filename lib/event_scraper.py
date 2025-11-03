@@ -713,7 +713,6 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 'rss': 'RSS feed',
                 'html': 'website',
                 'api': 'API',
-                'espn': 'sports schedule',
                 'olemiss': 'sports schedule'
             }.get(source_type, 'source')
             set_status(idx + 1, len(sources) + 2, f"Checking {source_name}...", f"Loading from {source_type_name}")
@@ -753,30 +752,6 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 if city and state_code:
                     events = fetch_ticketmaster_events(city, state_code)
                     all_events.extend(events)
-        
-        elif source_type == 'espn':
-            url = source.get('url')
-            sport_type = source.get('sport_type', 'football')
-            if url:
-                try:
-                    # Try ESPN scraper first (requires Chrome)
-                    print(f"[collect_all_events] Fetching ESPN schedule: {source_name}")
-                    events = fetch_espn_schedule(url, source_name, sport_type=sport_type)
-                    print(f"[collect_all_events] ESPN {source_name}: {len(events)} events found")
-                    # If ESPN scraper failed, try Ole Miss Athletics site as fallback
-                    if not events:
-                        from lib.olemiss_athletics_scraper import fetch_olemiss_schedule
-                        # Convert ESPN URL to Ole Miss Athletics URL
-                        olemiss_url = _convert_espn_to_olemiss_url(url, sport_type)
-                        if olemiss_url:
-                            print(f"[ESPN] Falling back to Ole Miss Athletics site: {olemiss_url}")
-                            events = fetch_olemiss_schedule(olemiss_url, source_name, sport_type=sport_type)
-                            print(f"[collect_all_events] Fallback {source_name}: {len(events)} events found")
-                    all_events.extend(events)
-                except Exception as e:
-                    print(f"[collect_all_events] ERROR fetching ESPN {source_name}: {e}")
-                    import traceback
-                    traceback.print_exc()
         
         elif source_type == 'olemiss':
             url = source.get('url')

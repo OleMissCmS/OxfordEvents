@@ -124,11 +124,10 @@ EVENT_SOURCES = [
     {"name": "Ole Miss Soccer", "type": "ics", "url": "https://olemisssports.com/calendar.ashx/calendar.ics?path=soccer", "group": "University"},
     {"name": "Ole Miss Volleyball", "type": "ics", "url": "https://olemisssports.com/calendar.ashx/calendar.ics?path=volleyball", "group": "University"},
     {"name": "Ole Miss Tennis", "type": "ics", "url": "https://olemisssports.com/calendar.ashx/calendar.ics?path=tennis", "group": "University"},
-    # ESPN Ole Miss Athletics (Selenium-based with HTML fallback, always most recent year)
-    {"name": "ESPN Ole Miss Football", "type": "espn", "url": "https://www.espn.com/college-football/team/schedule/_/id/145/ole-miss-rebels", "sport_type": "football", "group": "University"},
-    {"name": "ESPN Ole Miss MBB", "type": "espn", "url": "https://www.espn.com/mens-college-basketball/team/schedule/_/id/145", "sport_type": "basketball", "group": "University"},
-    {"name": "ESPN Ole Miss WBB", "type": "espn", "url": "https://www.espn.com/womens-college-basketball/team/schedule/_/id/145/ole-miss-rebels", "sport_type": "basketball", "group": "University"},
-    # Ole Miss Athletics Direct Schedule Sources (HTML-based scraper)
+    # Ole Miss Athletics Direct Schedule Sources (HTML-based scraper, no Selenium needed)
+    {"name": "Ole Miss Football Schedule", "type": "olemiss", "url": "https://olemisssports.com/sports/football/schedule", "sport_type": "football", "group": "University"},
+    {"name": "Ole Miss Men's Basketball Schedule", "type": "olemiss", "url": "https://olemisssports.com/sports/mens-basketball/schedule", "sport_type": "basketball", "group": "University"},
+    {"name": "Ole Miss Women's Basketball Schedule", "type": "olemiss", "url": "https://olemisssports.com/sports/womens-basketball/schedule", "sport_type": "basketball", "group": "University"},
     {"name": "Ole Miss Baseball Schedule", "type": "olemiss", "url": "https://olemisssports.com/sports/baseball/schedule", "sport_type": "baseball", "group": "University"},
     {"name": "Ole Miss Softball Schedule", "type": "olemiss", "url": "https://olemisssports.com/sports/softball/schedule", "sport_type": "softball", "group": "University"},
     {"name": "Ole Miss Women's Volleyball Schedule", "type": "olemiss", "url": "https://olemisssports.com/sports/womens-volleyball/schedule", "sport_type": "volleyball", "group": "University"},
