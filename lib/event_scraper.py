@@ -15,6 +15,8 @@ from bs4 import BeautifulSoup
 
 def fetch_ics_events(url: str, source_name: str) -> List[Dict[str, Any]]:
     """Fetch events from an ICS calendar URL"""
+    from lib.categorizer import categorize_event
+    
     events = []
     try:
         response = requests.get(url, timeout=10)
@@ -22,12 +24,18 @@ def fetch_ics_events(url: str, source_name: str) -> List[Dict[str, Any]]:
             cal = Calendar.from_ical(response.content)
             for component in cal.walk():
                 if component.name == "VEVENT":
+                    title = str(component.get('summary', ''))
+                    description = str(component.get('description', ''))
+                    
+                    # Smart categorization
+                    category = categorize_event(title, description, source_name)
+                    
                     event = {
-                        "title": str(component.get('summary', '')),
+                        "title": title,
                         "start_iso": component.get('dtstart').dt.isoformat() if component.get('dtstart') else None,
                         "location": str(component.get('location', '')),
-                        "description": str(component.get('description', '')),
-                        "category": "Sports" if "sport" in source_name.lower() or "athletic" in source_name.lower() else "University",
+                        "description": description,
+                        "category": category,
                         "source": source_name,
                         "link": str(component.get('url', '')),
                         "cost": "Free"  # Default
