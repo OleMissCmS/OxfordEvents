@@ -32,7 +32,7 @@ def init_app():
             except Exception:
                 pass
             
-            # Initialize database (SQLite on persistent disk, or PostgreSQL if configured)
+            # Initialize database (SQLite - always free, no PostgreSQL)
             from lib.database import init_database, migrate_json_to_db
             init_database()
             

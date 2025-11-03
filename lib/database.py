@@ -1,5 +1,6 @@
 """
-PostgreSQL database models and initialization for Oxford Events
+SQLite database models and initialization for Oxford Events
+Uses SQLite for free, persistent storage
 """
 
 from sqlalchemy import create_engine, Column, String, Text, DateTime, Integer
@@ -52,22 +53,12 @@ _session_factory = None
 
 def get_database_url():
     """
-    Get database URL from environment variable or use SQLite on persistent disk.
+    Get SQLite database URL (always uses SQLite, never PostgreSQL).
     Priority:
-    1. PostgreSQL (if DATABASE_URL is set) - optional, requires paid subscription after 30 days
-    2. SQLite on persistent disk (free, persistent) - RECOMMENDED
-    3. SQLite in local data/ (development)
+    1. SQLite on persistent disk (if available) - persistent storage
+    2. SQLite in local data/ - development fallback
     """
-    # First, check if PostgreSQL is configured (optional)
-    db_url = os.getenv('DATABASE_URL')
-    
-    if db_url:
-        # Render uses postgres:// but SQLAlchemy needs postgresql://
-        if db_url.startswith('postgres://'):
-            db_url = db_url.replace('postgres://', 'postgresql://', 1)
-        return db_url
-    
-    # Use SQLite on persistent disk (free, persistent)
+    # Always use SQLite - ignore DATABASE_URL if set
     try:
         from utils.storage import get_sqlite_db_path, is_persistent_disk
         sqlite_path = get_sqlite_db_path()
@@ -79,14 +70,14 @@ def get_database_url():
         sqlite_url = f'sqlite:///{abs_path}'
         
         if is_persistent_disk():
-            print(f"[Database] Using SQLite on persistent disk: {abs_path}")
+            print(f"[Database] ✅ Using SQLite on persistent disk: {abs_path}")
         else:
-            print(f"[Database] Using SQLite (local): {abs_path}")
+            print(f"[Database] ✅ Using SQLite (local): {abs_path}")
         
         return sqlite_url
     except Exception as e:
         # Ultimate fallback
-        print(f"[Database] Error getting persistent disk path, using local: {e}")
+        print(f"[Database] ⚠️ Error getting persistent disk path, using local: {e}")
         os.makedirs('data', exist_ok=True)
         return 'sqlite:///data/oxford_events.db'
 
@@ -117,7 +108,7 @@ def init_database():
 
 
 def migrate_json_to_db():
-    """Migrate existing JSON data to PostgreSQL (one-time migration)"""
+    """Migrate existing JSON data to SQLite database (one-time migration)"""
     import json
     import os
     from datetime import datetime

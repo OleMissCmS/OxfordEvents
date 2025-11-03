@@ -351,12 +351,12 @@ def fetch_google_image(query: str, num_results: int = 5) -> Optional[str]:
 
 def get_team_logo(team_name: str) -> Optional[List[str]]:
     """
-    Get team logo URLs from PostgreSQL database (or JSON fallback), or fetch from Wikipedia if not found
+    Get team logo URLs from SQLite database (or JSON fallback), or fetch from Wikipedia if not found
     Returns list of logo URLs (local paths or remote URLs)
     """
     team_key = team_name.lower().strip()
     
-    # Try PostgreSQL first
+    # Try SQLite database first
     try:
         from lib.database import get_session, TeamLogo
         session = get_session()
@@ -370,8 +370,8 @@ def get_team_logo(team_name: str) -> Optional[List[str]]:
                 return logos
         session.close()
     except Exception as e:
-        # PostgreSQL not available, fall back to JSON
-        print(f"[image_database] PostgreSQL not available, using JSON fallback: {e}")
+        # SQLite not available, fall back to JSON
+        print(f"[image_database] SQLite not available, using JSON fallback: {e}")
         db = load_database(TEAM_LOGOS_DB)
         
         if team_key in db:
@@ -384,7 +384,7 @@ def get_team_logo(team_name: str) -> Optional[List[str]]:
     logo_path = fetch_wikipedia_team_logo(team_name)
     
     if logo_path:
-        # Save to database (PostgreSQL or JSON)
+        # Save to SQLite database (or JSON fallback)
         try:
             from lib.database import get_session, TeamLogo
             session = get_session()
@@ -416,7 +416,7 @@ def get_team_logo(team_name: str) -> Optional[List[str]]:
 
 def get_venue_image(venue_name: str) -> Optional[str]:
     """
-    Get venue image from PostgreSQL database (or JSON fallback), or fetch from Wikipedia/Google if not found
+    Get venue image from SQLite database (or JSON fallback), or fetch from Wikipedia/Google if not found
     Returns image URL (local path or remote URL)
     """
     if not venue_name or venue_name.lower() in ['', 'tbd', 'tba', 'venue tbd']:
@@ -424,7 +424,7 @@ def get_venue_image(venue_name: str) -> Optional[str]:
     
     venue_key = venue_name.lower().strip()
     
-    # Try PostgreSQL first
+    # Try SQLite database first
     try:
         from lib.database import get_session, VenueImage
         session = get_session()
@@ -436,8 +436,8 @@ def get_venue_image(venue_name: str) -> Optional[str]:
             return image_url
         session.close()
     except Exception as e:
-        # PostgreSQL not available, fall back to JSON
-        print(f"[image_database] PostgreSQL not available, using JSON fallback: {e}")
+        # SQLite not available, fall back to JSON
+        print(f"[image_database] SQLite not available, using JSON fallback: {e}")
         db = load_database(VENUE_IMAGES_DB)
         
         if venue_key in db:
@@ -455,7 +455,7 @@ def get_venue_image(venue_name: str) -> Optional[str]:
         image_path = fetch_google_image(venue_name)
     
     if image_path:
-        # Save to database (PostgreSQL or JSON)
+        # Save to SQLite database (or JSON fallback)
         source = 'wikipedia' if 'wikipedia' in image_path.lower() else 'duckduckgo'
         try:
             from lib.database import get_session, VenueImage
