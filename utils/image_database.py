@@ -506,14 +506,17 @@ def get_venue_image(venue_name: str) -> Optional[str]:
             if image_url:
                 return image_url
     
-    # Not in database, try Wikipedia first
+    # Not in database, try Wikipedia first (more reliable, less rate limiting)
     print(f"[image_database] Fetching Wikipedia image for venue: {venue_name}")
     image_path = fetch_wikipedia_venue_image(venue_name)
     
     if not image_path:
-        # Try Google Image Search as fallback
-        print(f"[image_database] Trying DuckDuckGo image search for: {venue_name}")
-        image_path = fetch_google_image(venue_name)
+        # Only try DuckDuckGo if we're not rate limited
+        if _check_rate_limit("duckduckgo"):
+            print(f"[image_database] Trying DuckDuckGo image search for: {venue_name}")
+            image_path = fetch_google_image(venue_name)
+        else:
+            print(f"[image_database] Skipping DuckDuckGo for '{venue_name}' due to rate limiting")
     
     if image_path:
         # Save to SQLite database (or JSON fallback)
