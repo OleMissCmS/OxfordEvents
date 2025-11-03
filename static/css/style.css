@@ -235,7 +235,7 @@ body {
     background: white;
     border-radius: 8px;
     overflow: hidden;
-    border: 1px solid #e9ecef;
+    border: 2px solid #e9ecef;
     transition: box-shadow 0.2s, transform 0.2s;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     display: flex;
@@ -244,8 +244,37 @@ body {
 
 .event-card:hover {
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    border-color: #dee2e6;
     transform: translateY(-2px);
+}
+
+/* Category-based border colors matching filter pills */
+.event-card[data-category="Music"] {
+    border-color: #e1bee7;
+}
+
+.event-card[data-category="Arts & Culture"],
+.event-card[data-category="Arts"] {
+    border-color: #ffe0b2;
+}
+
+.event-card[data-category="Community"] {
+    border-color: #c8e6c9;
+}
+
+.event-card[data-category="Sports"] {
+    border-color: #f8bbd9;
+}
+
+.event-card[data-category="Ole Miss Athletics"] {
+    border-color: #ffcdd2;
+}
+
+.event-card[data-category="Education"] {
+    border-color: #b2ebf2;
+}
+
+.event-card[data-category="University"] {
+    border-color: #bbdefb;
 }
 
 .event-image {
