@@ -3,6 +3,7 @@ Image processing utilities for event images, including sports team logos
 """
 
 import io
+import os
 import re
 import base64
 from typing import Optional, Tuple, Dict, Any
@@ -115,6 +116,7 @@ def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str
     """
     Detect two teams from event title.
     Returns ((away_name, away_logo), (home_name, home_logo)) or None.
+    Uses database first, then falls back to hardcoded TEAM_NAMES.
     """
     title_lower = title.lower()
     # Pattern: "Team A vs Team B" or "Team A @ Team B"
@@ -126,14 +128,46 @@ def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str
     
     team1_text, team2_text = match.groups()
     
-    # Find team names - try longer matches first
+    # Find team names - try database first, then hardcoded
     def find_team(text):
         text_lower = text.lower().strip()
+        
+        # Clean up team name (remove common prefixes)
+        team_name_clean = re.sub(r'^(#?\d+\s+)?', '', text_lower).strip()
+        
+        # Try database first
+        try:
+            from utils.image_database import get_team_logo
+            logos = get_team_logo(team_name_clean)
+            if logos:
+                # Return standardized name and logos
+                # Capitalize properly
+                name_parts = team_name_clean.split()
+                name = ' '.join(word.capitalize() for word in name_parts)
+                return name, logos
+        except Exception as e:
+            # If database lookup fails, continue to hardcoded list
+            pass
+        
+        # Fallback to hardcoded TEAM_NAMES
         # Sort by key length (longer first) to match "mississippi state" before "mississippi"
         sorted_teams = sorted(TEAM_NAMES.items(), key=lambda x: len(x[0]), reverse=True)
         for key, (name, logo_urls) in sorted_teams:
             if key in text_lower:
                 return name, logo_urls
+        
+        # If not in hardcoded list, try database with cleaned name
+        if team_name_clean and team_name_clean != text_lower:
+            try:
+                from utils.image_database import get_team_logo
+                logos = get_team_logo(team_name_clean)
+                if logos:
+                    name_parts = team_name_clean.split()
+                    name = ' '.join(word.capitalize() for word in name_parts)
+                    return name, logos
+            except:
+                pass
+        
         return None, None
     
     team1_result = find_team(team1_text)
@@ -355,6 +389,7 @@ VENUE_IMAGES = {
 def search_location_image(location: str) -> Optional[str]:
     """
     Search for an image of a location.
+    Uses database first, then falls back to hardcoded VENUE_IMAGES, then fetches from Wikipedia/Google.
     Returns the first image URL found or None.
     """
     if not location or location.lower() in ['', 'oxford, ms', 'oxford', 'tbd', 'tba', 'venue tbd']:
@@ -362,12 +397,23 @@ def search_location_image(location: str) -> Optional[str]:
     
     try:
         # Clean location name
-        location_clean = location.split(',')[0].strip().lower()
-        location_clean = location_clean.split('-')[0].strip()
+        location_clean = location.split(',')[0].strip()
+        location_clean_lower = location_clean.lower()
+        location_clean_lower = location_clean_lower.split('-')[0].strip()
         
-        # Check if we have a known image for this venue
+        # Try database first (includes Wikipedia/Google fetching)
+        try:
+            from utils.image_database import get_venue_image
+            db_image = get_venue_image(location_clean)
+            if db_image:
+                return db_image
+        except Exception as e:
+            # If database lookup fails, continue to hardcoded list
+            pass
+        
+        # Fallback to hardcoded VENUE_IMAGES
         for venue_key, image_url in VENUE_IMAGES.items():
-            if venue_key in location_clean:
+            if venue_key in location_clean_lower:
                 return image_url
         
         # If no match found, return None to use category placeholder

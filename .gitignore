@@ -4,29 +4,18 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Virtual Environment
-venv/
 env/
+venv/
 ENV/
 .venv
+
+# Flask
+instance/
+.webassets-cache
+
+# Environment
+.env
+.env.local
 
 # IDE
 .vscode/
@@ -34,26 +23,12 @@ ENV/
 *.swp
 *.swo
 *~
-.DS_Store
-
-# Streamlit
-.streamlit/secrets.toml
-
-# Environment variables
-.env
-*.env
-
-# Logs
-*.log
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-
-# Jupyter Notebook
-.ipynb_checkpoints
 
 # OS
+.DS_Store
 Thumbs.db
+
+# Project specific
+data/
+static/images/cache/
+*.log
