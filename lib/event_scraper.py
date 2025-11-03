@@ -957,8 +957,14 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     deduplicated_events = []
     
     for event in all_events:
-        # Create a key based on title, date, and location for duplicate detection
+        # Clean title for deduplication (remove date patterns that might be in opponent)
         title = event.get('title', '').lower().strip()
+        # Remove date/time patterns from title for better duplicate detection
+        import re
+        title_clean = re.sub(r'\s*[A-Z][a-z]{2}\s+\d{1,2}\s*/\s*(noon|\d{1,2}\s*[ap]m)', '', title, flags=re.IGNORECASE)
+        title_clean = re.sub(r'\s*/\s*(noon|\d{1,2}\s*[ap]m)', '', title_clean, flags=re.IGNORECASE)
+        title_clean = title_clean.strip()
+        
         date = event.get('start_iso', '')
         location = event.get('location', '').lower().strip()
         
@@ -972,8 +978,8 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 print(f"[collect_all_events] Filtering duplicate athletic event from Visit Oxford: {event.get('title')}")
                 continue
         
-        # Create deduplication key
-        key = f"{title}_{date}_{location}"
+        # Create deduplication key using cleaned title
+        key = f"{title_clean}_{date}_{location}"
         
         # Skip if we've seen this exact event before
         if key in seen_events:

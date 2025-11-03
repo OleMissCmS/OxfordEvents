@@ -119,14 +119,24 @@ def fetch_olemiss_schedule(url: str, source_name: str, sport_type: str = "footba
                     # For now, default to 7 PM
                     
                     opponent_clean = opponent.strip()
-                    # Clean opponent name
+                    # Clean opponent name - remove date/time patterns
+                    opponent_clean = opponent_clean.strip()
+                    # Remove date patterns like "Nov 08 / Noon" or "Nov 8 / 12 PM"
+                    opponent_clean = re.sub(r'\s*[A-Z][a-z]{2}\s+\d{1,2}\s*/\s*(Noon|\d{1,2}\s*[AP]M)', '', opponent_clean, flags=re.IGNORECASE)
+                    opponent_clean = re.sub(r'\s*/\s*(Noon|\d{1,2}\s*[AP]M)', '', opponent_clean, flags=re.IGNORECASE)
+                    opponent_clean = re.sub(r'\s*\d{1,2}/\d{1,2}\s*/\s*(Noon|\d{1,2}\s*[AP]M)', '', opponent_clean, flags=re.IGNORECASE)
                     opponent_clean = re.sub(r'\s+Oxford.*$', '', opponent_clean, flags=re.IGNORECASE)
                     opponent_clean = re.sub(r'\s+Miss\..*$', '', opponent_clean, flags=re.IGNORECASE)
+                    opponent_clean = opponent_clean.strip()
+                    
+                    if not opponent_clean or len(opponent_clean) < 2:
+                        continue
                     
                     # Determine location and title based on sport
                     if sport_type == "football":
                         location = "Vaught-Hemingway Stadium"
                         title = f"Ole Miss vs {opponent_clean}"
+                        sport_desc = "Football"
                     elif "basketball" in sport_type.lower():
                         location = "The Pavilion"
                         # Determine if men's or women's basketball based on sport_type or source
@@ -134,23 +144,28 @@ def fetch_olemiss_schedule(url: str, source_name: str, sport_type: str = "footba
                         source_lower = source_name.lower()
                         if "women" in sport_type_lower or "wbb" in sport_type_lower or "women" in source_lower:
                             title = f"Ole Miss Women's Basketball vs {opponent_clean}"
+                            sport_desc = "Women's Basketball"
                         elif "men" in sport_type_lower or "mbb" in sport_type_lower or "men" in source_lower:
                             title = f"Ole Miss Men's Basketball vs {opponent_clean}"
+                            sport_desc = "Men's Basketball"
                         else:
-                            # Default to men's if unclear (check URL for hints)
+                            # Default based on URL
                             if "womens" in url.lower() or "women" in url.lower():
                                 title = f"Ole Miss Women's Basketball vs {opponent_clean}"
+                                sport_desc = "Women's Basketball"
                             else:
                                 title = f"Ole Miss Men's Basketball vs {opponent_clean}"
+                                sport_desc = "Men's Basketball"
                     else:
                         location = "TBD"
                         title = f"Ole Miss vs {opponent_clean}"
+                        sport_desc = sport_type.title()
                     
                     events.append({
                         "title": title,
                         "start_iso": parsed_date.isoformat(),
                         "location": location,
-                        "description": f"{sport_type.title()} game: {title}",
+                        "description": f"{sport_desc} game: {title}",
                         "category": "Ole Miss Athletics",
                         "source": source_name,
                         "link": url,
@@ -210,8 +225,12 @@ def _parse_table_row(row, source_name: str, sport_type: str, base_url: str) -> D
         if opponent_text.startswith('@') or opponent_text.startswith('at '):
             return None
         
-        # Clean opponent name
+        # Clean opponent name - remove vs/@ prefixes and date/time patterns
         opponent_clean = re.sub(r'^\s*(vs|VS|v\.|versus|@|at)\s*', '', opponent_text).strip()
+        # Remove date patterns like "Nov 08 / Noon" or "Nov 8 / 12 PM"
+        opponent_clean = re.sub(r'\s*[A-Z][a-z]{2}\s+\d{1,2}\s*/\s*(Noon|\d{1,2}\s*[AP]M)', '', opponent_clean, flags=re.IGNORECASE)
+        opponent_clean = re.sub(r'\s*/\s*(Noon|\d{1,2}\s*[AP]M)', '', opponent_clean, flags=re.IGNORECASE)
+        opponent_clean = re.sub(r'\s*\d{1,2}/\d{1,2}\s*/\s*(Noon|\d{1,2}\s*[AP]M)', '', opponent_clean, flags=re.IGNORECASE)
         
         # Skip placeholder text
         if opponent_clean in ['OPPONENT', 'TBD', 'TBA', ''] or len(opponent_clean) < 2:
@@ -248,6 +267,7 @@ def _parse_table_row(row, source_name: str, sport_type: str, base_url: str) -> D
         if sport_type == "football":
             location = "Vaught-Hemingway Stadium"
             title = f"Ole Miss vs {opponent_clean}"
+            sport_desc = "Football"
         elif "basketball" in sport_type.lower():
             location = "The Pavilion"
             # Determine if men's or women's basketball based on sport_type or source
@@ -255,32 +275,40 @@ def _parse_table_row(row, source_name: str, sport_type: str, base_url: str) -> D
             source_lower = source_name.lower()
             if "women" in sport_type_lower or "wbb" in sport_type_lower or "women" in source_lower:
                 title = f"Ole Miss Women's Basketball vs {opponent_clean}"
+                sport_desc = "Women's Basketball"
             elif "men" in sport_type_lower or "mbb" in sport_type_lower or "men" in source_lower:
                 title = f"Ole Miss Men's Basketball vs {opponent_clean}"
+                sport_desc = "Men's Basketball"
             else:
-                # Default to men's if unclear (check URL for hints)
+                # Default based on URL
                 if "womens" in base_url.lower() or "women" in base_url.lower():
                     title = f"Ole Miss Women's Basketball vs {opponent_clean}"
+                    sport_desc = "Women's Basketball"
                 else:
                     title = f"Ole Miss Men's Basketball vs {opponent_clean}"
+                    sport_desc = "Men's Basketball"
         elif sport_type == "baseball":
             location = "Swayze Field"
             title = f"Ole Miss vs {opponent_clean}"
+            sport_desc = "Baseball"
         elif sport_type == "softball":
             location = "Ole Miss Softball Complex"
             title = f"Ole Miss vs {opponent_clean}"
+            sport_desc = "Softball"
         elif sport_type == "volleyball":
             location = "The Pavilion"
             title = f"Ole Miss vs {opponent_clean}"
+            sport_desc = "Volleyball"
         else:
             location = "TBD"
             title = f"Ole Miss vs {opponent_clean}"
+            sport_desc = sport_type.title()
         
         return {
             "title": title,
             "start_iso": parsed_date.isoformat(),
             "location": location,
-            "description": f"{sport_type.title()} game: {title}",
+            "description": f"{sport_desc} game: {title}",
             "category": "Ole Miss Athletics",
             "source": source_name,
             "link": base_url,
@@ -316,8 +344,14 @@ def _parse_game_element(elem, source_name: str, sport_type: str, base_url: str, 
         if game_type.lower() == 'at':
             return None
         
-        # Clean opponent name (remove extra info like logos, rankings, locations)
-        opponent_clean = re.sub(r'^(#?\d+\s+)?', '', opponent_raw.strip())
+        # Clean opponent name (remove extra info like logos, rankings, locations, dates/times)
+        opponent_clean = opponent_raw.strip()
+        # Remove date patterns like "Nov 08 / Noon" or "Nov 8 / 12 PM" from opponent
+        opponent_clean = re.sub(r'\s*[A-Z][a-z]{2}\s+\d{1,2}\s*/\s*(Noon|\d{1,2}\s*[AP]M)', '', opponent_clean, flags=re.IGNORECASE)
+        opponent_clean = re.sub(r'\s*/\s*(Noon|\d{1,2}\s*[AP]M)', '', opponent_clean, flags=re.IGNORECASE)
+        opponent_clean = re.sub(r'\s*\d{1,2}/\d{1,2}\s*/\s*(Noon|\d{1,2}\s*[AP]M)', '', opponent_clean, flags=re.IGNORECASE)
+        # Remove other patterns
+        opponent_clean = re.sub(r'^(#?\d+\s+)?', '', opponent_clean)
         opponent_clean = re.sub(r'\s+Logo.*$', '', opponent_clean, flags=re.IGNORECASE)
         opponent_clean = re.sub(r'\s+Oxford.*$', '', opponent_clean, flags=re.IGNORECASE)
         opponent_clean = re.sub(r'\s+Miss\..*$', '', opponent_clean, flags=re.IGNORECASE)
