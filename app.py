@@ -78,6 +78,23 @@ def truncate_description(value, max_words=50):
         return value
     return " ".join(words[:max_words]) + "..."
 
+def clean_calendar_title(title):
+    """Remove date patterns from event title for calendar invites"""
+    import re
+    # Remove common date patterns that might be in titles
+    # Patterns like "Nov 3 - ", "11/3 - ", "2025-11-03 - ", etc.
+    title = re.sub(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\s*[-–—]\s*', '', title)  # Date - prefix
+    title = re.sub(r'\d{4}-\d{2}-\d{2}\s*[-–—]\s*', '', title)  # ISO date - prefix
+    title = re.sub(r'[A-Z][a-z]{2}\s+\d{1,2},?\s+\d{4}\s*[-–—]\s*', '', title)  # "Nov 3, 2025 - " prefix
+    title = re.sub(r'[A-Z][a-z]{2}\s+\d{1,2}\s*[-–—]\s*', '', title)  # "Nov 3 - " prefix
+    title = re.sub(r'\s*[-–—]\s*\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$', '', title)  # - Date suffix
+    title = re.sub(r'\s*[-–—]\s*\d{4}-\d{2}-\d{2}$', '', title)  # - ISO date suffix
+    title = re.sub(r'\s*[-–—]\s*[A-Z][a-z]{2}\s+\d{1,2},?\s+\d{4}$', '', title)  # - "Nov 3, 2025" suffix
+    # Clean up any double spaces or leading/trailing dashes
+    title = re.sub(r'\s+', ' ', title).strip()
+    title = re.sub(r'^\s*[-–—]\s*', '', title).strip()
+    return title
+
 @app.template_filter('google_calendar_link')
 def google_calendar_link(event):
     """Generate Google Calendar link for event"""
@@ -95,9 +112,12 @@ def google_calendar_link(event):
     end_dt = dt + timedelta(hours=2)  # Default 2 hour event
     end_str = end_dt.strftime('%Y%m%dT%H%M%S')
     
+    # Use clean title (without dates)
+    calendar_title = clean_calendar_title(event['title'])
+    
     params = {
         'action': 'TEMPLATE',
-        'text': event['title'],
+        'text': calendar_title,
         'dates': f"{start_str}/{end_str}",
         'details': event.get('description', ''),
         'location': event.get('location', '')
