@@ -817,6 +817,26 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     if len(filtered_events) < original_count:
         print(f"[collect_all_events] Filtered out {original_count - len(filtered_events)} training events")
     
+    # Filter out LGBTQ+ related events
+    original_count = len(filtered_events)
+    lgbtq_keywords = [
+        'lgbtq', 'lgbt', 'lgbtq+', 'pride', 'gay', 'lesbian', 'bisexual', 
+        'transgender', 'trans', 'queer', 'lgbtqia', 'lgbtqia+', 'pride month',
+        'pride parade', 'rainbow', 'coming out', 'drag', 'drag show'
+    ]
+    
+    filtered_events = [
+        event for event in filtered_events
+        if not any(
+            keyword in event.get("title", "").lower() or 
+            keyword in event.get("description", "").lower() or
+            keyword in event.get("category", "").lower()
+            for keyword in lgbtq_keywords
+        )
+    ]
+    if len(filtered_events) < original_count:
+        print(f"[collect_all_events] Filtered out {original_count - len(filtered_events)} LGBTQ+ related events")
+    
     # Update status - filtering complete
     try:
         from lib.status_tracker import set_status
