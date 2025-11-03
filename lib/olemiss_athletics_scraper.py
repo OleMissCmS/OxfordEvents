@@ -27,7 +27,9 @@ def fetch_olemiss_schedule(url: str, source_name: str, sport_type: str = "footba
         }
         
         print(f"[Ole Miss Athletics] Fetching schedule from: {url}")
-        response = requests.get(url, timeout=15, headers=headers)
+        # Add a small delay to account for page loading
+        import time
+        response = requests.get(url, timeout=20, headers=headers)
         
         if response.status_code != 200:
             print(f"[Ole Miss Athletics] Error: Got status code {response.status_code}")
@@ -35,38 +37,116 @@ def fetch_olemiss_schedule(url: str, source_name: str, sport_type: str = "footba
         
         soup = BeautifulSoup(response.content, 'html.parser')
         
-        # Try to find schedule table
-        # Ole Miss Athletics typically uses tables or list items for schedules
-        schedule_tables = soup.find_all('table', class_=lambda x: x and ('schedule' in str(x).lower() if x else False))
+        # Ole Miss Athletics pages use divs with game information
+        # Look for schedule items - they contain date, opponent, and game info
+        # Common patterns: divs with dates, "vs" indicators, game centers
         
-        if not schedule_tables:
-            # Try finding any table
-            schedule_tables = soup.find_all('table')
+        # Try finding game entries by looking for "vs" and "at" patterns
+        # Games are often in divs or sections with dates and team names
+        all_text = soup.get_text()
         
-        if not schedule_tables:
-            # Try finding schedule in list items
-            schedule_lists = soup.find_all(['ul', 'ol'], class_=lambda x: x and ('schedule' in str(x).lower() if x else False))
-            if schedule_lists:
-                # Process list items
-                for list_elem in schedule_lists:
-                    items = list_elem.find_all('li')
-                    for item in items:
-                        event = _parse_schedule_item(item, source_name, sport_type, url)
-                        if event:
-                            events.append(event)
-                return events
+        # Look for date patterns followed by opponent info
+        # Pattern: Date (like "Nov 8", "Sep 13") followed by "vs" or "at"
         
-        # Parse table rows
-        for table in schedule_tables:
-            rows = table.find_all('tr')
-            for row in rows:
-                # Skip header rows
-                if row.find('th'):
+        # Method 1: Find schedule container and parse games
+        schedule_container = soup.find(['div', 'section'], class_=lambda x: x and ('schedule' in str(x).lower() if x else False))
+        
+        # Method 2: Look for game entries by finding "vs" and "at" patterns with dates
+        # Find all text that contains date patterns and game indicators
+        game_pattern = re.compile(r'([A-Z][a-z]{2})\s+(\d{1,2}).*?(vs|at)\s+([A-Z][^,\n]+)', re.IGNORECASE | re.DOTALL)
+        matches = game_pattern.findall(all_text)
+        
+        # Method 3: Find divs containing game information
+        # Look for elements that contain both date and opponent info
+        game_elements = soup.find_all(['div', 'li', 'tr'], string=re.compile(r'(vs|at)\s+[A-Z]'))
+        
+        # Also try finding by looking for game links or calendar entries
+        calendar_items = soup.find_all(['div', 'article'], class_=lambda x: x and (
+            'game' in str(x).lower() or 
+            'schedule' in str(x).lower() or
+            'event' in str(x).lower()
+        ) if x else False)
+        
+        # Try to extract games from various structures
+        seen_games = set()  # Avoid duplicates
+        
+        # Process calendar items first
+        for item in calendar_items:
+            event = _parse_game_element(item, source_name, sport_type, url, seen_games)
+            if event:
+                events.append(event)
+        
+        # If no events from calendar items, try parsing text patterns
+        if not events:
+            for match in matches:
+                month_abbr, day, game_type, opponent = match
+                # Skip away games
+                if game_type.lower() == 'at':
                     continue
                 
-                event = _parse_table_row(row, source_name, sport_type, url)
-                if event:
-                    events.append(event)
+                # Parse date
+                try:
+                    month_map = {
+                        'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+                        'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+                    }
+                    month = month_map.get(month_abbr.lower()[:3])
+                    day_int = int(day)
+                    current_year = datetime.now().year
+                    
+                    # Create date string for deduplication
+                    game_key = f"{month_abbr} {day} vs {opponent.strip()}"
+                    if game_key in seen_games:
+                        continue
+                    seen_games.add(game_key)
+                    
+                    # Determine year (if month has passed, assume next year)
+                    parsed_date = datetime(current_year, month, day_int, 19, 0)
+                    if parsed_date < datetime.now():
+                        parsed_date = datetime(current_year + 1, month, day_int, 19, 0)
+                    
+                    # Parse time from context if available (would need more sophisticated parsing)
+                    # For now, default to 7 PM
+                    
+                    opponent_clean = opponent.strip()
+                    # Clean opponent name
+                    opponent_clean = re.sub(r'\s+Oxford.*$', '', opponent_clean, flags=re.IGNORECASE)
+                    opponent_clean = re.sub(r'\s+Miss\..*$', '', opponent_clean, flags=re.IGNORECASE)
+                    
+                    if sport_type == "football":
+                        location = "Vaught-Hemingway Stadium"
+                    elif "basketball" in sport_type.lower():
+                        location = "The Pavilion"
+                    else:
+                        location = "TBD"
+                    
+                    title = f"Ole Miss vs {opponent_clean}"
+                    
+                    events.append({
+                        "title": title,
+                        "start_iso": parsed_date.isoformat(),
+                        "location": location,
+                        "description": f"{sport_type.title()} game: {title}",
+                        "category": "Ole Miss Athletics",
+                        "source": source_name,
+                        "link": url,
+                        "cost": "Varies"
+                    })
+                except Exception as e:
+                    print(f"[Ole Miss Athletics] Error parsing match {match}: {e}")
+                    continue
+        
+        # If still no events, try table parsing as fallback
+        if not events:
+            schedule_tables = soup.find_all('table')
+            for table in schedule_tables:
+                rows = table.find_all('tr')
+                for row in rows:
+                    if row.find('th'):
+                        continue
+                    event = _parse_table_row(row, source_name, sport_type, url)
+                    if event:
+                        events.append(event)
         
         print(f"[Ole Miss Athletics] Found {len(events)} home games")
         
@@ -163,6 +243,110 @@ def _parse_table_row(row, source_name: str, sport_type: str, base_url: str) -> D
         }
     except Exception as e:
         print(f"[Ole Miss Athletics] Error parsing table row: {e}")
+        return None
+
+
+def _parse_game_element(elem, source_name: str, sport_type: str, base_url: str, seen_games: set) -> Dict[str, Any]:
+    """Parse a game element (div/article) to extract game information"""
+    try:
+        text = elem.get_text(separator=' ', strip=True)
+        if not text:
+            return None
+        
+        # Look for date pattern (e.g., "Nov 8", "Sep 13")
+        date_match = re.search(r'([A-Z][a-z]{2})\s+(\d{1,2})', text)
+        if not date_match:
+            return None
+        
+        month_abbr, day = date_match.groups()
+        
+        # Look for "vs" or "at" pattern
+        game_match = re.search(r'(vs|at)\s+([A-Z#][^,\n\(]+)', text, re.IGNORECASE)
+        if not game_match:
+            return None
+        
+        game_type, opponent_raw = game_match.groups()
+        
+        # Skip away games
+        if game_type.lower() == 'at':
+            return None
+        
+        # Clean opponent name (remove extra info like logos, rankings, locations)
+        opponent_clean = re.sub(r'^(#?\d+\s+)?', '', opponent_raw.strip())
+        opponent_clean = re.sub(r'\s+Logo.*$', '', opponent_clean, flags=re.IGNORECASE)
+        opponent_clean = re.sub(r'\s+Oxford.*$', '', opponent_clean, flags=re.IGNORECASE)
+        opponent_clean = re.sub(r'\s+Miss\..*$', '', opponent_clean, flags=re.IGNORECASE)
+        opponent_clean = opponent_clean.strip()
+        
+        if not opponent_clean or len(opponent_clean) < 2:
+            return None
+        
+        # Create deduplication key
+        game_key = f"{month_abbr} {day} vs {opponent_clean}"
+        if game_key in seen_games:
+            return None
+        seen_games.add(game_key)
+        
+        # Parse date
+        month_map = {
+            'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+            'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+        }
+        month = month_map.get(month_abbr.lower()[:3])
+        if not month:
+            return None
+        
+        day_int = int(day)
+        current_year = datetime.now().year
+        
+        # Parse time if available (look for patterns like "Noon", "7 p.m.", "2:30-3:30 or 5-7 PM")
+        time_match = re.search(r'(Noon|12\s*[Pp][Mm]|(\d{1,2}):?(\d{2})?\s*([AaPp][Mm])|(\d{1,2})\s*([Pp][Mm]))', text, re.IGNORECASE)
+        hour = 19  # Default 7 PM
+        minute = 0
+        
+        if time_match:
+            time_str = time_match.group(0).lower()
+            if 'noon' in time_str or '12' in time_str:
+                hour = 12
+                minute = 0
+            else:
+                # Try to extract hour
+                hour_match = re.search(r'(\d{1,2})', time_str)
+                if hour_match:
+                    hour = int(hour_match.group(1))
+                    if 'pm' in time_str and hour < 12:
+                        hour += 12
+                    elif 'am' in time_str and hour == 12:
+                        hour = 0
+        
+        parsed_date = datetime(current_year, month, day_int, hour, minute)
+        
+        # If date has passed this year, assume next year
+        if parsed_date < datetime.now():
+            parsed_date = datetime(current_year + 1, month, day_int, hour, minute)
+        
+        # Determine location
+        if sport_type == "football":
+            location = "Vaught-Hemingway Stadium"
+        elif "basketball" in sport_type.lower():
+            location = "The Pavilion"
+        else:
+            location = "TBD"
+        
+        title = f"Ole Miss vs {opponent_clean}"
+        
+        return {
+            "title": title,
+            "start_iso": parsed_date.isoformat(),
+            "location": location,
+            "description": f"{sport_type.title()} game: {title}",
+            "category": "Ole Miss Athletics",
+            "source": source_name,
+            "link": base_url,
+            "cost": "Varies"
+        }
+    except Exception as e:
+        print(f"[Ole Miss Athletics] Error parsing game element: {e}")
         return None
 
 

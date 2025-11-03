@@ -679,12 +679,12 @@ def _convert_espn_to_olemiss_url(espn_url: str, sport_type: str) -> str:
     base_url = "https://olemisssports.com/sports"
     
     if sport_type == "football":
-        return f"{base_url}/football/schedule/2025"
+        return f"{base_url}/football/schedule"
     elif "basketball" in sport_type.lower():
         if "women" in espn_url.lower() or "wbb" in espn_url.lower():
-            return f"{base_url}/womens-basketball/schedule/2025-26"
+            return f"{base_url}/womens-basketball/schedule"
         else:
-            return f"{base_url}/mens-basketball/schedule/2025-26"
+            return f"{base_url}/mens-basketball/schedule"
     
     return None
 
