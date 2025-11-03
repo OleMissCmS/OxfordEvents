@@ -315,12 +315,38 @@ def sports_image(title):
         response.headers['Cache-Control'] = 'public, max-age=3600'
         return response
 
+    # Add timeout protection - don't let image generation hang
+    import threading
+    import queue
+    
+    def generate_image_with_timeout():
+        """Generate image in a thread with timeout protection"""
+        try:
+            teams = detect_sports_teams(title)
+            if teams:
+                away, home = teams
+                matchup_img, error = create_team_matchup_image(away, home)
+                result_queue.put(('success', matchup_img, error))
+            else:
+                result_queue.put(('no_teams', None, None))
+        except Exception as e:
+            result_queue.put(('error', None, str(e)))
+    
+    result_queue = queue.Queue()
+    timeout_seconds = 8  # Max 8 seconds for image generation
+    
     try:
-        teams = detect_sports_teams(title)
-        if teams:
-            away, home = teams
-            matchup_img, error = create_team_matchup_image(away, home)
-            if matchup_img:
+        # Start image generation in thread
+        img_thread = threading.Thread(target=generate_image_with_timeout, daemon=True)
+        img_thread.start()
+        img_thread.join(timeout=timeout_seconds)
+        
+        # Check if result is available
+        try:
+            result = result_queue.get_nowait()
+            result_type, matchup_img, error = result
+            
+            if result_type == 'success' and matchup_img:
                 # Store in cache
                 img_data = matchup_img.getvalue()
                 cache.set(cache_key_hash, img_data, timeout=3600)
@@ -347,8 +373,15 @@ def sports_image(title):
                 response = send_file(matchup_img, mimetype='image/png')
                 response.headers['Cache-Control'] = 'public, max-age=3600'  # Cache for 1 hour
                 return response
+            elif result_type == 'error':
+                print(f"Error generating sports image: {error}")
+            elif result_type == 'no_teams':
+                print(f"No teams detected in title: {title}")
+        except queue.Empty:
+            # Timeout - image generation took too long
+            print(f"Timeout generating sports image for: {title} (>{timeout_seconds}s)")
     except Exception as e:
-        print(f"Error generating sports image: {e}")
+        print(f"Error in sports image generation: {e}")
     
     # Return placeholder if no matchup image
     from flask import send_from_directory
