@@ -463,24 +463,24 @@ def category_image(category, title):
                 print(f"[category_image] Timeout searching for venue image: {location}")
             
             if location_img:
-            # Store in EventImage if event_hash provided
-            if event_hash:
-                try:
-                    from lib.database import get_session, EventImage
-                    session = get_session()
-                    event_image = session.query(EventImage).filter_by(event_hash=event_hash).first()
-                    if event_image:
-                        event_image.image_url = location_img
-                        event_image.image_type = 'venue'
-                        session.merge(event_image)
-                        session.commit()
-                    session.close()
-                except Exception:
-                    pass
-            
-            # Redirect to location image (these are external, no need to cache)
-            from flask import redirect
-            return redirect(location_img)
+                # Store in EventImage if event_hash provided
+                if event_hash:
+                    try:
+                        from lib.database import get_session, EventImage
+                        session = get_session()
+                        event_image = session.query(EventImage).filter_by(event_hash=event_hash).first()
+                        if event_image:
+                            event_image.image_url = location_img
+                            event_image.image_type = 'venue'
+                            session.merge(event_image)
+                            session.commit()
+                        session.close()
+                    except Exception:
+                        pass
+                
+                # Redirect to location image (these are external, no need to cache)
+                from flask import redirect
+                return redirect(location_img)
     
     # Try to generate category-specific image
     try:
