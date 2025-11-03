@@ -234,18 +234,21 @@ def clear_cache():
 
 
 @app.route('/api/sports-image/<path:title>')
+@cache.cached(timeout=3600, key_prefix='sports_image')  # Cache for 1 hour
 def sports_image(title):
-    """Generate sports matchup image"""
+    """Generate sports matchup image with caching"""
     try:
         teams = detect_sports_teams(title)
         if teams:
             away, home = teams
             matchup_img, error = create_team_matchup_image(away, home)
             if matchup_img:
-                from flask import send_file
-                return send_file(matchup_img, mimetype='image/png')
-    except:
-        pass
+                from flask import send_file, Response
+                response = send_file(matchup_img, mimetype='image/png')
+                response.headers['Cache-Control'] = 'public, max-age=3600'  # Cache for 1 hour
+                return response
+    except Exception as e:
+        print(f"Error generating sports image: {e}")
     
     # Return placeholder if no matchup image
     from flask import send_from_directory

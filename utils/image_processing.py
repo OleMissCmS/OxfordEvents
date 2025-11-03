@@ -240,9 +240,10 @@ def create_team_matchup_image(
     Returns (BytesIO buffer or None, error_message or None).
     """
     try:
-        # Download logos
-        away_logo = get_logo_image(away_team[1], size=120)
-        home_logo = get_logo_image(home_team[1], size=120)
+        # Download logos with larger size and ensure they fit
+        logo_size = 140  # Slightly larger to ensure visibility
+        away_logo = get_logo_image(away_team[1], size=logo_size)
+        home_logo = get_logo_image(home_team[1], size=logo_size)
         
         # Check which logos failed
         away_urls_str = str(away_team[1]) if isinstance(away_team[1], list) else away_team[1]
@@ -260,21 +261,29 @@ def create_team_matchup_image(
         draw = ImageDraw.Draw(img)
         
         # Draw diagonal line from bottom-left to top-right
-        draw.line([(0, height), (width, 0)], fill="#000000", width=4)
+        draw.line([(0, height), (width, 0)], fill="#000000", width=3)
         
-        # Place away logo in upper left quadrant
-        paste_x = width // 4 - away_logo.width // 2
-        paste_y = height // 4 - away_logo.height // 2
+        # Calculate safe positioning with padding to prevent cropping
+        padding = 20  # Padding from edges
+        away_center_x = width // 4
+        away_center_y = height // 4
+        home_center_x = 3 * width // 4
+        home_center_y = 3 * height // 4
+        
+        # Ensure logos don't get cut off - use center positioning with bounds checking
+        # Away logo (upper left)
+        paste_x = max(padding, min(away_center_x - away_logo.width // 2, width - away_logo.width - padding))
+        paste_y = max(padding, min(away_center_y - away_logo.height // 2, height - away_logo.height - padding))
         img.paste(away_logo, (paste_x, paste_y), away_logo)
         
-        # Place home logo in lower right quadrant
-        paste_x = 3 * width // 4 - home_logo.width // 2
-        paste_y = 3 * height // 4 - home_logo.height // 2
+        # Home logo (lower right)
+        paste_x = max(padding, min(home_center_x - home_logo.width // 2, width - home_logo.width - padding))
+        paste_y = max(padding, min(home_center_y - home_logo.height // 2, height - home_logo.height - padding))
         img.paste(home_logo, (paste_x, paste_y), home_logo)
         
         # Convert to BytesIO
         buffer = io.BytesIO()
-        img.save(buffer, format="PNG")
+        img.save(buffer, format="PNG", optimize=True)
         buffer.seek(0)
         return buffer, None
     except Exception as e:
