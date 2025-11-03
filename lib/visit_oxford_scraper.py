@@ -58,15 +58,29 @@ def fetch_visit_oxford_events(url: str, source_name: str) -> List[Dict[str, Any]
         
         print(f"[Visit Oxford] Found {len(event_links)} event links")
         
-        # Limit to first 30 events to avoid timeout
-        for idx, event_link in enumerate(event_links[:30]):
+        # Limit to first 10 events to avoid timeout (Visit Oxford scraping is slow)
+        # Skip if too many links to avoid worker timeout
+        if len(event_links) > 20:
+            print(f"[Visit Oxford] WARNING: Too many links ({len(event_links)}), skipping to avoid timeout")
+            print(f"[Visit Oxford] Consider using a different approach or limiting links")
+            return events
+        
+        for idx, event_link in enumerate(event_links[:10]):
             try:
                 href = event_link['href']
-                print(f"[Visit Oxford] Processing event {idx + 1}/{min(len(event_links), 30)}: {href}")
+                print(f"[Visit Oxford] Processing event {idx + 1}/{min(len(event_links), 10)}: {href}")
                 
-                # Fetch event detail page
-                detail_response = requests.get(href, timeout=10, headers=headers)
-                if detail_response.status_code != 200:
+                # Fetch event detail page with short timeout
+                try:
+                    detail_response = requests.get(href, timeout=5, headers=headers)
+                    if detail_response.status_code != 200:
+                        print(f"[Visit Oxford] Skipping {href} - status {detail_response.status_code}")
+                        continue
+                except requests.exceptions.Timeout:
+                    print(f"[Visit Oxford] Timeout fetching {href}, skipping")
+                    continue
+                except requests.exceptions.RequestException as e:
+                    print(f"[Visit Oxford] Error fetching {href}: {e}")
                     continue
                 
                 detail_soup = BeautifulSoup(detail_response.content, 'html.parser')
@@ -161,8 +175,8 @@ def fetch_visit_oxford_events(url: str, source_name: str) -> List[Dict[str, Any]
                 events.append(event)
                 print(f"[Visit Oxford] Successfully parsed: {title}")
                 
-                # Small delay to avoid rate limiting
-                time.sleep(0.5)
+                # Skip delay to speed up (already limited to 10 events)
+                # time.sleep(0.5)  # Removed to prevent timeout
                 
             except Exception as e:
                 print(f"[Visit Oxford] Error processing event {href}: {e}")

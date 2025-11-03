@@ -456,18 +456,33 @@ def fetch_ticketmaster_events(city: str, state_code: str) -> List[Dict[str, Any]
             print(f"[Ticketmaster] API returned {len(events_list)} events")
             
             for item in events_list:
+                # Try multiple date field options
+                dates = item.get('dates', {}).get('start', {})
+                start_iso = dates.get('localDateTime') or dates.get('dateTime') or dates.get('localDate')
+                
+                # If we only have a date, add a default time
+                if start_iso and 'T' not in start_iso:
+                    start_iso = f"{start_iso}T19:00:00"
+                
+                # Extract venue name safely
+                venues = item.get('_embedded', {}).get('venues', [])
+                venue_name = venues[0].get('name', 'Unknown Venue') if venues else 'Unknown Venue'
+                
                 event = {
                     "title": item.get('name', ''),
-                    "start_iso": item.get('dates', {}).get('start', {}).get('localDateTime'),
-                    "location": f"{item.get('_embedded', {}).get('venues', [{}])[0].get('name', '')}, {city}",
-                    "description": item.get('info', ''),
+                    "start_iso": start_iso,
+                    "location": f"{venue_name}, {city}",
+                    "description": item.get('info', '') or item.get('description', ''),
                     "category": "Ticketmaster",  # Use dedicated Ticketmaster category
                     "source": "Ticketmaster",
                     "link": item.get('url', ''),
                     "cost": f"${item.get('priceRanges', [{}])[0].get('min', 0)}" if item.get('priceRanges') else "Varies"
                 }
+                
                 if event['start_iso']:
                     events.append(event)
+                else:
+                    print(f"[Ticketmaster] Skipping event '{event['title'][:50]}' - no valid date")
         elif response.status_code == 401:
             print(f"[Ticketmaster] ERROR: Unauthorized (401) - API key may be invalid or expired")
             try:
@@ -493,6 +508,17 @@ def fetch_ticketmaster_events(city: str, state_code: str) -> List[Dict[str, Any]
         traceback.print_exc()
     
     print(f"[Ticketmaster] Successfully processed {len(events)} events")
+    if len(events_list) > 0 and len(events) == 0:
+        print(f"[Ticketmaster] WARNING: API returned {len(events_list)} events but 0 were processed")
+        print(f"[Ticketmaster] This usually means events are missing dates. Sample event structure:")
+        if events_list:
+            sample = events_list[0]
+            dates = sample.get('dates', {})
+            print(f"[Ticketmaster] Sample dates structure: {dates}")
+            if dates:
+                start = dates.get('start', {})
+                print(f"[Ticketmaster] Sample start structure: {start}")
+                print(f"[Ticketmaster] Available date fields: localDateTime={start.get('localDateTime')}, dateTime={start.get('dateTime')}, localDate={start.get('localDate')}")
     return events
 
 
@@ -887,9 +913,9 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                             events = fetch_visit_oxford_events(url, source_name)
                             print(f"[collect_all_events] {source_name} (Enhanced): {len(events)} events found")
                         except Exception as e:
-                            print(f"[collect_all_events] Enhanced scraper failed for {source_name}, using fallback: {e}")
-                            # Fallback to regular HTML scraper
-                            events = fetch_html_events(url, source_name, parser=parser)
+                            print(f"[collect_all_events] Visit Oxford scraper failed/timed out: {str(e)[:100]}")
+                            # Skip Visit Oxford if it fails to prevent worker timeout
+                            events = []
                     else:
                         events = fetch_html_events(url, source_name, parser=parser)
                     all_events.extend(events)
