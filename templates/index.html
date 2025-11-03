@@ -64,9 +64,17 @@
                     {% if event.image_url %}
                     <img src="{{ event.image_url }}" alt="{{ event.title }}">
                     {% elif event.category == 'Sports' or event.category == 'Ole Miss Athletics' %}
+                    {% if event.image_hash %}
+                    <img src="{{ url_for('sports_image', title=event.title, hash=event.image_hash, date=event.start_iso, location=event.location) }}" alt="{{ event.title }}">
+                    {% else %}
                     <img src="{{ url_for('sports_image', title=event.title) }}" alt="{{ event.title }}">
+                    {% endif %}
+                    {% else %}
+                    {% if event.image_hash %}
+                    <img src="{{ url_for('category_image', category=event.category, title=event.title, location=event.location, hash=event.image_hash) }}" alt="{{ event.title }}">
                     {% else %}
                     <img src="{{ url_for('category_image', category=event.category, title=event.title, location=event.location) }}" alt="{{ event.title }}">
+                    {% endif %}
                     {% endif %}
                 </div>
                 <div class="event-content">

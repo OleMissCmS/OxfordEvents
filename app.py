@@ -392,10 +392,28 @@ def category_image(category, title):
         response.headers['Cache-Control'] = 'public, max-age=3600'
         return response
     
-    # Try to get location image first
+    # Get event_hash if provided (for event-specific storage)
+    event_hash = request.args.get('hash', '')
+    
+    # Try to get location image first (with event_hash to avoid re-searching)
     if location:
-        location_img = search_location_image(location)
+        location_img = search_location_image(location, event_hash=event_hash)
         if location_img:
+            # Store in EventImage if event_hash provided
+            if event_hash:
+                try:
+                    from lib.database import get_session, EventImage
+                    session = get_session()
+                    event_image = session.query(EventImage).filter_by(event_hash=event_hash).first()
+                    if event_image:
+                        event_image.image_url = location_img
+                        event_image.image_type = 'venue'
+                        session.merge(event_image)
+                        session.commit()
+                    session.close()
+                except Exception:
+                    pass
+            
             # Redirect to location image (these are external, no need to cache)
             from flask import redirect
             return redirect(location_img)
