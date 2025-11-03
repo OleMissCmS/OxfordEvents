@@ -114,16 +114,6 @@ def ics_calendar_link(event):
 
 # Event sources
 EVENT_SOURCES = [
-    # Ole Miss Athletics
-    {"name": "Ole Miss Football", "type": "ics", "url": "https://olemisssports.com/calendar.ashx/calendar.ics?path=football", "group": "University"},
-    {"name": "Ole Miss MBB", "type": "ics", "url": "https://olemisssports.com/calendar.ashx/calendar.ics?path=mbball", "group": "University"},
-    {"name": "Ole Miss WBB", "type": "ics", "url": "https://olemisssports.com/calendar.ashx/calendar.ics?path=wbball", "group": "University"},
-    {"name": "Ole Miss Baseball", "type": "ics", "url": "https://olemisssports.com/calendar.ashx/calendar.ics?path=baseball", "group": "University"},
-    {"name": "Ole Miss Softball", "type": "ics", "url": "https://olemisssports.com/calendar.ashx/calendar.ics?path=softball", "group": "University"},
-    {"name": "Ole Miss Track", "type": "ics", "url": "https://olemisssports.com/calendar.ashx/calendar.ics?path=track", "group": "University"},
-    {"name": "Ole Miss Soccer", "type": "ics", "url": "https://olemisssports.com/calendar.ashx/calendar.ics?path=soccer", "group": "University"},
-    {"name": "Ole Miss Volleyball", "type": "ics", "url": "https://olemisssports.com/calendar.ashx/calendar.ics?path=volleyball", "group": "University"},
-    {"name": "Ole Miss Tennis", "type": "ics", "url": "https://olemisssports.com/calendar.ashx/calendar.ics?path=tennis", "group": "University"},
     # Ole Miss Athletics Direct Schedule Sources (HTML-based scraper, no Selenium needed)
     {"name": "Ole Miss Football Schedule", "type": "olemiss", "url": "https://olemisssports.com/sports/football/schedule", "sport_type": "football", "group": "University"},
     {"name": "Ole Miss Men's Basketball Schedule", "type": "olemiss", "url": "https://olemisssports.com/sports/mens-basketball/schedule", "sport_type": "basketball", "group": "University"},
@@ -136,7 +126,6 @@ EVENT_SOURCES = [
     # Community
     {"name": "Visit Oxford", "type": "html", "url": "https://visitoxfordms.com/events/", "parser": "visit_oxford", "group": "Community"},
     {"name": "Bandsintown", "type": "html", "url": "https://www.bandsintown.com/c/oxford-ms", "parser": "bandsintown", "group": "Community"},
-    {"name": "SeatGeek", "type": "api", "parser": "seatgeek", "city": "Oxford", "state": "MS", "group": "Community"},
     {"name": "Ticketmaster", "type": "api", "parser": "ticketmaster", "city": "Oxford", "stateCode": "MS", "group": "Community"},
 ]
 
