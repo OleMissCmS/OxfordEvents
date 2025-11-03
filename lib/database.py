@@ -51,19 +51,44 @@ _session_factory = None
 
 
 def get_database_url():
-    """Get database URL from environment variable or use default"""
-    # Render provides DATABASE_URL, or use local SQLite for development
+    """
+    Get database URL from environment variable or use SQLite on persistent disk.
+    Priority:
+    1. PostgreSQL (if DATABASE_URL is set) - optional, requires paid subscription after 30 days
+    2. SQLite on persistent disk (free, persistent) - RECOMMENDED
+    3. SQLite in local data/ (development)
+    """
+    # First, check if PostgreSQL is configured (optional)
     db_url = os.getenv('DATABASE_URL')
     
-    if not db_url:
-        # Fallback to SQLite for local development
+    if db_url:
+        # Render uses postgres:// but SQLAlchemy needs postgresql://
+        if db_url.startswith('postgres://'):
+            db_url = db_url.replace('postgres://', 'postgresql://', 1)
+        return db_url
+    
+    # Use SQLite on persistent disk (free, persistent)
+    try:
+        from utils.storage import get_sqlite_db_path, is_persistent_disk
+        sqlite_path = get_sqlite_db_path()
+        
+        # Convert to absolute path for SQLite
+        abs_path = os.path.abspath(sqlite_path)
+        
+        # SQLite URL format: sqlite:///absolute/path/to/db.db
+        sqlite_url = f'sqlite:///{abs_path}'
+        
+        if is_persistent_disk():
+            print(f"[Database] Using SQLite on persistent disk: {abs_path}")
+        else:
+            print(f"[Database] Using SQLite (local): {abs_path}")
+        
+        return sqlite_url
+    except Exception as e:
+        # Ultimate fallback
+        print(f"[Database] Error getting persistent disk path, using local: {e}")
+        os.makedirs('data', exist_ok=True)
         return 'sqlite:///data/oxford_events.db'
-    
-    # Render uses postgres:// but SQLAlchemy needs postgresql://
-    if db_url.startswith('postgres://'):
-        db_url = db_url.replace('postgres://', 'postgresql://', 1)
-    
-    return db_url
 
 
 def get_engine():

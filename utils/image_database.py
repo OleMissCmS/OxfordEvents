@@ -13,13 +13,35 @@ from bs4 import BeautifulSoup
 from urllib.parse import quote, urlparse
 import time
 
-# Database file paths
-DB_DIR = "data"
-TEAM_LOGOS_DB = os.path.join(DB_DIR, "team_logos.json")
-VENUE_IMAGES_DB = os.path.join(DB_DIR, "venue_images.json")
-IMAGES_DIR = os.path.join("static", "images", "cache")
+# Use persistent disk storage if available
+try:
+    from utils.storage import (
+        get_images_dir, get_database_dir, 
+        get_json_db_path, log_storage_setup
+    )
+    IMAGES_DIR = get_images_dir()
+    DB_DIR = get_database_dir()
+    TEAM_LOGOS_DB = get_json_db_path("team_logos.json")
+    VENUE_IMAGES_DB = get_json_db_path("venue_images.json")
+    
+    # Log storage setup on first import
+    try:
+        _storage_logged = getattr(__import__('utils.image_database', fromlist=['']), '_storage_logged', False)
+        if not _storage_logged:
+            log_storage_setup()
+            setattr(__import__('utils.image_database', fromlist=['']), '_storage_logged', True)
+    except:
+        pass
+except Exception as e:
+    # Fallback to default paths
+    DB_DIR = "data"
+    IMAGES_DIR = os.path.join("static", "images", "cache")
+    TEAM_LOGOS_DB = os.path.join(DB_DIR, "team_logos.json")
+    VENUE_IMAGES_DB = os.path.join(DB_DIR, "venue_images.json")
+    os.makedirs(DB_DIR, exist_ok=True)
+    os.makedirs(IMAGES_DIR, exist_ok=True)
 
-# Ensure directories exist
+# Ensure directories exist (in case storage.py fails)
 os.makedirs(DB_DIR, exist_ok=True)
 os.makedirs(IMAGES_DIR, exist_ok=True)
 

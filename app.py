@@ -25,13 +25,23 @@ def init_app():
     global _db_initialized
     if not _db_initialized:
         try:
+            # Log storage setup
+            try:
+                from utils.storage import log_storage_setup
+                log_storage_setup()
+            except Exception:
+                pass
+            
+            # Initialize database (SQLite on persistent disk, or PostgreSQL if configured)
             from lib.database import init_database, migrate_json_to_db
             init_database()
+            
             # Try to migrate JSON data once (if any exists)
             try:
                 migrate_json_to_db()
             except Exception as e:
                 print(f"[Database] Migration skipped or failed: {e}")
+            
             _db_initialized = True
         except Exception as e:
             print(f"[Database] Database initialization skipped (using JSON fallback): {e}")
@@ -288,9 +298,35 @@ def sports_image(title):
     except Exception as e:
         print(f"Error generating sports image: {e}")
     
-    # Return placeholder if no matchup image
-    from flask import send_from_directory
-    return send_from_directory('static/images', 'placeholder.svg')
+        # Return placeholder if no matchup image
+        from flask import send_from_directory
+        return send_from_directory('static/images', 'placeholder.svg')
+
+
+@app.route('/static/images/cache/<path:filename>')
+def serve_cached_image(filename):
+    """Serve cached images from persistent disk or static directory"""
+    try:
+        # Try persistent disk first
+        from utils.storage import get_images_dir, is_persistent_disk
+        images_dir = get_images_dir()
+        
+        # Check if file exists
+        file_path = os.path.join(images_dir, filename)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            from flask import send_file
+            return send_file(file_path)
+    except Exception:
+        pass
+    
+    # Fallback to static/images/cache
+    try:
+        from flask import send_from_directory
+        return send_from_directory('static/images/cache', filename)
+    except Exception:
+        # Ultimate fallback to placeholder
+        from flask import send_from_directory
+        return send_from_directory('static/images', 'placeholder.svg')
 
 
 @app.route('/api/category-image/<category>/<path:title>')
