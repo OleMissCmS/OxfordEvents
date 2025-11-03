@@ -404,27 +404,52 @@ def _parse_game_element(elem, source_name: str, sport_type: str, base_url: str, 
         if parsed_date < datetime.now():
             parsed_date = datetime(current_year + 1, month, day_int, hour, minute)
         
-        # Determine location
+        # Determine location and build title with sport description
         if sport_type == "football":
             location = "Vaught-Hemingway Stadium"
+            title = f"Ole Miss vs {opponent_clean}"
+            sport_desc = "Football"
         elif "basketball" in sport_type.lower():
             location = "The Pavilion"
+            # Determine if men's or women's basketball based on sport_type or source
+            sport_type_lower = sport_type.lower()
+            source_lower = source_name.lower()
+            if "women" in sport_type_lower or "wbb" in sport_type_lower or "women" in source_lower:
+                title = f"Ole Miss Women's Basketball vs {opponent_clean}"
+                sport_desc = "Women's Basketball"
+            elif "men" in sport_type_lower or "mbb" in sport_type_lower or "men" in source_lower:
+                title = f"Ole Miss Men's Basketball vs {opponent_clean}"
+                sport_desc = "Men's Basketball"
+            else:
+                # Default based on URL
+                if "womens" in base_url.lower() or "women" in base_url.lower():
+                    title = f"Ole Miss Women's Basketball vs {opponent_clean}"
+                    sport_desc = "Women's Basketball"
+                else:
+                    title = f"Ole Miss Men's Basketball vs {opponent_clean}"
+                    sport_desc = "Men's Basketball"
         elif sport_type == "baseball":
             location = "Swayze Field"
+            title = f"Ole Miss vs {opponent_clean}"
+            sport_desc = "Baseball"
         elif sport_type == "softball":
             location = "Ole Miss Softball Complex"
+            title = f"Ole Miss vs {opponent_clean}"
+            sport_desc = "Softball"
         elif sport_type == "volleyball":
             location = "The Pavilion"
+            title = f"Ole Miss vs {opponent_clean}"
+            sport_desc = "Volleyball"
         else:
             location = "TBD"
-        
-        title = f"Ole Miss vs {opponent_clean}"
+            title = f"Ole Miss vs {opponent_clean}"
+            sport_desc = sport_type.title()
         
         return {
             "title": title,
             "start_iso": parsed_date.isoformat(),
             "location": location,
-            "description": f"{sport_type.title()} game: {title}",
+            "description": f"{sport_desc} game: {title}",
             "category": "Ole Miss Athletics",
             "source": source_name,
             "link": base_url,
