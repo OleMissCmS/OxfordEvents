@@ -439,10 +439,11 @@ VENUE_IMAGES = {
     "lyceum": "https://images.unsplash.com/photo-1562774053-701939374585?w=800",
 }
 
-def search_location_image(location: str) -> Optional[str]:
+def search_location_image(location: str, event_hash: str = None) -> Optional[str]:
     """
     Search for an image of a location.
-    Uses database first, then falls back to hardcoded VENUE_IMAGES, then fetches from Wikipedia/Google.
+    Uses database first, then falls back to hardcoded VENUE_IMAGES, then fetches from Wikipedia/search engines.
+    If event_hash is provided, checks EventImage first to avoid re-searching for the same event.
     Returns the first image URL found or None.
     """
     if not location or location.lower() in ['', 'oxford, ms', 'oxford', 'tbd', 'tba', 'venue tbd']:
@@ -454,10 +455,10 @@ def search_location_image(location: str) -> Optional[str]:
         location_clean_lower = location_clean.lower()
         location_clean_lower = location_clean_lower.split('-')[0].strip()
         
-        # Try database first (includes Wikipedia/Google fetching)
+        # Try database first (includes Wikipedia/search engine fetching, with event_hash for event-specific storage)
         try:
             from utils.image_database import get_venue_image
-            db_image = get_venue_image(location_clean)
+            db_image = get_venue_image(location_clean, event_hash=event_hash)
             if db_image:
                 return db_image
         except Exception as e:

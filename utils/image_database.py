@@ -310,104 +310,211 @@ def _record_successful_request(endpoint: str = "default"):
         _rate_limit_errors[endpoint] = 0
 
 
-def fetch_google_image(query: str, num_results: int = 5) -> Optional[str]:
-    """
-    Fetch image using DuckDuckGo (simple, no API key needed)
-    Returns local file path if successful, None otherwise
-    Includes rate limiting to avoid 403/202 errors
-    """
+def fetch_duckduckgo_image(query: str, num_results: int = 5) -> Optional[str]:
+    """Fetch image using DuckDuckGo"""
     # Check rate limit first
     if not _check_rate_limit("duckduckgo"):
-        print(f"[image_database] Rate limit exceeded for DuckDuckGo, skipping fetch for '{query}'")
         return None
     
     try:
-        # Use duckduckgo-search library (simple, no API key)
+        from duckduckgo_search import DDGS
+        
+        search_query = f"{query} oxford MS"
+        
         try:
-            from duckduckgo_search import DDGS
-            
-            search_query = f"{query} oxford MS"
-            
-            # Search for images with rate limiting
-            try:
-                with DDGS() as ddgs:
-                    results = list(ddgs.images(
-                        keywords=search_query,
-                        max_results=num_results,
-                        safesearch='moderate'
-                    ))
-            except Exception as e:
-                error_str = str(e).lower()
-                if 'ratelimit' in error_str or '403' in error_str or '202' in error_str:
-                    _record_rate_limit_error("duckduckgo")
-                    print(f"[image_database] Rate limited by DuckDuckGo for '{query}', will retry later")
-                    return None
-                else:
-                    raise
-            
-            for result in results:
-                img_url = result.get('image', '') or result.get('url', '')
-                if not img_url:
-                    continue
-                
-                # Validate it's an image URL
-                if not any(ext in img_url.lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', 'image']):
-                    continue
-                
-                # Try to download
-                filename = get_filename_from_url(img_url, query.replace(' ', '_'))
-                local_path = os.path.join(IMAGES_DIR, filename)
-                
-                if download_image(img_url, local_path):
-                    print(f"[image_database] Successfully downloaded image from DuckDuckGo: {img_url[:80]}...")
-                    _record_successful_request("duckduckgo")
-                    return f"/static/images/cache/{filename}"
-            
-            # If we got results but none downloaded successfully, still record success
-            _record_successful_request("duckduckgo")
+            with DDGS() as ddgs:
+                results = list(ddgs.images(
+                    keywords=search_query,
+                    max_results=num_results,
+                    safesearch='moderate'
+                ))
+        except Exception as e:
+            error_str = str(e).lower()
+            if 'ratelimit' in error_str or '403' in error_str or '202' in error_str:
+                _record_rate_limit_error("duckduckgo")
+                return None
+            else:
+                raise
         
-        except ImportError:
-            # Library not installed, try simple Bing search as fallback
-            print(f"[image_database] duckduckgo-search not installed, trying Bing Image Search")
-            search_query = f"{query} oxford MS"
+        for result in results:
+            img_url = result.get('image', '') or result.get('url', '')
+            if not img_url:
+                continue
             
-            # Simple Bing Image Search (no API key needed for basic use)
-            bing_url = f"https://www.bing.com/images/search?q={quote(search_query)}&form=HDRSC2&first=1"
+            if not any(ext in img_url.lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', 'image']):
+                continue
             
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            }
+            filename = get_filename_from_url(img_url, query.replace(' ', '_'))
+            local_path = os.path.join(IMAGES_DIR, filename)
             
-            response = requests.get(bing_url, timeout=15, headers=headers)
-            
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.content, 'html.parser')
-                
-                # Look for image links in Bing results
-                img_links = soup.find_all('a', class_='iusc', limit=num_results)
-                
-                for link in img_links:
-                    # Bing stores image URL in m attribute as JSON
-                    m_attr = link.get('m', '{}')
-                    try:
-                        import json
-                        data = json.loads(m_attr)
-                        img_url = data.get('murl', '')
-                        
-                        if img_url:
-                            filename = get_filename_from_url(img_url, query.replace(' ', '_'))
-                            local_path = os.path.join(IMAGES_DIR, filename)
-                            
-                            if download_image(img_url, local_path):
-                                return f"/static/images/cache/{filename}"
-                    except:
-                        continue
+            if download_image(img_url, local_path):
+                print(f"[image_database] Successfully downloaded from DuckDuckGo: {img_url[:80]}...")
+                _record_successful_request("duckduckgo")
+                return f"/static/images/cache/{filename}"
         
+        _record_successful_request("duckduckgo")
+        return None
+    except ImportError:
         return None
     except Exception as e:
-        print(f"[image_database] Error fetching image for '{query}': {e}")
+        print(f"[image_database] DuckDuckGo error for '{query}': {e}")
         return None
+
+
+def fetch_bing_image(query: str, num_results: int = 5) -> Optional[str]:
+    """Fetch image using Bing Image Search"""
+    try:
+        search_query = f"{query} oxford MS"
+        bing_url = f"https://www.bing.com/images/search?q={quote(search_query)}&form=HDRSC2&first=1"
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        }
+        
+        response = requests.get(bing_url, timeout=15, headers=headers)
+        
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            img_links = soup.find_all('a', class_='iusc', limit=num_results)
+            
+            for link in img_links:
+                m_attr = link.get('m', '{}')
+                try:
+                    import json
+                    data = json.loads(m_attr)
+                    img_url = data.get('murl', '')
+                    
+                    if img_url:
+                        filename = get_filename_from_url(img_url, query.replace(' ', '_'))
+                        local_path = os.path.join(IMAGES_DIR, filename)
+                        
+                        if download_image(img_url, local_path):
+                            print(f"[image_database] Successfully downloaded from Bing: {img_url[:80]}...")
+                            return f"/static/images/cache/{filename}"
+                except:
+                    continue
+        return None
+    except Exception as e:
+        print(f"[image_database] Bing error for '{query}': {e}")
+        return None
+
+
+def fetch_google_image_scrape(query: str, num_results: int = 5) -> Optional[str]:
+    """Fetch image using Google Image Search (scraping, no API key)"""
+    try:
+        search_query = f"{query} oxford MS"
+        google_url = f"https://www.google.com/search?tbm=isch&q={quote(search_query)}"
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        }
+        
+        response = requests.get(google_url, timeout=15, headers=headers)
+        
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            # Google stores images in various ways, try common patterns
+            img_tags = soup.find_all('img', limit=20)
+            
+            for img in img_tags:
+                src = img.get('src', '') or img.get('data-src', '')
+                if not src or src.startswith('data:'):
+                    continue
+                
+                # Filter out Google's own images
+                if 'google.com' in src.lower() or 'googleusercontent' in src.lower():
+                    continue
+                
+                if any(ext in src.lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']):
+                    # Convert relative URLs
+                    if src.startswith('//'):
+                        src = 'https:' + src
+                    elif src.startswith('/'):
+                        continue  # Skip relative URLs
+                    
+                    filename = get_filename_from_url(src, query.replace(' ', '_'))
+                    local_path = os.path.join(IMAGES_DIR, filename)
+                    
+                    if download_image(src, local_path):
+                        print(f"[image_database] Successfully downloaded from Google: {src[:80]}...")
+                        return f"/static/images/cache/{filename}"
+        return None
+    except Exception as e:
+        print(f"[image_database] Google error for '{query}': {e}")
+        return None
+
+
+def fetch_brave_image(query: str, num_results: int = 5) -> Optional[str]:
+    """Fetch image using Brave Search (scraping)"""
+    try:
+        search_query = f"{query} oxford MS"
+        brave_url = f"https://search.brave.com/images?q={quote(search_query)}"
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        }
+        
+        response = requests.get(brave_url, timeout=15, headers=headers)
+        
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            img_tags = soup.find_all('img', limit=20)
+            
+            for img in img_tags:
+                src = img.get('src', '') or img.get('data-src', '')
+                if not src or src.startswith('data:'):
+                    continue
+                
+                if 'brave.com' in src.lower():
+                    continue
+                
+                if any(ext in src.lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']):
+                    if src.startswith('//'):
+                        src = 'https:' + src
+                    elif src.startswith('/'):
+                        continue
+                    
+                    filename = get_filename_from_url(src, query.replace(' ', '_'))
+                    local_path = os.path.join(IMAGES_DIR, filename)
+                    
+                    if download_image(src, local_path):
+                        print(f"[image_database] Successfully downloaded from Brave: {src[:80]}...")
+                        return f"/static/images/cache/{filename}"
+        return None
+    except Exception as e:
+        print(f"[image_database] Brave error for '{query}': {e}")
+        return None
+
+
+def fetch_google_image(query: str, num_results: int = 5) -> Optional[str]:
+    """
+    Fetch image using multiple search engines as fallbacks.
+    Tries: DuckDuckGo -> Bing -> Google -> Brave
+    Returns local file path if successful, None otherwise
+    """
+    # Try each search engine in order until one succeeds
+    search_engines = [
+        ("DuckDuckGo", fetch_duckduckgo_image),
+        ("Bing", fetch_bing_image),
+        ("Google", fetch_google_image_scrape),
+        ("Brave", fetch_brave_image),
+    ]
+    
+    for engine_name, fetch_func in search_engines:
+        try:
+            print(f"[image_database] Trying {engine_name} for '{query}'...")
+            result = fetch_func(query, num_results)
+            if result:
+                return result
+        except Exception as e:
+            print(f"[image_database] {engine_name} failed for '{query}': {e}")
+            continue
+    
+    print(f"[image_database] All search engines failed for '{query}'")
+    return None
 
 
 def get_team_logo(team_name: str) -> Optional[List[str]]:
@@ -475,9 +582,41 @@ def get_team_logo(team_name: str) -> Optional[List[str]]:
     return None
 
 
-def get_venue_image(venue_name: str) -> Optional[str]:
+def get_event_venue_image(event_hash: str, venue_name: str) -> Optional[str]:
     """
-    Get venue image from SQLite database (or JSON fallback), or fetch from Wikipedia/Google if not found
+    Get venue image for a specific event (by event_hash).
+    Checks EventImage database first to avoid re-searching for the same event.
+    Returns image URL if found, None otherwise.
+    """
+    if not event_hash or not venue_name:
+        return None
+    
+    # Check EventImage database first (event-specific storage)
+    try:
+        from lib.database import get_session, EventImage
+        session = get_session()
+        event_image = session.query(EventImage).filter_by(event_hash=event_hash).first()
+        
+        if event_image and event_image.image_url:
+            image_url = event_image.image_url
+            session.close()
+            # Verify file exists
+            if image_url.startswith('/static/images/cache/'):
+                filename = image_url.replace('/static/images/cache/', '')
+                local_path = os.path.join(IMAGES_DIR, filename)
+                if os.path.exists(local_path):
+                    return image_url
+        session.close()
+    except Exception:
+        pass
+    
+    return None
+
+
+def get_venue_image(venue_name: str, event_hash: str = None) -> Optional[str]:
+    """
+    Get venue image from SQLite database (or JSON fallback), or fetch from Wikipedia/search engines if not found.
+    If event_hash is provided, checks EventImage first to avoid re-searching for the same event.
     Returns image URL (local path or remote URL)
     """
     if not venue_name or venue_name.lower() in ['', 'tbd', 'tba', 'venue tbd']:
@@ -485,7 +624,13 @@ def get_venue_image(venue_name: str) -> Optional[str]:
     
     venue_key = venue_name.lower().strip()
     
-    # Try SQLite database first
+    # If event_hash provided, check event-specific storage first
+    if event_hash:
+        event_img = get_event_venue_image(event_hash, venue_name)
+        if event_img:
+            return event_img
+    
+    # Try venue database (general venue storage)
     try:
         from lib.database import get_session, VenueImage
         session = get_session()
@@ -494,13 +639,16 @@ def get_venue_image(venue_name: str) -> Optional[str]:
         if venue_image and venue_image.image_url:
             image_url = venue_image.image_url
             session.close()
-            return image_url
+            # Verify file exists
+            if image_url.startswith('/static/images/cache/'):
+                filename = image_url.replace('/static/images/cache/', '')
+                local_path = os.path.join(IMAGES_DIR, filename)
+                if os.path.exists(local_path):
+                    return image_url
         session.close()
     except Exception as e:
         # SQLite not available, fall back to JSON
-        print(f"[image_database] SQLite not available, using JSON fallback: {e}")
         db = load_database(VENUE_IMAGES_DB)
-        
         if venue_key in db:
             image_url = db[venue_key].get('image_url')
             if image_url:
@@ -511,16 +659,13 @@ def get_venue_image(venue_name: str) -> Optional[str]:
     image_path = fetch_wikipedia_venue_image(venue_name)
     
     if not image_path:
-        # Only try DuckDuckGo if we're not rate limited
-        if _check_rate_limit("duckduckgo"):
-            print(f"[image_database] Trying DuckDuckGo image search for: {venue_name}")
-            image_path = fetch_google_image(venue_name)
-        else:
-            print(f"[image_database] Skipping DuckDuckGo for '{venue_name}' due to rate limiting")
+        # Try multiple search engines as fallback (DuckDuckGo -> Bing -> Google -> Brave)
+        print(f"[image_database] Trying multiple search engines for: {venue_name}")
+        image_path = fetch_google_image(venue_name)
     
     if image_path:
-        # Save to SQLite database (or JSON fallback)
-        source = 'wikipedia' if 'wikipedia' in image_path.lower() else 'duckduckgo'
+        # Save to venue database
+        source = 'wikipedia' if 'wikipedia' in image_path.lower() else 'search_engine'
         try:
             from lib.database import get_session, VenueImage
             session = get_session()
@@ -530,11 +675,11 @@ def get_venue_image(venue_name: str) -> Optional[str]:
                 image_url=image_path,
                 source=source
             )
-            session.merge(venue_image)  # Use merge to handle existing records
+            session.merge(venue_image)
             session.commit()
             session.close()
         except Exception:
-            # Fall back to JSON
+            # Fallback to JSON
             db = load_database(VENUE_IMAGES_DB)
             db[venue_key] = {
                 'venue_name': venue_name,
@@ -543,6 +688,22 @@ def get_venue_image(venue_name: str) -> Optional[str]:
                 'fetched_at': time.time()
             }
             save_database(VENUE_IMAGES_DB, db)
+        
+        # Also save to EventImage if event_hash provided (so we don't search again for this event)
+        if event_hash:
+            try:
+                from lib.database import get_session, EventImage
+                session = get_session()
+                
+                event_image = session.query(EventImage).filter_by(event_hash=event_hash).first()
+                if event_image:
+                    event_image.image_url = image_path
+                    event_image.image_type = 'venue'
+                    session.merge(event_image)
+                    session.commit()
+                session.close()
+            except Exception:
+                pass
         
         return image_path
     
