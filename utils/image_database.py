@@ -248,12 +248,64 @@ def fetch_wikipedia_venue_image(venue_name: str) -> Optional[str]:
 
 def fetch_google_image(query: str, num_results: int = 5) -> Optional[str]:
     """
-    Fetch image from Google Image Search
+    Fetch image from Google Image Search using Custom Search API
     Returns local file path if successful, None otherwise
+    Falls back to scraping if API key is not configured
     """
+    import os
+    
+    # Try Google Custom Search API first (more reliable)
+    api_key = os.getenv('GOOGLE_CUSTOM_SEARCH_API_KEY')
+    search_engine_id = os.getenv('GOOGLE_CUSTOM_SEARCH_ENGINE_ID')
+    
+    if api_key and search_engine_id:
+        try:
+            search_query = f"{query} oxford MS"
+            api_url = "https://www.googleapis.com/customsearch/v1"
+            params = {
+                'key': api_key,
+                'cx': search_engine_id,
+                'q': search_query,
+                'searchType': 'image',
+                'num': min(num_results, 10),  # API allows max 10 results per request
+                'safe': 'active',
+            }
+            
+            response = requests.get(api_url, params=params, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if 'items' in data and len(data['items']) > 0:
+                    # Try each image result
+                    for item in data['items'][:num_results]:
+                        img_url = item.get('link', '')
+                        if not img_url:
+                            continue
+                        
+                        # Validate it's an image URL
+                        if not any(ext in img_url.lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']):
+                            continue
+                        
+                        filename = get_filename_from_url(img_url, query.replace(' ', '_'))
+                        local_path = os.path.join(IMAGES_DIR, filename)
+                        
+                        if download_image(img_url, local_path):
+                            print(f"[image_database] Successfully downloaded image from Google API: {img_url[:80]}...")
+                            return f"/static/images/cache/{filename}"
+            
+            elif response.status_code == 403:
+                print(f"[image_database] Google Custom Search API quota exceeded or invalid key")
+            else:
+                print(f"[image_database] Google Custom Search API error: {response.status_code}")
+        
+        except Exception as e:
+            print(f"[image_database] Error using Google Custom Search API: {e}")
+            # Fall through to scraping fallback
+    
+    # Fallback to scraping if API not configured or fails
     try:
-        # Google Image Search (using a simple approach)
-        # Note: Google has strict rate limiting, so this may not always work
+        print(f"[image_database] Falling back to scraping Google Images (consider using API key)")
         search_query = f"{query} oxford MS"
         search_url = f"https://www.google.com/search?tbm=isch&q={quote(search_query)}"
         
