@@ -277,17 +277,55 @@ body {
     border-color: #bbdefb;
 }
 
-.event-image {
+/* Event Header - colored bar, half height */
+.event-header {
     width: 100%;
-    height: 150px;
-    background: #f8f9fa;
+    height: 75px;
     overflow: hidden;
 }
 
-.event-image img {
+/* Athletics events get Ole Miss logo header */
+.athletics-header {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    background: linear-gradient(135deg, #C8102E 0%, #E03C31 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+}
+
+.ole-miss-logo {
+    max-height: 60px;
+    max-width: 120px;
+    object-fit: contain;
+    filter: brightness(0) invert(1); /* Make logo white */
+}
+
+/* Non-athletic events get simple colored header based on category */
+.event-card[data-category="Music"] .event-header {
+    background: linear-gradient(135deg, #e1bee7 0%, #ce93d8 100%);
+}
+
+.event-card[data-category="Arts & Culture"] .event-header,
+.event-card[data-category="Arts"] .event-header {
+    background: linear-gradient(135deg, #ffe0b2 0%, #ffcc80 100%);
+}
+
+.event-card[data-category="Community"] .event-header {
+    background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%);
+}
+
+.event-card[data-category="Sports"] .event-header {
+    background: linear-gradient(135deg, #f8bbd9 0%, #f48fb1 100%);
+}
+
+.event-card[data-category="Education"] .event-header {
+    background: linear-gradient(135deg, #b2ebf2 0%, #80deea 100%);
+}
+
+.event-card[data-category="University"] .event-header {
+    background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%);
 }
 
 .event-content {
