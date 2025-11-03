@@ -219,6 +219,16 @@ def api_events():
     return jsonify(events)
 
 
+@app.route('/api/clear-cache')
+def clear_cache():
+    """Clear the events cache - useful for testing"""
+    try:
+        cache.clear()
+        return jsonify({"status": "success", "message": "Cache cleared successfully"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route('/api/sports-image/<path:title>')
 def sports_image(title):
     """Generate sports matchup image"""
