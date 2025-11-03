@@ -556,6 +556,9 @@ def generate_ics(title):
     except:
         return "Invalid date", 400
     
+    # Clean title for calendar (remove dates)
+    calendar_title = clean_calendar_title(event['title'])
+    
     # Generate ICS content
     ics_content = f"""BEGIN:VCALENDAR
 VERSION:2.0
@@ -563,7 +566,7 @@ PRODID:-//Oxford Events//Event Calendar//EN
 BEGIN:VEVENT
 DTSTART:{dt.strftime('%Y%m%dT%H%M%S')}
 DTEND:{end_dt.strftime('%Y%m%dT%H%M%S')}
-SUMMARY:{event['title']}
+SUMMARY:{calendar_title}
 DESCRIPTION:{event.get('description', '')[:100]}
 LOCATION:{event.get('location', '')}
 URL:{event.get('link', '')}
