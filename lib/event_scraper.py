@@ -353,6 +353,298 @@ def fetch_ticketmaster_events(city: str, state_code: str) -> List[Dict[str, Any]
     return events
 
 
+def fetch_espn_schedule(url: str, source_name: str, sport_type: str = "football") -> List[Dict[str, Any]]:
+    """
+    Fetch events from ESPN schedule page using Selenium
+    Filters out away games (@ prefix) and only includes home games
+    Always selects the most recent year automatically
+    """
+    from lib.categorizer import categorize_event
+    from dateutil import parser as dtp
+    from datetime import datetime
+    import time
+    import re
+    
+    events = []
+    
+    try:
+        # Import Selenium components
+        from selenium import webdriver
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        from selenium.webdriver.chrome.service import Service
+        from selenium.webdriver.chrome.options import Options
+        from webdriver_manager.chrome import ChromeDriverManager
+        
+        # Configure Chrome options for headless mode
+        chrome_options = Options()
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--window-size=1920,1080')
+        chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+        
+        # Initialize driver
+        # Use webdriver-manager to automatically handle driver downloads
+        try:
+            from selenium.webdriver.chrome.service import Service as ChromeService
+            service = ChromeService(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=chrome_options)
+        except Exception as e:
+            # Fallback: try without webdriver-manager (for systems with ChromeDriver in PATH)
+            print(f"Warning: Could not use webdriver-manager: {e}")
+            driver = webdriver.Chrome(options=chrome_options)
+        
+        try:
+            # Navigate to ESPN schedule page
+            print(f"Loading ESPN schedule: {url}")
+            driver.get(url)
+            
+            # Wait for page to load (ESPN uses JavaScript rendering)
+            wait = WebDriverWait(driver, 15)
+            
+            # Wait for schedule table or content to appear
+            # ESPN schedules are typically in tables or specific containers
+            try:
+                # Try to find schedule container
+                schedule_loaded = wait.until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "table, [class*='Schedule'], [class*='schedule'], [data-testid*='schedule']"))
+                )
+            except:
+                # If specific selector fails, just wait a bit for JS to render
+                time.sleep(3)
+            
+            # Check if we need to select the most recent year
+            # ESPN often has a year selector dropdown
+            try:
+                # Look for year selector buttons or dropdowns
+                year_selectors = driver.find_elements(By.CSS_SELECTOR, 
+                    "button[data-name*='year'], button[class*='year'], select[name*='year'], [class*='YearSelector']")
+                
+                if year_selectors:
+                    # Find the most recent year (usually the first or last option)
+                    # Click the most recent year option
+                    current_year = datetime.now().year
+                    for selector in year_selectors:
+                        try:
+                            if selector.tag_name == 'button':
+                                text = selector.text
+                                if str(current_year) in text or str(current_year + 1) in text:
+                                    selector.click()
+                                    time.sleep(2)  # Wait for page to update
+                                    break
+                        except:
+                            continue
+            except Exception as year_error:
+                print(f"Could not select year (may already be on latest): {year_error}")
+            
+            # Parse the schedule
+            # ESPN schedule tables typically have rows with date, opponent, result columns
+            schedule_tables = driver.find_elements(By.CSS_SELECTOR, 
+                "table[class*='Schedule'], table[class*='Table'], table[class*='schedule']")
+            
+            # If no tables found, try finding schedule rows directly
+            if not schedule_tables:
+                schedule_rows = driver.find_elements(By.CSS_SELECTOR, 
+                    "tr[class*='Schedule'], tr[class*='Row'], [data-testid*='schedule-row']")
+            else:
+                schedule_rows = []
+                for table in schedule_tables:
+                    rows = table.find_elements(By.TAG_NAME, "tr")
+                    schedule_rows.extend(rows)
+            
+            for row in schedule_rows:
+                try:
+                    # Skip header rows
+                    if row.find_elements(By.TAG_NAME, "th"):
+                        continue
+                    
+                    # Get all cells in the row
+                    cells = row.find_elements(By.TAG_NAME, "td")
+                    if len(cells) < 2:
+                        continue
+                    
+                    # Extract date from first cell (or data attribute)
+                    date_text = ""
+                    try:
+                        date_cell = cells[0]
+                        date_text = date_cell.text.strip()
+                        
+                        # Also try data-date attribute
+                        if not date_text:
+                            date_text = date_cell.get_attribute('data-date') or ""
+                    except:
+                        continue
+                    
+                    if not date_text:
+                        continue
+                    
+                    # Extract opponent from second cell (or nearby cell)
+                    opponent_text = ""
+                    opponent_cell = None
+                    
+                    # Try different cell positions for opponent
+                    for i in range(1, min(4, len(cells))):
+                        try:
+                            cell_text = cells[i].text.strip()
+                            # Look for opponent name (skip result columns like "W", "L", scores)
+                            if cell_text and not cell_text.startswith(('W', 'L', 'T', 'Final', 'Cancelled')):
+                                # Check if it's an away game (@ prefix)
+                                if cell_text.startswith('@') or cell_text.startswith('at '):
+                                    # Skip away games
+                                    opponent_text = None
+                                    break
+                                opponent_text = cell_text
+                                opponent_cell = cells[i]
+                                break
+                        except:
+                            continue
+                    
+                    # Skip if no opponent found or it's an away game
+                    if not opponent_text or opponent_text.startswith('@'):
+                        continue
+                    
+                    # Clean opponent name (remove vs, @, etc.)
+                    opponent_clean = re.sub(r'^\s*(vs|VS|v\.|versus|@|at)\s*', '', opponent_text).strip()
+                    
+                    # Skip placeholder text
+                    if opponent_clean in ['OPPONENT', 'TBD', 'TBA', ''] or len(opponent_clean) < 2:
+                        continue
+                    
+                    # Parse date
+                    try:
+                        # ESPN date formats vary: "Sep 2", "9/2", "September 2, 2024", etc.
+                        current_year = datetime.now().year
+                        
+                        # Try to parse the date
+                        if '/' in date_text:
+                            # Format like "9/2" or "09/02"
+                            parts = date_text.split('/')
+                            if len(parts) == 2:
+                                month = int(parts[0])
+                                day = int(parts[1])
+                                parsed_date = datetime(current_year, month, day, 19, 0)
+                                
+                                # If date has passed this year, assume next year
+                                if parsed_date < datetime.now():
+                                    parsed_date = datetime(current_year + 1, month, day, 19, 0)
+                            else:
+                                parsed_date = dtp.parse(date_text, fuzzy=True)
+                                if parsed_date.hour == 0:
+                                    parsed_date = parsed_date.replace(hour=19, minute=0)
+                        else:
+                            # Try fuzzy parsing for formats like "Sep 2" or "September 2, 2024"
+                            parsed_date = dtp.parse(date_text, fuzzy=True)
+                            # Default to 7 PM if no time specified
+                            if parsed_date.hour == 0 and parsed_date.minute == 0:
+                                parsed_date = parsed_date.replace(hour=19, minute=0)
+                        
+                        # Determine location based on sport
+                        if sport_type == "football":
+                            location = "Vaught-Hemingway Stadium"
+                        elif "basketball" in sport_type.lower():
+                            location = "The Pavilion"
+                        else:
+                            location = "TBD"
+                        
+                        # Build title
+                        title = f"Ole Miss vs {opponent_clean}"
+                        
+                        event = {
+                            "title": title,
+                            "start_iso": parsed_date.isoformat(),
+                            "location": location,
+                            "description": f"{sport_type.title()} game: {title}",
+                            "category": "Ole Miss Athletics",
+                            "source": source_name,
+                            "link": url,
+                            "cost": "Varies"
+                        }
+                        events.append(event)
+                        
+                    except Exception as date_error:
+                        print(f"Error parsing date '{date_text}': {date_error}")
+                        continue
+                        
+                except Exception as row_error:
+                    print(f"Error processing schedule row: {row_error}")
+                    continue
+            
+            # If no events found, try alternative parsing approach
+            if not events:
+                # Look for schedule items in different structure
+                try:
+                    schedule_items = driver.find_elements(By.CSS_SELECTOR, 
+                        "[class*='ScheduleRow'], [class*='GameRow'], [data-testid*='game']")
+                    
+                    for item in schedule_items:
+                        try:
+                            # Extract date
+                            date_elem = item.find_element(By.CSS_SELECTOR, 
+                                "[class*='date'], [data-date], [datetime]")
+                            date_text = date_elem.text or date_elem.get_attribute('data-date') or date_elem.get_attribute('datetime') or ""
+                            
+                            # Extract opponent
+                            opponent_elem = item.find_element(By.CSS_SELECTOR, 
+                                "[class*='opponent'], [class*='team'], [class*='name']")
+                            opponent_text = opponent_elem.text.strip()
+                            
+                            # Skip away games
+                            if opponent_text.startswith('@') or opponent_text.startswith('at '):
+                                continue
+                            
+                            if date_text and opponent_text:
+                                try:
+                                    parsed_date = dtp.parse(date_text, fuzzy=True)
+                                    if parsed_date.hour == 0:
+                                        parsed_date = parsed_date.replace(hour=19, minute=0)
+                                    
+                                    opponent_clean = re.sub(r'^\s*(vs|VS|v\.|versus|@|at)\s*', '', opponent_text).strip()
+                                    
+                                    if sport_type == "football":
+                                        location = "Vaught-Hemingway Stadium"
+                                    elif "basketball" in sport_type.lower():
+                                        location = "The Pavilion"
+                                    else:
+                                        location = "TBD"
+                                    
+                                    title = f"Ole Miss vs {opponent_clean}"
+                                    
+                                    event = {
+                                        "title": title,
+                                        "start_iso": parsed_date.isoformat(),
+                                        "location": location,
+                                        "description": f"{sport_type.title()} game: {title}",
+                                        "category": "Ole Miss Athletics",
+                                        "source": source_name,
+                                        "link": url,
+                                        "cost": "Varies"
+                                    }
+                                    events.append(event)
+                                except:
+                                    continue
+                        except:
+                            continue
+                except:
+                    pass
+            
+        finally:
+            # Always close the driver
+            driver.quit()
+            
+    except ImportError:
+        print(f"Selenium not available. Install with: pip install selenium webdriver-manager")
+        # Return empty list if Selenium isn't installed
+    except Exception as e:
+        print(f"Error fetching ESPN schedule from {url}: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    return events
+
+
 def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Collect events from all sources"""
     all_events = []
@@ -394,6 +686,13 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 if city and state_code:
                     events = fetch_ticketmaster_events(city, state_code)
                     all_events.extend(events)
+        
+        elif source_type == 'espn':
+            url = source.get('url')
+            sport_type = source.get('sport_type', 'football')
+            if url:
+                events = fetch_espn_schedule(url, source_name, sport_type=sport_type)
+                all_events.extend(events)
     
     # Filter to next 3 weeks
     cutoff = datetime.now(tz.tzlocal()) + timedelta(days=21)
