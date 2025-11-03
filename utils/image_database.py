@@ -248,113 +248,82 @@ def fetch_wikipedia_venue_image(venue_name: str) -> Optional[str]:
 
 def fetch_google_image(query: str, num_results: int = 5) -> Optional[str]:
     """
-    Fetch image from Google Image Search using Custom Search API
+    Fetch image using DuckDuckGo (simple, no API key needed)
     Returns local file path if successful, None otherwise
-    Falls back to scraping if API key is not configured
     """
-    import os
-    
-    # Try Google Custom Search API first (more reliable)
-    api_key = os.getenv('GOOGLE_CUSTOM_SEARCH_API_KEY')
-    search_engine_id = os.getenv('GOOGLE_CUSTOM_SEARCH_ENGINE_ID')
-    
-    if api_key and search_engine_id:
-        try:
-            search_query = f"{query} oxford MS"
-            api_url = "https://www.googleapis.com/customsearch/v1"
-            params = {
-                'key': api_key,
-                'cx': search_engine_id,
-                'q': search_query,
-                'searchType': 'image',
-                'num': min(num_results, 10),  # API allows max 10 results per request
-                'safe': 'active',
-            }
-            
-            response = requests.get(api_url, params=params, timeout=15)
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                if 'items' in data and len(data['items']) > 0:
-                    # Try each image result
-                    for item in data['items'][:num_results]:
-                        img_url = item.get('link', '')
-                        if not img_url:
-                            continue
-                        
-                        # Validate it's an image URL
-                        if not any(ext in img_url.lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']):
-                            continue
-                        
-                        filename = get_filename_from_url(img_url, query.replace(' ', '_'))
-                        local_path = os.path.join(IMAGES_DIR, filename)
-                        
-                        if download_image(img_url, local_path):
-                            print(f"[image_database] Successfully downloaded image from Google API: {img_url[:80]}...")
-                            return f"/static/images/cache/{filename}"
-            
-            elif response.status_code == 403:
-                print(f"[image_database] Google Custom Search API quota exceeded or invalid key")
-            else:
-                print(f"[image_database] Google Custom Search API error: {response.status_code}")
-        
-        except Exception as e:
-            print(f"[image_database] Error using Google Custom Search API: {e}")
-            # Fall through to scraping fallback
-    
-    # Fallback to scraping if API not configured or fails
     try:
-        print(f"[image_database] Falling back to scraping Google Images (consider using API key)")
-        search_query = f"{query} oxford MS"
-        search_url = f"https://www.google.com/search?tbm=isch&q={quote(search_query)}"
-        
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        }
-        
-        response = requests.get(search_url, timeout=15, headers=headers)
-        
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'html.parser')
+        # Use duckduckgo-search library (simple, no API key)
+        try:
+            from duckduckgo_search import DDGS
             
-            # Google Image Search structure (may change)
-            # Look for img tags in search results
-            img_tags = soup.find_all('img', limit=20)
+            search_query = f"{query} oxford MS"
             
-            for img_tag in img_tags:
-                src = img_tag.get('src', '') or img_tag.get('data-src', '')
-                if not src or src.startswith('data:'):
+            # Search for images
+            with DDGS() as ddgs:
+                results = list(ddgs.images(
+                    keywords=search_query,
+                    max_results=num_results,
+                    safe_search='moderate'
+                ))
+            
+            for result in results:
+                img_url = result.get('image', '') or result.get('url', '')
+                if not img_url:
                     continue
                 
-                # Skip Google's own images
-                if 'google' in src.lower() or 'gstatic' in src.lower():
+                # Validate it's an image URL
+                if not any(ext in img_url.lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', 'image']):
                     continue
-                
-                # Convert to absolute URL if needed
-                if src.startswith('//'):
-                    img_url = 'https:' + src
-                elif not src.startswith('http'):
-                    continue
-                else:
-                    img_url = src
                 
                 # Try to download
                 filename = get_filename_from_url(img_url, query.replace(' ', '_'))
                 local_path = os.path.join(IMAGES_DIR, filename)
                 
                 if download_image(img_url, local_path):
+                    print(f"[image_database] Successfully downloaded image from DuckDuckGo: {img_url[:80]}...")
                     return f"/static/images/cache/{filename}"
+        
+        except ImportError:
+            # Library not installed, try simple Bing search as fallback
+            print(f"[image_database] duckduckgo-search not installed, trying Bing Image Search")
+            search_query = f"{query} oxford MS"
+            
+            # Simple Bing Image Search (no API key needed for basic use)
+            bing_url = f"https://www.bing.com/images/search?q={quote(search_query)}&form=HDRSC2&first=1"
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            }
+            
+            response = requests.get(bing_url, timeout=15, headers=headers)
+            
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.content, 'html.parser')
                 
-                # Limit attempts
-                num_results -= 1
-                if num_results <= 0:
-                    break
+                # Look for image links in Bing results
+                img_links = soup.find_all('a', class_='iusc', limit=num_results)
+                
+                for link in img_links:
+                    # Bing stores image URL in m attribute as JSON
+                    m_attr = link.get('m', '{}')
+                    try:
+                        import json
+                        data = json.loads(m_attr)
+                        img_url = data.get('murl', '')
+                        
+                        if img_url:
+                            filename = get_filename_from_url(img_url, query.replace(' ', '_'))
+                            local_path = os.path.join(IMAGES_DIR, filename)
+                            
+                            if download_image(img_url, local_path):
+                                return f"/static/images/cache/{filename}"
+                    except:
+                        continue
         
         return None
     except Exception as e:
-        print(f"[image_database] Error fetching Google image for '{query}': {e}")
+        print(f"[image_database] Error fetching image for '{query}': {e}")
         return None
 
 

@@ -16,3 +16,4 @@ plotly>=6.3.1
 Pillow>=10.4.0
 selenium>=4.15.0
 webdriver-manager>=4.0.1
+duckduckgo-search>=4.0.0
