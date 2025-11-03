@@ -333,8 +333,13 @@ def _parse_game_element(elem, source_name: str, sport_type: str, base_url: str, 
         
         month_abbr, day = date_match.groups()
         
-        # Look for "vs" or "at" pattern
-        game_match = re.search(r'(vs|at)\s+([A-Z#][^,\n\(]+)', text, re.IGNORECASE)
+        # Look for "vs" or "at" pattern - be more specific to avoid matching date patterns
+        # First, try to find a clear "vs" followed by opponent name
+        game_match = re.search(r'\b(vs|at)\s+([A-Z#][A-Za-z\s&]+?)(?:\s*[,\n\(]|\s*$|Logo|Oxford|Miss\.)', text, re.IGNORECASE)
+        if not game_match:
+            # Fallback to simpler pattern
+            game_match = re.search(r'(vs|at)\s+([A-Z#][^,\n\(]+)', text, re.IGNORECASE)
+        
         if not game_match:
             return None
         
@@ -346,10 +351,20 @@ def _parse_game_element(elem, source_name: str, sport_type: str, base_url: str, 
         
         # Clean opponent name (remove extra info like logos, rankings, locations, dates/times)
         opponent_clean = opponent_raw.strip()
-        # Remove date patterns like "Nov 08 / Noon" or "Nov 8 / 12 PM" from opponent
-        opponent_clean = re.sub(r'\s*[A-Z][a-z]{2}\s+\d{1,2}\s*/\s*(Noon|\d{1,2}\s*[AP]M)', '', opponent_clean, flags=re.IGNORECASE)
-        opponent_clean = re.sub(r'\s*/\s*(Noon|\d{1,2}\s*[AP]M)', '', opponent_clean, flags=re.IGNORECASE)
+        
+        # Remove date/time patterns that got included in opponent - patterns like:
+        # "Nov 15 / 2:30-3:30 or 5-7 PM vs Florida" -> should extract just "Florida"
+        # "Nov 08 / Noon vs The Citadel" -> should extract just "The Citadel"
+        # Strategy: Find the last "vs" after a date pattern and extract what follows
+        # First, try to remove everything from date pattern up to and including the next "vs"
+        opponent_clean = re.sub(r'[A-Z][a-z]{2}\s+\d{1,2}\s*/\s*[^vs]+?\s+vs\s+', '', opponent_clean, flags=re.IGNORECASE)
+        opponent_clean = re.sub(r'\s*[A-Z][a-z]{2}\s+\d{1,2}\s*/\s*[^A-Z]+?vs\s+', '', opponent_clean, flags=re.IGNORECASE)
+        # Remove standalone date patterns
+        opponent_clean = re.sub(r'\s*[A-Z][a-z]{2}\s+\d{1,2}\s*/\s*(Noon|\d{1,2}\s*[AP]M|\d{1,2}:\d{2}[^\s]*?)', '', opponent_clean, flags=re.IGNORECASE)
+        opponent_clean = re.sub(r'\s*/\s*(Noon|\d{1,2}\s*[AP]M|\d{1,2}:\d{2}[^\s]*?\s*(or|PM|AM|pm|am))', '', opponent_clean, flags=re.IGNORECASE)
         opponent_clean = re.sub(r'\s*\d{1,2}/\d{1,2}\s*/\s*(Noon|\d{1,2}\s*[AP]M)', '', opponent_clean, flags=re.IGNORECASE)
+        # Remove "vs" if it appears at the start (duplicate)
+        opponent_clean = re.sub(r'^\s*(vs|VS)\s+', '', opponent_clean, flags=re.IGNORECASE)
         # Remove other patterns
         opponent_clean = re.sub(r'^(#?\d+\s+)?', '', opponent_clean)
         opponent_clean = re.sub(r'\s+Logo.*$', '', opponent_clean, flags=re.IGNORECASE)
