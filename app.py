@@ -16,6 +16,27 @@ app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 # Configure caching
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 600})
 
+# Initialize database on startup (using flag to run only once)
+_db_initialized = False
+
+@app.before_request
+def init_app():
+    """Initialize database on first request"""
+    global _db_initialized
+    if not _db_initialized:
+        try:
+            from lib.database import init_database, migrate_json_to_db
+            init_database()
+            # Try to migrate JSON data once (if any exists)
+            try:
+                migrate_json_to_db()
+            except Exception as e:
+                print(f"[Database] Migration skipped or failed: {e}")
+            _db_initialized = True
+        except Exception as e:
+            print(f"[Database] Database initialization skipped (using JSON fallback): {e}")
+            _db_initialized = True  # Mark as initialized even if failed
+
 # Custom Jinja2 filters
 @app.template_filter('format_datetime')
 def format_datetime(value):

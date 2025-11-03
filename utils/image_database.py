@@ -25,7 +25,7 @@ os.makedirs(IMAGES_DIR, exist_ok=True)
 
 
 def load_database(db_path: str) -> Dict:
-    """Load JSON database file, return empty dict if doesn't exist"""
+    """Load JSON database file (fallback only)"""
     if os.path.exists(db_path):
         try:
             with open(db_path, 'r', encoding='utf-8') as f:
@@ -36,7 +36,7 @@ def load_database(db_path: str) -> Dict:
 
 
 def save_database(db_path: str, data: Dict):
-    """Save JSON database file"""
+    """Save JSON database file (fallback only)"""
     with open(db_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
@@ -329,31 +329,64 @@ def fetch_google_image(query: str, num_results: int = 5) -> Optional[str]:
 
 def get_team_logo(team_name: str) -> Optional[List[str]]:
     """
-    Get team logo URLs from database, or fetch from Wikipedia if not found
+    Get team logo URLs from PostgreSQL database (or JSON fallback), or fetch from Wikipedia if not found
     Returns list of logo URLs (local paths or remote URLs)
     """
-    db = load_database(TEAM_LOGOS_DB)
     team_key = team_name.lower().strip()
     
-    # Check database first
-    if team_key in db:
-        logos = db[team_key].get('logos', [])
-        if logos:
-            return logos
+    # Try PostgreSQL first
+    try:
+        from lib.database import get_session, TeamLogo
+        session = get_session()
+        team_logo = session.query(TeamLogo).filter_by(team_name=team_key).first()
+        
+        if team_logo and team_logo.logo_urls:
+            import json
+            logos = json.loads(team_logo.logo_urls)
+            session.close()
+            if logos:
+                return logos
+        session.close()
+    except Exception as e:
+        # PostgreSQL not available, fall back to JSON
+        print(f"[image_database] PostgreSQL not available, using JSON fallback: {e}")
+        db = load_database(TEAM_LOGOS_DB)
+        
+        if team_key in db:
+            logos = db[team_key].get('logos', [])
+            if logos:
+                return logos
     
     # Not in database, try to fetch from Wikipedia
     print(f"[image_database] Fetching Wikipedia logo for: {team_name}")
     logo_path = fetch_wikipedia_team_logo(team_name)
     
     if logo_path:
-        # Save to database
-        db[team_key] = {
-            'team_name': team_name,
-            'logos': [logo_path],
-            'source': 'wikipedia',
-            'fetched_at': time.time()
-        }
-        save_database(TEAM_LOGOS_DB, db)
+        # Save to database (PostgreSQL or JSON)
+        try:
+            from lib.database import get_session, TeamLogo
+            session = get_session()
+            import json
+            
+            team_logo = TeamLogo(
+                team_name=team_key,
+                logo_urls=json.dumps([logo_path]),
+                source='wikipedia'
+            )
+            session.merge(team_logo)  # Use merge to handle existing records
+            session.commit()
+            session.close()
+        except Exception:
+            # Fall back to JSON
+            db = load_database(TEAM_LOGOS_DB)
+            db[team_key] = {
+                'team_name': team_name,
+                'logos': [logo_path],
+                'source': 'wikipedia',
+                'fetched_at': time.time()
+            }
+            save_database(TEAM_LOGOS_DB, db)
+        
         return [logo_path]
     
     return None
@@ -361,20 +394,34 @@ def get_team_logo(team_name: str) -> Optional[List[str]]:
 
 def get_venue_image(venue_name: str) -> Optional[str]:
     """
-    Get venue image from database, or fetch from Wikipedia/Google if not found
+    Get venue image from PostgreSQL database (or JSON fallback), or fetch from Wikipedia/Google if not found
     Returns image URL (local path or remote URL)
     """
     if not venue_name or venue_name.lower() in ['', 'tbd', 'tba', 'venue tbd']:
         return None
     
-    db = load_database(VENUE_IMAGES_DB)
     venue_key = venue_name.lower().strip()
     
-    # Check database first
-    if venue_key in db:
-        image_url = db[venue_key].get('image_url')
-        if image_url:
+    # Try PostgreSQL first
+    try:
+        from lib.database import get_session, VenueImage
+        session = get_session()
+        venue_image = session.query(VenueImage).filter_by(venue_name=venue_key).first()
+        
+        if venue_image and venue_image.image_url:
+            image_url = venue_image.image_url
+            session.close()
             return image_url
+        session.close()
+    except Exception as e:
+        # PostgreSQL not available, fall back to JSON
+        print(f"[image_database] PostgreSQL not available, using JSON fallback: {e}")
+        db = load_database(VENUE_IMAGES_DB)
+        
+        if venue_key in db:
+            image_url = db[venue_key].get('image_url')
+            if image_url:
+                return image_url
     
     # Not in database, try Wikipedia first
     print(f"[image_database] Fetching Wikipedia image for venue: {venue_name}")
@@ -382,18 +429,35 @@ def get_venue_image(venue_name: str) -> Optional[str]:
     
     if not image_path:
         # Try Google Image Search as fallback
-        print(f"[image_database] Trying Google Image Search for: {venue_name}")
+        print(f"[image_database] Trying DuckDuckGo image search for: {venue_name}")
         image_path = fetch_google_image(venue_name)
     
     if image_path:
-        # Save to database
-        db[venue_key] = {
-            'venue_name': venue_name,
-            'image_url': image_path,
-            'source': 'wikipedia' if 'wikipedia' in image_path.lower() else 'google',
-            'fetched_at': time.time()
-        }
-        save_database(VENUE_IMAGES_DB, db)
+        # Save to database (PostgreSQL or JSON)
+        source = 'wikipedia' if 'wikipedia' in image_path.lower() else 'duckduckgo'
+        try:
+            from lib.database import get_session, VenueImage
+            session = get_session()
+            
+            venue_image = VenueImage(
+                venue_name=venue_key,
+                image_url=image_path,
+                source=source
+            )
+            session.merge(venue_image)  # Use merge to handle existing records
+            session.commit()
+            session.close()
+        except Exception:
+            # Fall back to JSON
+            db = load_database(VENUE_IMAGES_DB)
+            db[venue_key] = {
+                'venue_name': venue_name,
+                'image_url': image_path,
+                'source': source,
+                'fetched_at': time.time()
+            }
+            save_database(VENUE_IMAGES_DB, db)
+        
         return image_path
     
     return None
