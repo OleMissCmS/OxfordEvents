@@ -256,8 +256,9 @@ def sports_image(title):
 
 
 @app.route('/api/category-image/<category>/<path:title>')
+@cache.cached(timeout=3600, key_prefix='category_image')  # Cache for 1 hour
 def category_image(category, title):
-    """Generate smart category placeholder image"""
+    """Generate smart category placeholder image with caching"""
     from utils.smart_image_generator import generate_category_image
     from utils.image_processing import search_location_image
     from flask import send_file, request
@@ -275,9 +276,11 @@ def category_image(category, title):
     try:
         img_buffer, error = generate_category_image(category, title)
         if img_buffer:
-            return send_file(img_buffer, mimetype='image/png')
-    except:
-        pass
+            response = send_file(img_buffer, mimetype='image/png')
+            response.headers['Cache-Control'] = 'public, max-age=3600'  # Cache for 1 hour
+            return response
+    except Exception as e:
+        print(f"Error generating category image: {e}")
     
     # Return plain placeholder if category image fails
     from flask import send_from_directory
