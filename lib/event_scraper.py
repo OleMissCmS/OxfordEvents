@@ -368,7 +368,22 @@ def fetch_espn_schedule(url: str, source_name: str, sport_type: str = "football"
     events = []
     
     try:
-        # Import Selenium components
+        # Quick check: Is Chrome available? (Fail fast if not)
+        import os
+        chrome_binary = None
+        chrome_paths = ['/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome', '/usr/bin/chrome']
+        for possible_path in chrome_paths:
+            if os.path.exists(possible_path):
+                chrome_binary = possible_path
+                break
+        
+        # If Chrome not found, fail immediately to avoid 30+ second timeout
+        if not chrome_binary:
+            print(f"[ESPN] Chrome/Chromium not found. Skipping ESPN scraping.")
+            print(f"[ESPN] Chrome is required for ESPN scraping. Install Chrome or use a different approach.")
+            return events  # Return empty list immediately
+        
+        # Import Selenium components (only if Chrome is available)
         from selenium import webdriver
         from selenium.webdriver.common.by import By
         from selenium.webdriver.support.ui import WebDriverWait
@@ -388,20 +403,11 @@ def fetch_espn_schedule(url: str, source_name: str, sport_type: str = "football"
         chrome_options.add_argument('--window-size=1920,1080')
         chrome_options.add_argument('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
         
-        # For Render/Linux environments, Chrome might be at /usr/bin/chromium or /usr/bin/chromium-browser
-        import os
-        chrome_binary = None
-        for possible_path in ['/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome', '/usr/bin/chrome']:
-            if os.path.exists(possible_path):
-                chrome_binary = possible_path
-                break
+        # Set Chrome binary location
+        chrome_options.binary_location = chrome_binary
+        print(f"[ESPN] Using Chrome binary at: {chrome_binary}")
         
-        if chrome_binary:
-            chrome_options.binary_location = chrome_binary
-            print(f"[ESPN] Using Chrome binary at: {chrome_binary}")
-        
-        # Initialize driver
-        # Use webdriver-manager to automatically handle driver downloads
+        # Initialize driver with timeout
         try:
             from selenium.webdriver.chrome.service import Service as ChromeService
             service = ChromeService(ChromeDriverManager().install())
@@ -414,7 +420,7 @@ def fetch_espn_schedule(url: str, source_name: str, sport_type: str = "football"
                 driver = webdriver.Chrome(options=chrome_options)
             except Exception as e2:
                 print(f"[ESPN] Error: Failed to initialize Chrome driver: {e2}")
-                raise
+                return events  # Return empty list instead of raising
         
         try:
             # Navigate to ESPN schedule page
