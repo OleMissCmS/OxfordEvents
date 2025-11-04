@@ -1052,15 +1052,6 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                         events = fetch_seatgeek_events(lat, lon, radius)
                         all_events.extend(events)
             
-            elif source_type == 'olemiss':
-                url = source.get('url')
-                sport_type = source.get('sport_type', 'football')
-                if url:
-                    from lib.olemiss_athletics_scraper import fetch_olemiss_schedule
-                    print(f"[collect_all_events] Fetching Ole Miss schedule: {source_name}")
-                    events = fetch_olemiss_schedule(url, source_name, sport_type=sport_type)
-                    print(f"[collect_all_events] {source_name}: {len(events)} events found")
-                    all_events.extend(events)
         except Exception as e:
             # Log error but continue processing other sources
             print(f"[collect_all_events] ERROR fetching {source_name}: {str(e)[:100]}")

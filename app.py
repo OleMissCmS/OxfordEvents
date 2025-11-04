@@ -253,8 +253,14 @@ def index():
     except Exception:
         pass
     
-    # Get unique categories
-    categories = sorted(set(event['category'] for event in events))
+    # Get unique categories - handle comma-separated categories
+    all_categories = set()
+    for event in events:
+        category = event.get('category', 'Other')
+        # Split comma-separated categories
+        for cat in category.split(','):
+            all_categories.add(cat.strip())
+    categories = sorted(all_categories)
     
     return render_template('index.html', 
                          events=events,
