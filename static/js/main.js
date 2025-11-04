@@ -96,8 +96,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const title = card.getAttribute('data-title');
             const location = card.getAttribute('data-location');
             
-            // Category filter
-            const categoryMatch = category === 'All' || cardCategory === category;
+            // Category filter - handle comma-separated categories
+            let categoryMatch = false;
+            if (category === 'All') {
+                categoryMatch = true;
+            } else {
+                // Check if the card's category (which may be comma-separated) contains the selected category
+                const cardCategories = cardCategory.split(',').map(c => c.trim());
+                categoryMatch = cardCategories.includes(category);
+            }
             
             // Search filter
             const searchMatch = !searchTerm || 

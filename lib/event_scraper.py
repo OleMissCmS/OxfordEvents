@@ -450,12 +450,53 @@ def fetch_seatgeek_events(lat: float, lon: float, radius: str = "25mi") -> List[
                 # Extract description
                 description = item.get('description', '') or item.get('short_title', '')
                 
+                # Extract title and check for Ole Miss Athletics
+                title = item.get('title', item.get('short_title', 'Untitled Event'))
+                title_lower = title.lower()
+                
+                # Check if this is an Ole Miss Athletics event
+                # Look for Ole Miss, Rebels, or specific venues/stadiums
+                is_olemiss_athletics = False
+                olemiss_venues = [
+                    'vaught-hemingway', 'vaught hemingway', 'hemingway stadium',
+                    'the pavilion', 'pavilion', 'ole miss pavilion',
+                    'swayze field', 'swayze',
+                    'ole miss softball complex', 'softball complex',
+                    'ole miss', 'rebels', 'ole miss rebels'
+                ]
+                
+                # Check venue name
+                venue_name_lower = venue_name.lower()
+                if any(venue_term in venue_name_lower for venue_term in olemiss_venues):
+                    is_olemiss_athletics = True
+                
+                # Check title for Ole Miss/Rebels and sports keywords
+                sports_keywords = ['football', 'basketball', 'baseball', 'softball', ' vs ', ' vs. ', ' vs ', 'game']
+                if any(term in title_lower for term in ['ole miss', 'rebels', 'ole miss rebels']) and \
+                   any(sport in title_lower for sport in sports_keywords):
+                    is_olemiss_athletics = True
+                
+                # Check performers for Ole Miss
+                performers = item.get('performers', [])
+                for performer in performers:
+                    performer_name = performer.get('name', '').lower()
+                    if any(term in performer_name for term in ['ole miss', 'rebels', 'ole miss rebels']):
+                        is_olemiss_athletics = True
+                        break
+                
+                # Determine category - use comma-separated for multiple categories
+                if is_olemiss_athletics:
+                    category = "Ole Miss Athletics,SeatGeek"
+                    print(f"[SeatGeek] Identified Ole Miss Athletics event: {title}")
+                else:
+                    category = "SeatGeek"
+                
                 event = {
-                    "title": item.get('title', item.get('short_title', 'Untitled Event')),
+                    "title": title,
                     "start_iso": datetime_local,
                     "location": venue_location,
                     "description": description,
-                    "category": "SeatGeek",
+                    "category": category,
                     "source": "SeatGeek",
                     "link": item.get('url', item.get('short_title_url', '')),
                     "cost": cost

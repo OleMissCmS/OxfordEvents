@@ -134,13 +134,6 @@ def ics_calendar_link(event):
 
 # Event sources
 EVENT_SOURCES = [
-    # Ole Miss Athletics Direct Schedule Sources (HTML-based scraper, no Selenium needed)
-    {"name": "Ole Miss Football Schedule", "type": "olemiss", "url": "https://olemisssports.com/sports/football/schedule", "sport_type": "football", "group": "University"},
-    {"name": "Ole Miss Men's Basketball Schedule", "type": "olemiss", "url": "https://olemisssports.com/sports/mens-basketball/schedule", "sport_type": "basketball", "group": "University"},
-    {"name": "Ole Miss Women's Basketball Schedule", "type": "olemiss", "url": "https://olemisssports.com/sports/womens-basketball/schedule", "sport_type": "basketball", "group": "University"},
-    {"name": "Ole Miss Baseball Schedule", "type": "olemiss", "url": "https://olemisssports.com/sports/baseball/schedule", "sport_type": "baseball", "group": "University"},
-    {"name": "Ole Miss Softball Schedule", "type": "olemiss", "url": "https://olemisssports.com/sports/softball/schedule", "sport_type": "softball", "group": "University"},
-    {"name": "Ole Miss Women's Volleyball Schedule", "type": "olemiss", "url": "https://olemisssports.com/sports/womens-volleyball/schedule", "sport_type": "volleyball", "group": "University"},
     # Ole Miss Events
     {"name": "Ole Miss Events", "type": "rss", "url": "https://eventcalendar.olemiss.edu/calendar.xml", "group": "University"},
     # Community

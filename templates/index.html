@@ -61,7 +61,7 @@
             {% for event in events %}
             <div class="event-card" data-category="{{ event.category }}" data-title="{{ event.title|lower }}" data-location="{{ event.location|lower }}">
                 <div class="event-header">
-                    {% if event.category == 'Ole Miss Athletics' %}
+                    {% if 'Ole Miss Athletics' in event.category %}
                     <div class="athletics-header">
                         <img src="{{ url_for('static', filename='images/ole-miss-logo.png') }}" alt="Ole Miss" class="ole-miss-logo" onerror="this.style.display='none'">
                     </div>
