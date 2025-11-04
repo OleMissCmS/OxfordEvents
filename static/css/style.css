@@ -315,17 +315,17 @@ body {
 
 .event-card[data-category="Ticketmaster"],
 .event-card[data-category*="Ticketmaster"] {
-    border-color: #009BFF;
-}
-
-.event-card[data-category="Bandsintown"],
-.event-card[data-category*="Bandsintown"] {
-    border-color: #00C853;
+    border-color: #008CFF;
 }
 
 .event-card[data-category="SeatGeek"],
 .event-card[data-category*="SeatGeek"] {
-    border-color: #008CFF;
+    border-color: #FF5B49;
+}
+
+.event-card[data-category="Bandsintown"],
+.event-card[data-category*="Bandsintown"] {
+    border-color: #00CEC8;
 }
 
 /* Event Header - colored bar, half height */
@@ -385,17 +385,17 @@ body {
 
 .event-card[data-category="Ticketmaster"] .event-header,
 .event-card[data-category*="Ticketmaster"] .event-header {
-    background: linear-gradient(135deg, #009BFF 0%, #0080CC 100%);
-}
-
-.event-card[data-category="Bandsintown"] .event-header,
-.event-card[data-category*="Bandsintown"] .event-header {
-    background: linear-gradient(135deg, #00C853 0%, #00A645 100%);
+    background: linear-gradient(135deg, #008CFF 0%, #0066CC 100%);
 }
 
 .event-card[data-category="SeatGeek"] .event-header,
 .event-card[data-category*="SeatGeek"] .event-header {
-    background: linear-gradient(135deg, #008CFF 0%, #0070CC 100%);
+    background: linear-gradient(135deg, #FF5B49 0%, #E64433 100%);
+}
+
+.event-card[data-category="Bandsintown"] .event-header,
+.event-card[data-category*="Bandsintown"] .event-header {
+    background: linear-gradient(135deg, #00CEC8 0%, #00A8A3 100%);
 }
 
 .event-content {
