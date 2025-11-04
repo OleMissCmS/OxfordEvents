@@ -391,37 +391,105 @@ def _parse_generic(soup, source_name: str, base_url: str) -> List[Dict[str, Any]
     return events
 
 
-def fetch_seatgeek_events(city: str, state: str) -> List[Dict[str, Any]]:
-    """Fetch events from SeatGeek API"""
+def fetch_seatgeek_events(lat: float, lon: float, radius: str = "25mi") -> List[Dict[str, Any]]:
+    """Fetch events from SeatGeek API around a location"""
+    import os
     events = []
     try:
-        # SeatGeek API endpoint
-        url = f"https://api.seatgeek.com/2/events"
+        url = "https://api.seatgeek.com/2/events"
+        
+        # Get API key from environment variable
+        api_key = os.environ.get('SEATGEEK_API_KEY', '')
+        if not api_key:
+            print("[SeatGeek] WARNING: No SEATGEEK_API_KEY found in environment variables")
+            print("[SeatGeek] Make sure the environment variable is set in Render")
+            return events
+        
+        print(f"[SeatGeek] API key found (first 8 chars: {api_key[:8]}...)")
+        
         params = {
-            'venue.city': city,
-            'venue.state': state,
-            'per_page': 100
+            'client_id': api_key,
+            'lat': lat,
+            'lon': lon,
+            'range': radius,  # Search radius (e.g., "25mi" for 25 miles)
+            'per_page': 100,  # Maximum events per page
+            'page': 1
         }
-        # TODO: Add API key if needed
+        
         response = requests.get(url, params=params, timeout=10)
+        
         if response.status_code == 200:
             data = response.json()
-            for item in data.get('events', []):
+            events_list = data.get('events', [])
+            print(f"[SeatGeek] API returned {len(events_list)} events")
+            
+            for item in events_list:
+                # Extract date/time
+                datetime_local = item.get('datetime_local')
+                if not datetime_local:
+                    datetime_local = item.get('datetime_utc')
+                
+                # Extract venue information
+                venue = item.get('venue', {})
+                venue_name = venue.get('name', 'Unknown Venue')
+                venue_city = venue.get('city', '')
+                venue_state = venue.get('state', '')
+                venue_location = venue_name
+                if venue_city:
+                    venue_location = f"{venue_name}, {venue_city}"
+                if venue_state:
+                    venue_location = f"{venue_name}, {venue_city}, {venue_state}"
+                
+                # Extract price information
+                stats = item.get('stats', {})
+                price_min = stats.get('lowest_price')
+                cost = "Varies"
+                if price_min is not None:
+                    cost = f"${int(price_min)}"
+                
+                # Extract description
+                description = item.get('description', '') or item.get('short_title', '')
+                
                 event = {
-                    "title": item.get('title', ''),
-                    "start_iso": item.get('datetime_local'),
-                    "location": f"{item.get('venue', {}).get('name', '')}, {city}, {state}",
-                    "description": "",
-                    "category": "Music",  # Default
+                    "title": item.get('title', item.get('short_title', 'Untitled Event')),
+                    "start_iso": datetime_local,
+                    "location": venue_location,
+                    "description": description,
+                    "category": "SeatGeek",
                     "source": "SeatGeek",
-                    "link": item.get('url', ''),
-                    "cost": f"${item.get('stats', {}).get('lowest_price', 0)}" if item.get('stats', {}).get('lowest_price') else "Varies"
+                    "link": item.get('url', item.get('short_title_url', '')),
+                    "cost": cost
                 }
+                
                 if event['start_iso']:
                     events.append(event)
+                else:
+                    print(f"[SeatGeek] Skipping event '{event['title'][:50]}' - no valid date")
+        elif response.status_code == 401:
+            print(f"[SeatGeek] ERROR: Unauthorized (401) - API key may be invalid or expired")
+            try:
+                error_data = response.json()
+                print(f"[SeatGeek] API Error: {error_data}")
+            except:
+                print(f"[SeatGeek] Response: {response.text[:200]}")
+        elif response.status_code == 403:
+            print(f"[SeatGeek] ERROR: Forbidden (403) - API key may not have permission for this endpoint")
+        else:
+            print(f"[SeatGeek] ERROR: Got status code {response.status_code}")
+            try:
+                error_data = response.json()
+                print(f"[SeatGeek] API Error: {error_data}")
+            except:
+                print(f"[SeatGeek] Response: {response.text[:200]}")
+                
+    except requests.exceptions.RequestException as e:
+        print(f"[SeatGeek] Network error: {e}")
     except Exception as e:
-        print(f"Error fetching SeatGeek events: {e}")
+        print(f"[SeatGeek] Error fetching events: {e}")
+        import traceback
+        traceback.print_exc()
     
+    print(f"[SeatGeek] Successfully processed {len(events)} events")
     return events
 
 
@@ -923,16 +991,24 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             elif source_type == 'api':
                 parser = source.get('parser')
                 if parser == 'seatgeek':
-                    city = source.get('city')
-                    state = source.get('state')
-                    if city and state:
-                        events = fetch_seatgeek_events(city, state)
+                    lat = source.get('lat')
+                    lon = source.get('lon')
+                    radius = source.get('radius', '25mi')
+                    if lat and lon:
+                        events = fetch_seatgeek_events(lat, lon, radius)
                         all_events.extend(events)
                 elif parser == 'ticketmaster':
                     city = source.get('city')
                     state_code = source.get('stateCode')
                     if city and state_code:
                         events = fetch_ticketmaster_events(city, state_code)
+                        all_events.extend(events)
+                elif parser == 'seatgeek':
+                    lat = source.get('lat')
+                    lon = source.get('lon')
+                    radius = source.get('radius', '25mi')
+                    if lat and lon:
+                        events = fetch_seatgeek_events(lat, lon, radius)
                         all_events.extend(events)
             
             elif source_type == 'olemiss':

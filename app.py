@@ -144,10 +144,11 @@ EVENT_SOURCES = [
     # Ole Miss Events
     {"name": "Ole Miss Events", "type": "rss", "url": "https://eventcalendar.olemiss.edu/calendar.xml", "group": "University"},
     # Community
-    {"name": "Visit Oxford", "type": "html", "url": "https://visitoxfordms.com/events/", "parser": "visit_oxford", "group": "Community"},
-    {"name": "Bandsintown", "type": "html", "url": "https://www.bandsintown.com/c/oxford-ms", "parser": "bandsintown", "group": "Community"},
-    {"name": "Ticketmaster", "type": "api", "parser": "ticketmaster", "city": "Oxford", "stateCode": "MS", "group": "Community"},
-]
+        {"name": "Visit Oxford", "type": "html", "url": "https://visitoxfordms.com/events/", "parser": "visit_oxford", "group": "Community"},
+        {"name": "Bandsintown", "type": "html", "url": "https://www.bandsintown.com/c/oxford-ms", "parser": "bandsintown", "group": "Community"},
+        {"name": "Ticketmaster", "type": "api", "parser": "ticketmaster", "city": "Oxford", "stateCode": "MS", "group": "Community"},
+        {"name": "SeatGeek", "type": "api", "parser": "seatgeek", "lat": 34.3665, "lon": -89.5192, "radius": "25mi", "group": "Community"},
+    ]
 
 
 @cache.cached(timeout=600, key_prefix='all_events')

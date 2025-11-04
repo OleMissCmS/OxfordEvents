@@ -194,6 +194,14 @@ body {
     background-color: #e3f2fd;
 }
 
+.filter-pill[data-category="SeatGeek"] {
+    border-color: #ff9800;
+    color: #e65100;
+}
+.filter-pill[data-category="SeatGeek"].active {
+    background-color: #fff3e0;
+}
+
 /* Search Box */
 .search-box {
     flex: 1;
@@ -313,6 +321,10 @@ body {
     border-color: #64b5f6;
 }
 
+.event-card[data-category="SeatGeek"] {
+    border-color: #ff9800;
+}
+
 /* Event Header - colored bar, half height */
 .event-header {
     width: 100%;
@@ -374,6 +386,10 @@ body {
 
 .event-card[data-category="Bandsintown"] .event-header {
     background: linear-gradient(135deg, #64b5f6 0%, #42a5f5 100%);
+}
+
+.event-card[data-category="SeatGeek"] .event-header {
+    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
 }
 
 .event-content {

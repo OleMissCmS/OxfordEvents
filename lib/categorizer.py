@@ -21,6 +21,9 @@ def categorize_event(title: str, description: str = "", source: str = "") -> str
     if source_lower == "bandsintown":
         return "Bandsintown"
     
+    if source_lower == "seatgeek":
+        return "SeatGeek"
+    
     # Check if source indicates Ole Miss Athletics
     # Check for ESPN Ole Miss sources or Ole Miss sports sources
     if ("espn" in source_lower and "ole miss" in source_lower) or \
