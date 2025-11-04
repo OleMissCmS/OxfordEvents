@@ -260,7 +260,31 @@ def index():
         # Split comma-separated categories
         for cat in category.split(','):
             all_categories.add(cat.strip())
-    categories = sorted(all_categories)
+    
+    # Arrange categories in gradient order (similar colors together)
+    # Order: Blues → Teals → Greens → Pinks → Reds/Oranges → Others
+    category_order = [
+        'University', 'Education',  # Typically blue-ish
+        'Ticketmaster',  # Blue #008CFF
+        'Bandsintown',  # Teal #00CEC8
+        'Community', 'Arts & Culture',  # Typically green-ish
+        'Music', 'Performance',  # Typically pink/purple
+        'SeatGeek',  # Orange #FF5B49
+        'Ole Miss Athletics',  # Red (athletics)
+        'Sports',  # Typically red/pink
+    ]
+    
+    # Sort categories: first by predefined order, then alphabetically for others
+    ordered_categories = []
+    remaining_categories = sorted(all_categories)
+    
+    for cat in category_order:
+        if cat in remaining_categories:
+            ordered_categories.append(cat)
+            remaining_categories.remove(cat)
+    
+    # Add any remaining categories alphabetically
+    categories = ordered_categories + sorted(remaining_categories)
     
     return render_template('index.html', 
                          events=events,

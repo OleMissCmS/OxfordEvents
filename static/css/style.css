@@ -179,27 +179,27 @@ body {
 }
 
 .filter-pill[data-category="Ticketmaster"] {
-    border-color: #81c784;
-    color: #388e3c;
+    border-color: #008CFF;
+    color: #008CFF;
 }
 .filter-pill[data-category="Ticketmaster"].active {
-    background-color: #e8f5e9;
-}
-
-.filter-pill[data-category="Bandsintown"] {
-    border-color: #64b5f6;
-    color: #1976d2;
-}
-.filter-pill[data-category="Bandsintown"].active {
-    background-color: #e3f2fd;
+    background-color: #E6F5FF;
 }
 
 .filter-pill[data-category="SeatGeek"] {
-    border-color: #ff9800;
-    color: #e65100;
+    border-color: #FF5B49;
+    color: #FF5B49;
 }
 .filter-pill[data-category="SeatGeek"].active {
-    background-color: #fff3e0;
+    background-color: #FFE8E6;
+}
+
+.filter-pill[data-category="Bandsintown"] {
+    border-color: #00CEC8;
+    color: #00CEC8;
+}
+.filter-pill[data-category="Bandsintown"].active {
+    background-color: #E6F9F8;
 }
 
 /* Search Box */
