@@ -12,10 +12,10 @@
     <div class="main-container">
         <div class="hero">
             <div class="hero-header">
-                <h1>Share Your Oxford Event</h1>
-                <a class="hero-link" href="{{ url_for('index') }}">Back to Events</a>
+                <h1>Share Your Oxford Happening</h1>
+                <a class="hero-link" href="{{ url_for('index') }}">Back to Happenings</a>
             </div>
-            <p>Use this form to submit public events in the Oxford, MS area. We welcome concerts, performances, community gatherings, athletics, church events, and other happenings that are open to the public. If tickets are required, include the ticket link so attendees can purchase them.</p>
+            <p>Use this form to submit public events in the Oxford area. We welcome concerts, performances, community gatherings, athletics, church events, and other happenings that are open to the public&nbsp;&mdash; either free of charge or with a paid ticket. If tickets are required, include the ticket link so attendees can purchase them.</p>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=True) %}
@@ -38,7 +38,7 @@
 
         <form class="form-card" method="post" novalidate>
             <div class="form-grid">
-                <div class="form-group">
+                <div class="form-group wide">
                     <label for="title">Event Title *</label>
                     <input type="text" id="title" name="title" required value="{{ form_defaults.get('title', '') }}">
                 </div>
@@ -46,39 +46,41 @@
                     <label for="location">Event Location *</label>
                     <input type="text" id="location" name="location" required value="{{ form_defaults.get('location', '') }}" placeholder="Venue or address">
                 </div>
-                <div class="form-group">
+                <div class="form-row">
+                    <div class="form-group">
                     <label for="start_date">Start Date *</label>
                     <input type="date" id="start_date" name="start_date" required value="{{ form_defaults.get('start_date', '') }}">
-                </div>
-                <div class="form-group">
-                    <label for="start_time">Start Time</label>
-                    <input type="time" id="start_time" name="start_time" value="{{ form_defaults.get('start_time', '') }}">
-                </div>
-                <div class="form-group">
-                    <label for="end_date">End Date (optional)</label>
-                    <input type="date" id="end_date" name="end_date" value="{{ form_defaults.get('end_date', '') }}">
-                </div>
-                <div class="form-group">
-                    <label for="end_time">End Time (optional)</label>
-                    <input type="time" id="end_time" name="end_time" value="{{ form_defaults.get('end_time', '') }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="start_time">Start Time</label>
+                        <input type="time" id="start_time" name="start_time" value="{{ form_defaults.get('start_time', '') }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="end_date">End Date (optional)</label>
+                        <input type="date" id="end_date" name="end_date" value="{{ form_defaults.get('end_date', '') }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="end_time">End Time (optional)</label>
+                        <input type="time" id="end_time" name="end_time" value="{{ form_defaults.get('end_time', '') }}">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="cost">Cost</label>
                     <input type="text" id="cost" name="cost" value="{{ form_defaults.get('cost', '') }}" placeholder="Free, $10, Donation, etc.">
                 </div>
                 <div class="form-group">
-                    <label for="info_url">Event Details URL *</label>
-                    <input type="url" id="info_url" name="info_url" required value="{{ form_defaults.get('info_url', '') }}" placeholder="https://example.com/event">
+                    <label for="info_url">Event Details URL (optional)</label>
+                    <input type="url" id="info_url" name="info_url" value="{{ form_defaults.get('info_url', '') }}" placeholder="https://example.com/event-details">
                 </div>
                 <div class="form-group">
-                    <label for="tickets_url">Tickets URL (if required)</label>
+                    <label for="tickets_url">Ticket URL (if required)</label>
                     <input type="url" id="tickets_url" name="tickets_url" value="{{ form_defaults.get('tickets_url', '') }}" placeholder="https://example.com/tickets">
                 </div>
             </div>
 
             <div class="form-group">
                 <label>Categories *</label>
-                <p class="form-hint">Select all categories that apply. This helps people find your event.</p>
+                <p class="form-hint">Select all categories that apply. This helps people find your happening.</p>
                 <div class="checkbox-grid">
                     {% for category in categories %}
                     <label class="checkbox">
@@ -92,13 +94,13 @@
 
             <div class="form-group">
                 <label for="description">Event Description</label>
-                <textarea id="description" name="description" rows="5" placeholder="Tell people what to expect.">{{ form_defaults.get('description', '') }}</textarea>
+                <textarea id="description" name="description" rows="5" placeholder="Tell people what to expect." required>{{ form_defaults.get('description', '') }}</textarea>
             </div>
 
             <div class="form-group">
                 <label for="contact_email">Contact Email *</label>
                 <input type="email" id="contact_email" name="contact_email" required value="{{ form_defaults.get('contact_email', '') }}">
-                <p class="form-hint">We won't publish your email. We'll only contact you if we have questions about the listing.</p>
+                <p class="form-hint">We won't publish your email. We'll only contact you if we have questions about the happening.</p>
             </div>
 
             <button type="submit" class="btn-primary">Submit for Review</button>

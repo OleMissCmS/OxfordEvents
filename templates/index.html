@@ -17,7 +17,10 @@
         <div class="hero">
             <div class="hero-header">
                 <h1>Oxford Happenings</h1>
-                <a class="hero-link" href="{{ url_for('submit_event') }}">Submit an Event</a>
+                <div class="hero-actions">
+                    <a class="hero-link" href="{{ url_for('submit_event') }}">Submit a Happening</a>
+                    <a class="hero-link hero-link-secondary" href="{{ url_for('admin_login') }}">Admin Login</a>
+                </div>
             </div>
             <p>Browse concerts, athletics, community gatherings, arts, and more happening in and around Oxford over the next few weeks.</p>
             <!-- Loading Status -->
@@ -28,8 +31,42 @@
 
         <!-- Filter Section -->
         <div class="filter-section">
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Search events...">
+            <div class="filter-controls">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search happenings...">
+                </div>
+                <div class="date-filter">
+                    <label for="dateFilterSelect" class="date-filter-label">I'm looking for events during specific dates.</label>
+                    <select id="dateFilterSelect" class="date-filter-select">
+                        <option value="none" selected>Make your selection</option>
+                        <option value="before">Events before a certain day</option>
+                        <option value="after">Events after a certain day</option>
+                        <option value="between">Events between two dates</option>
+                        <option value="on">Events on a specific day</option>
+                    </select>
+                    <div id="dateInputContainer" class="date-input-container hidden">
+                        <div class="date-input-group hidden" data-filter-group="before">
+                            <label for="dateBefore">Select date</label>
+                            <input type="date" id="dateBefore">
+                        </div>
+                        <div class="date-input-group hidden" data-filter-group="after">
+                            <label for="dateAfter">Select date</label>
+                            <input type="date" id="dateAfter">
+                        </div>
+                        <div class="date-input-group hidden" data-filter-group="between">
+                            <label for="dateBetweenStart">Start date</label>
+                            <input type="date" id="dateBetweenStart">
+                            <label for="dateBetweenEnd">End date</label>
+                            <input type="date" id="dateBetweenEnd">
+                        </div>
+                        <div class="date-input-group hidden" data-filter-group="on">
+                            <label for="dateOn">Select date</label>
+                            <input type="date" id="dateOn">
+                        </div>
+                    </div>
+                    <div id="dateFilterWarning" class="date-warning hidden">Fetching happenings beyond our current 3-week window. This may take a moment…</div>
+                    <div id="dateFilterStatus" class="date-status">All Happenings Collected</div>
+                </div>
             </div>
             <div class="filter-chips" id="filterChips">
                 <button class="filter-pill active filter-pill-all" data-category="All">
@@ -68,7 +105,7 @@
         <!-- Events Grid -->
         <div class="events-grid" id="eventsGrid">
             {% for event in events %}
-            <div class="event-card" data-category="{{ event.category }}" data-title="{{ event.title|lower }}" data-location="{{ event.location|lower }}">
+            <div class="event-card" data-category="{{ event.category }}" data-title="{{ event.title|lower }}" data-location="{{ event.location|lower }}" data-start="{{ event.start_iso }}">
                 <div class="event-header">
                     {% if 'Ole Miss Athletics' in event.category %}
                     <div class="athletics-header">
@@ -113,7 +150,7 @@
 
         <!-- Footer -->
         <div class="footer">
-            Last updated: Just now | {{ num_sources }} sources
+            Last updated: Just now | {{ num_sources }} sources &middot; <a href="{{ url_for('admin_login') }}" class="footer-link">Admin Login</a>
         </div>
     </div>
 
