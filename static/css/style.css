@@ -314,9 +314,8 @@ body {
 
 /* Search Box */
 .search-box {
-    flex: 1 1 50%;
+    flex: 1 1 auto;
     min-width: 220px;
-    max-width: 50%;
 }
 
 .search-box input {
@@ -335,16 +334,9 @@ body {
 }
 
 .date-filter {
-    flex: 1 1 50%;
-    min-width: 220px;
-    background: #ffffff;
-    border: 1px solid #e1e5eb;
-    border-radius: 12px;
-    padding: 0.75rem 1rem;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 0.75rem;
 }
 
 .date-filter-label {
@@ -353,35 +345,7 @@ body {
     color: #333333;
 }
 
-.date-filter-select {
-    width: 100%;
-    padding: 0.5rem 0.75rem;
-    border-radius: 8px;
-    border: 1px solid #d0d5dc;
-    font-size: 0.85rem;
-    background-color: #f8f9fb;
-}
-
-.date-input-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-}
-
-.date-input-group {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.date-input-group label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #495057;
-}
-
-.date-input-group input {
+.date-filter-input {
     padding: 0.45rem 0.6rem;
     border-radius: 6px;
     border: 1px solid #cbd3db;
@@ -783,6 +747,11 @@ body {
     margin-bottom: 1.5rem;
 }
 
+.form-grid.compact-grid {
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+
 .form-row {
     display: grid;
     gap: 1rem;
@@ -849,6 +818,47 @@ body {
 .checkbox input {
     width: 1rem;
     height: 1rem;
+}
+
+.pill-group {
+    gap: 0.25rem;
+}
+
+.pill-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.pill-selector-pill {
+    border: 1px solid #ced4da;
+    background-color: #f8f9fa;
+    color: #495057;
+    border-radius: 999px;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.8rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pill-selector-pill:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.pill-selector-pill.selected {
+    border-color: #007BFF;
+    background-color: #E6F2FF;
+    color: #007BFF;
+}
+
+.pill-selector-x {
+    font-weight: 700;
+    font-size: 0.9rem;
 }
 
 .admin-section {
@@ -1002,10 +1012,21 @@ body {
     
 .search-box {
     width: 100%;
-    max-width: 100%;
 }
 
 .date-filter {
+    width: 100%;
+}
+
+.date-filter-inline {
+    flex-direction: column;
+}
+
+.date-filter-inline .date-filter-label {
+    width: 100%;
+}
+
+.date-filter-inline .date-filter-input {
     width: 100%;
 }
 

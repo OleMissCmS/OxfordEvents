@@ -35,35 +35,11 @@
                 <div class="search-box">
                     <input type="text" id="searchInput" placeholder="Search happenings...">
                 </div>
-                <div class="date-filter">
-                    <label for="dateFilterSelect" class="date-filter-label">I'm looking for events during specific dates.</label>
-                    <select id="dateFilterSelect" class="date-filter-select">
-                        <option value="none" selected>Make your selection</option>
-                        <option value="before">Events before a certain day</option>
-                        <option value="after">Events after a certain day</option>
-                        <option value="between">Events between two dates</option>
-                        <option value="on">Events on a specific day</option>
-                    </select>
-                    <div id="dateInputContainer" class="date-input-container hidden">
-                        <div class="date-input-group hidden" data-filter-group="before">
-                            <label for="dateBefore">Select date</label>
-                            <input type="date" id="dateBefore">
-                        </div>
-                        <div class="date-input-group hidden" data-filter-group="after">
-                            <label for="dateAfter">Select date</label>
-                            <input type="date" id="dateAfter">
-                        </div>
-                        <div class="date-input-group hidden" data-filter-group="between">
-                            <label for="dateBetweenStart">Start date</label>
-                            <input type="date" id="dateBetweenStart">
-                            <label for="dateBetweenEnd">End date</label>
-                            <input type="date" id="dateBetweenEnd">
-                        </div>
-                        <div class="date-input-group hidden" data-filter-group="on">
-                            <label for="dateOn">Select date</label>
-                            <input type="date" id="dateOn">
-                        </div>
-                    </div>
+                <div class="date-filter date-filter-inline">
+                    <label for="dateRangeStart" class="date-filter-label">Start date</label>
+                    <input type="date" id="dateRangeStart" class="date-filter-input">
+                    <label for="dateRangeEnd" class="date-filter-label">End date</label>
+                    <input type="date" id="dateRangeEnd" class="date-filter-input">
                     <div id="dateFilterWarning" class="date-warning hidden">Fetching happenings beyond our current 3-week window. This may take a moment…</div>
                     <div id="dateFilterStatus" class="date-status">All Happenings Collected</div>
                 </div>

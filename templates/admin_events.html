@@ -44,7 +44,7 @@
                     <form method="post" class="form-card admin-entry" novalidate>
                         <input type="hidden" name="event_id" value="{{ event.id }}">
                         <div class="text-muted">Submitted {{ event.created_date }} {{ event.created_time }}</div>
-                        <div class="form-grid">
+                        <div class="form-grid compact-grid">
                             <div class="form-group">
                                 <label for="title_{{ event.id }}">Title</label>
                                 <input type="text" id="title_{{ event.id }}" name="title" value="{{ event.title }}" required>
@@ -69,10 +69,15 @@
                                 <label for="end_time_{{ event.id }}">End Time</label>
                                 <input type="time" id="end_time_{{ event.id }}" name="end_time" value="{{ event.end_time }}">
                             </div>
-                            <div class="form-group">
+                            <div class="form-group pill-group">
                                 <label for="categories_{{ event.id }}">Categories</label>
-                                <input type="text" id="categories_{{ event.id }}" name="categories" value="{{ event.categories }}" placeholder="Comma separated">
-                                <p class="form-hint">Keep categories separated with commas (e.g., Music, Community).</p>
+                                <input type="hidden" id="categories_{{ event.id }}" name="categories" value="{{ event.categories }}">
+                                <div class="pill-selector" data-input="categories_{{ event.id }}">
+                                    {% for category in categories %}
+                                    {% set is_selected = category in event.categories_list %}
+                                    <button type="button" class="pill-selector-pill {{ 'selected' if is_selected else '' }}" data-value="{{ category }}">{{ category }} <span class="pill-selector-x">&times;</span></button>
+                                    {% endfor %}
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label for="cost_{{ event.id }}">Cost</label>
@@ -121,7 +126,7 @@
                     <form method="post" class="form-card admin-entry" novalidate>
                         <input type="hidden" name="event_id" value="{{ event.id }}">
                         <div class="text-muted">Published {{ event.start_date }} {{ event.start_time }}</div>
-                        <div class="form-grid">
+                        <div class="form-grid compact-grid">
                             <div class="form-group">
                                 <label for="title_a{{ event.id }}">Title</label>
                                 <input type="text" id="title_a{{ event.id }}" name="title" value="{{ event.title }}" required>
@@ -146,9 +151,15 @@
                                 <label for="end_time_a{{ event.id }}">End Time</label>
                                 <input type="time" id="end_time_a{{ event.id }}" name="end_time" value="{{ event.end_time }}">
                             </div>
-                            <div class="form-group">
+                            <div class="form-group pill-group">
                                 <label for="categories_a{{ event.id }}">Categories</label>
-                                <input type="text" id="categories_a{{ event.id }}" name="categories" value="{{ event.categories }}" placeholder="Comma separated">
+                                <input type="hidden" id="categories_a{{ event.id }}" name="categories" value="{{ event.categories }}">
+                                <div class="pill-selector" data-input="categories_a{{ event.id }}">
+                                    {% for category in categories %}
+                                    {% set is_selected = category in event.categories_list %}
+                                    <button type="button" class="pill-selector-pill {{ 'selected' if is_selected else '' }}" data-value="{{ category }}">{{ category }} <span class="pill-selector-x">&times;</span></button>
+                                    {% endfor %}
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label for="cost_a{{ event.id }}">Cost</label>
