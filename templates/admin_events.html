@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Oxford Happenings</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="accent-bar"></div>
+    <div class="main-container">
+        <div class="hero">
+            <div class="hero-header">
+                <h1>Manage Event Submissions</h1>
+                <a class="hero-link" href="{{ url_for('admin_logout') }}">Sign Out</a>
+            </div>
+            <p>Review submissions, fine-tune details, and approve events for the Oxford Happenings calendar.</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=True) %}
+        {% if messages %}
+        <div class="alert-list">
+            {% for category, message in messages %}
+            <div class="alert {{ 'alert-success' if category == 'success' else 'alert-error' }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <div class="admin-section">
+            <div class="admin-toolbar">
+                <a class="btn-link" href="{{ url_for('index') }}">View live site</a>
+            </div>
+
+            {% if pending_events %}
+            <section class="admin-card">
+                <header>
+                    <h2>Pending Approval</h2>
+                    <span class="badge">{{ pending_events|length }} awaiting review</span>
+                </header>
+                <div class="admin-form-grid">
+                    {% for event in pending_events %}
+                    <form method="post" class="form-card admin-entry" novalidate>
+                        <input type="hidden" name="event_id" value="{{ event.id }}">
+                        <div class="text-muted">Submitted {{ event.created_date }} {{ event.created_time }}</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="title_{{ event.id }}">Title</label>
+                                <input type="text" id="title_{{ event.id }}" name="title" value="{{ event.title }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="location_{{ event.id }}">Location</label>
+                                <input type="text" id="location_{{ event.id }}" name="location" value="{{ event.location }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="start_date_{{ event.id }}">Start Date</label>
+                                <input type="date" id="start_date_{{ event.id }}" name="start_date" value="{{ event.start_date }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="start_time_{{ event.id }}">Start Time</label>
+                                <input type="time" id="start_time_{{ event.id }}" name="start_time" value="{{ event.start_time }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="end_date_{{ event.id }}">End Date</label>
+                                <input type="date" id="end_date_{{ event.id }}" name="end_date" value="{{ event.end_date }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="end_time_{{ event.id }}">End Time</label>
+                                <input type="time" id="end_time_{{ event.id }}" name="end_time" value="{{ event.end_time }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="categories_{{ event.id }}">Categories</label>
+                                <input type="text" id="categories_{{ event.id }}" name="categories" value="{{ event.categories }}" placeholder="Comma separated">
+                                <p class="form-hint">Keep categories separated with commas (e.g., Music, Community).</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="cost_{{ event.id }}">Cost</label>
+                                <input type="text" id="cost_{{ event.id }}" name="cost" value="{{ event.cost }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="info_url_{{ event.id }}">Event Details URL</label>
+                                <input type="url" id="info_url_{{ event.id }}" name="info_url" value="{{ event.info_url }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="tickets_url_{{ event.id }}">Tickets URL</label>
+                                <input type="url" id="tickets_url_{{ event.id }}" name="tickets_url" value="{{ event.tickets_url }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="contact_email_{{ event.id }}">Contact Email</label>
+                                <input type="email" id="contact_email_{{ event.id }}" name="contact_email" value="{{ event.contact_email }}">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="description_{{ event.id }}">Description</label>
+                            <textarea id="description_{{ event.id }}" name="description" rows="4">{{ event.description }}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="admin_notes_{{ event.id }}">Admin Notes</label>
+                            <textarea id="admin_notes_{{ event.id }}" name="admin_notes" rows="2">{{ event.admin_notes }}</textarea>
+                        </div>
+                        <div class="admin-form-actions">
+                            <button type="submit" name="action" value="update" class="btn-outline">Save Changes</button>
+                            <button type="submit" name="action" value="approve" class="btn-primary">Approve & Publish</button>
+                            <button type="submit" name="action" value="reject" class="btn-danger">Reject</button>
+                        </div>
+                    </form>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            <section class="admin-card">
+                <header>
+                    <h2>Approved Events</h2>
+                    <span class="badge">{{ approved_events|length }} live</span>
+                </header>
+                {% if approved_events %}
+                <div class="admin-form-grid">
+                    {% for event in approved_events %}
+                    <form method="post" class="form-card admin-entry" novalidate>
+                        <input type="hidden" name="event_id" value="{{ event.id }}">
+                        <div class="text-muted">Published {{ event.start_date }} {{ event.start_time }}</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="title_a{{ event.id }}">Title</label>
+                                <input type="text" id="title_a{{ event.id }}" name="title" value="{{ event.title }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="location_a{{ event.id }}">Location</label>
+                                <input type="text" id="location_a{{ event.id }}" name="location" value="{{ event.location }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="start_date_a{{ event.id }}">Start Date</label>
+                                <input type="date" id="start_date_a{{ event.id }}" name="start_date" value="{{ event.start_date }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="start_time_a{{ event.id }}">Start Time</label>
+                                <input type="time" id="start_time_a{{ event.id }}" name="start_time" value="{{ event.start_time }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="end_date_a{{ event.id }}">End Date</label>
+                                <input type="date" id="end_date_a{{ event.id }}" name="end_date" value="{{ event.end_date }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="end_time_a{{ event.id }}">End Time</label>
+                                <input type="time" id="end_time_a{{ event.id }}" name="end_time" value="{{ event.end_time }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="categories_a{{ event.id }}">Categories</label>
+                                <input type="text" id="categories_a{{ event.id }}" name="categories" value="{{ event.categories }}" placeholder="Comma separated">
+                            </div>
+                            <div class="form-group">
+                                <label for="cost_a{{ event.id }}">Cost</label>
+                                <input type="text" id="cost_a{{ event.id }}" name="cost" value="{{ event.cost }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="info_url_a{{ event.id }}">Event Details URL</label>
+                                <input type="url" id="info_url_a{{ event.id }}" name="info_url" value="{{ event.info_url }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="tickets_url_a{{ event.id }}">Tickets URL</label>
+                                <input type="url" id="tickets_url_a{{ event.id }}" name="tickets_url" value="{{ event.tickets_url }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="contact_email_a{{ event.id }}">Contact Email</label>
+                                <input type="email" id="contact_email_a{{ event.id }}" name="contact_email" value="{{ event.contact_email }}">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="description_a{{ event.id }}">Description</label>
+                            <textarea id="description_a{{ event.id }}" name="description" rows="4">{{ event.description }}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="admin_notes_a{{ event.id }}">Admin Notes</label>
+                            <textarea id="admin_notes_a{{ event.id }}" name="admin_notes" rows="2">{{ event.admin_notes }}</textarea>
+                        </div>
+                        <div class="admin-form-actions">
+                            <button type="submit" name="action" value="update" class="btn-outline">Save Changes</button>
+                            <button type="submit" name="action" value="delete" class="btn-danger">Remove</button>
+                        </div>
+                    </form>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No approved submissions yet.</p>
+                {% endif %}
+            </section>
+
+            <section class="admin-card">
+                <header>
+                    <h2>Recently Rejected</h2>
+                    <span class="badge">{{ rejected_events|length }} archived</span>
+                </header>
+                {% if rejected_events %}
+                <div class="admin-form-grid">
+                    {% for event in rejected_events %}
+                    <div class="form-card admin-entry">
+                        <div class="badge">Rejected</div>
+                        <h3>{{ event.title }}</h3>
+                        <p class="text-muted">{{ event.location }} &middot; {{ event.start_date }} {{ event.start_time }}</p>
+                        <p>{{ event.description }}</p>
+                        {% if event.admin_notes %}
+                        <p class="text-muted">Admin notes: {{ event.admin_notes }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No recent rejections.</p>
+                {% endif %}
+            </section>
+        </div>
+
+        <div class="footer">
+            Oxford Happenings &mdash; internal moderation dashboard
+        </div>
+    </div>
+</body>
+</html>
+

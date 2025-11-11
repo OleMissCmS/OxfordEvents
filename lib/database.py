@@ -1,13 +1,15 @@
 """
-SQLite database models and initialization for Oxford Events
-Uses SQLite for free, persistent storage
+Database models and initialization for Oxford Events.
+Supports PostgreSQL (preferred on Render) with SQLite fallback.
 """
+
+import os
+from urllib.parse import urlparse
 
 from sqlalchemy import create_engine, Column, String, Text, DateTime, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from datetime import datetime, timezone
-import os
 import time
 
 Base = declarative_base()
@@ -60,40 +62,79 @@ class EventImage(Base):
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
+class SubmittedEvent(Base):
+    """User-submitted events stored for moderation."""
+    __tablename__ = 'submitted_events'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(300), nullable=False)
+    start_datetime = Column(DateTime, nullable=False, index=True)
+    end_datetime = Column(DateTime)
+    location = Column(String(300), nullable=False)
+    categories = Column(String(300), nullable=False)
+    cost = Column(String(120), default="Free")
+    description = Column(Text)
+    info_url = Column(String(500))
+    tickets_url = Column(String(500))
+    contact_email = Column(String(200))
+    status = Column(String(20), default="pending", index=True)  # pending, approved, rejected
+    submitted_by = Column(String(200))
+    admin_notes = Column(Text)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+
 # Database connection
 _engine = None
 _session_factory = None
 
 
-def get_database_url():
+def _normalize_database_url(url: str) -> str:
     """
-    Get SQLite database URL (always uses SQLite, never PostgreSQL).
+    Ensure SQLAlchemy URL is compatible (convert postgres:// to postgresql+psycopg://).
+    """
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    if url.startswith("postgresql://"):
+        # Ensure +psycopg driver is specified
+        if "+psycopg" not in url:
+            url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return url
+
+
+def get_database_url() -> str:
+    """
+    Get database URL.
     Priority:
-    1. SQLite on persistent disk (if available) - persistent storage
-    2. SQLite in local data/ - development fallback
+    1. DATABASE_URL environment variable (PostgreSQL on Render)
+    2. SQLite on persistent disk
+    3. SQLite in local data/ directory
     """
-    # Always use SQLite - ignore DATABASE_URL if set
+    env_url = os.environ.get("DATABASE_URL")
+    if env_url:
+        normalized = _normalize_database_url(env_url)
+        parsed = urlparse(normalized)
+        safe_host = parsed.hostname or "postgres"
+        print(f"[Database] ✅ Using PostgreSQL: host={safe_host}, db={parsed.path.lstrip('/') or 'default'}")
+        return normalized
+
+    # Fallback to SQLite
     try:
         from utils.storage import get_sqlite_db_path, is_persistent_disk
         sqlite_path = get_sqlite_db_path()
-        
-        # Convert to absolute path for SQLite
         abs_path = os.path.abspath(sqlite_path)
-        
-        # SQLite URL format: sqlite:///absolute/path/to/db.db
-        sqlite_url = f'sqlite:///{abs_path}'
-        
+        sqlite_url = f"sqlite:///{abs_path}"
+
         if is_persistent_disk():
             print(f"[Database] ✅ Using SQLite on persistent disk: {abs_path}")
         else:
             print(f"[Database] ✅ Using SQLite (local): {abs_path}")
-        
+
         return sqlite_url
     except Exception as e:
-        # Ultimate fallback
-        print(f"[Database] ⚠️ Error getting persistent disk path, using local: {e}")
-        os.makedirs('data', exist_ok=True)
-        return 'sqlite:///data/oxford_events.db'
+        print(f"[Database] ⚠️ Error getting persistent disk path, using local fallback: {e}")
+        os.makedirs("data", exist_ok=True)
+        return "sqlite:///data/oxford_events.db"
 
 
 def get_engine():

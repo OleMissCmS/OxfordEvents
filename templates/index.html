@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oxford Events - Upcoming in Oxford</title>
+    <title>Oxford Happenings - Upcoming in Oxford</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -15,8 +15,11 @@
     <div class="main-container">
         <!-- Hero Section -->
         <div class="hero">
-            <h1>Concerts & Events in Oxford</h1>
-            <p>Browse live music, community happenings, athletics, arts and more over the next 3 weeks.</p>
+            <div class="hero-header">
+                <h1>Oxford Happenings</h1>
+                <a class="hero-link" href="{{ url_for('submit_event') }}">Submit an Event</a>
+            </div>
+            <p>Browse concerts, athletics, community gatherings, arts, and more happening in and around Oxford over the next few weeks.</p>
             <!-- Loading Status -->
             <div id="loadingStatus" class="loading-status" style="display: none;">
                 <span id="statusText">Loading events...</span>
@@ -29,9 +32,15 @@
                 <input type="text" id="searchInput" placeholder="Search events...">
             </div>
             <div class="filter-chips" id="filterChips">
-                <button class="filter-pill active" data-category="All">All</button>
+                <button class="filter-pill active filter-pill-all" data-category="All">
+                    <span class="pill-label">All</span>
+                </button>
                 {% for category in categories %}
-                <button class="filter-pill" data-category="{{ category }}">{{ category }}</button>
+                <button class="filter-pill" data-category="{{ category }}">
+                    <span class="pill-label">{{ category }}</span>
+                    <span class="pill-divider" aria-hidden="true"></span>
+                    <span class="pill-dismiss" role="button" tabindex="0" aria-label="Hide {{ category }}">×</span>
+                </button>
                 {% endfor %}
             </div>
         </div>
@@ -70,7 +79,12 @@
                 <div class="event-content">
                     <div class="event-date">{{ event.start_iso|format_datetime }}</div>
                     <h3 class="event-title">
-                        <a href="{{ event.link }}" target="_blank">{{ event.title }}</a>
+                        {% set detail_link = event.info_url or event.link %}
+                        {% if detail_link %}
+                        <a href="{{ detail_link }}" target="_blank" rel="noopener">{{ event.title }}</a>
+                        {% else %}
+                        {{ event.title }}
+                        {% endif %}
                     </h3>
                     <div class="event-venue">{{ event.location }}</div>
                     <div class="event-meta">
@@ -78,9 +92,16 @@
                         <span class="event-category">{{ event.category }}</span>
                     </div>
                     <div class="event-description">{{ event.description|truncate_description }}</div>
-                    {% if event.cost != 'Free' %}
-                    <a href="{{ event.link }}" class="btn-tickets" target="_blank">Tickets</a>
-                    {% endif %}
+                    <div class="event-actions">
+                        {% if detail_link %}
+                        <a href="{{ detail_link }}" class="btn-secondary" target="_blank" rel="noopener">Event Details</a>
+                        {% endif %}
+                        {% if event.tickets_url %}
+                        <a href="{{ event.tickets_url }}" class="btn-tickets" target="_blank" rel="noopener">Tickets</a>
+                        {% elif event.cost and event.cost != 'Free' and detail_link %}
+                        <a href="{{ detail_link }}" class="btn-tickets" target="_blank" rel="noopener">Tickets</a>
+                        {% endif %}
+                    </div>
                     <div class="calendar-links">
                         <a href="{{ event|google_calendar_link }}" target="_blank" class="calendar-btn google-cal">Google Calendar</a>
                         <a href="{{ event|ics_calendar_link }}" class="calendar-btn apple-cal">Apple Calendar</a>

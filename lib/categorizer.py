@@ -68,6 +68,13 @@ def categorize_event(title: str, description: str = "", source: str = "") -> str
         'sculpture', 'painting', 'imagination station', 'discovery'
     ]
     
+    # Religious keywords
+    religious_keywords = [
+        'worship', 'church', 'mass', 'prayer', 'faith', 'bible', 'ministry',
+        'revival', 'service', 'gospel', 'fellowship', 'sermon', 'youth group',
+        'church choir', 'vacation bible school', 'vbs', 'easter', 'christmas cantata'
+    ]
+
     # Community keywords
     community_keywords = [
         'farmers market', 'festival', 'fair', 'recycling', 'community', 'local',
@@ -92,6 +99,8 @@ def categorize_event(title: str, description: str = "", source: str = "") -> str
         return "Sports"
     elif any(keyword in text for keyword in education_keywords):
         return "Education"
+    elif any(keyword in text for keyword in religious_keywords):
+        return "Religious"
     elif any(keyword in text for keyword in community_keywords):
         return "Community"
     else:

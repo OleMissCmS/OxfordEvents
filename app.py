@@ -2,16 +2,65 @@
 Flask application for Oxford Events
 """
 
-from flask import Flask, render_template, jsonify, url_for
+from flask import (
+    Flask,
+    render_template,
+    jsonify,
+    url_for,
+    request,
+    redirect,
+    flash,
+    session,
+)
 from flask_caching import Cache
 from datetime import datetime, timedelta, date
-import json
 import os
+from typing import Optional, Tuple
+from werkzeug.security import check_password_hash, generate_password_hash
+import pytz
+
 from lib.event_scraper import collect_all_events
+from lib.database import (
+    init_database,
+    migrate_json_to_db,
+    get_session as db_get_session,
+    SubmittedEvent,
+)
 from utils.image_processing import detect_sports_teams, create_team_matchup_image
 
 app = Flask(__name__)
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+app.config['SECRET_KEY'] = os.environ.get("FLASK_SECRET_KEY", "change-me")
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = "Lax"
+
+DEFAULT_ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "CmSCMU")
+DEFAULT_ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Champer")
+ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH") or generate_password_hash(
+    DEFAULT_ADMIN_PASSWORD
+)
+app.config['ADMIN_USERNAME'] = DEFAULT_ADMIN_USERNAME
+app.config['ADMIN_PASSWORD_HASH'] = ADMIN_PASSWORD_HASH
+
+# Timezone helpers
+CENTRAL_TZ = pytz.timezone("America/Chicago")
+UTC = pytz.UTC
+
+# Category options (public + admin)
+CATEGORY_CHOICES = [
+    "Community",
+    "Arts & Culture",
+    "Music",
+    "Performance",
+    "Sports",
+    "Ole Miss Athletics",
+    "Education",
+    "University",
+    "Ticketmaster",
+    "SeatGeek",
+    "Bandsintown",
+    "Religious",
+]
 
 # Configure caching
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 600})
@@ -32,8 +81,6 @@ def init_app():
             except Exception:
                 pass
             
-            # Initialize database (SQLite - always free, no PostgreSQL)
-            from lib.database import init_database, migrate_json_to_db
             init_database()
             
             # Try to migrate JSON data once (if any exists)
@@ -132,6 +179,165 @@ def ics_calendar_link(event):
     """Generate .ics calendar download link for event"""
     return url_for('generate_ics', title=event['title'])
 
+
+def normalize_event_dict(event: dict) -> dict:
+    """Ensure event dictionaries have consistent keys used by templates."""
+    normalized = dict(event)
+    link = normalized.get("link") or normalized.get("info_url") or ""
+    normalized.setdefault("info_url", link)
+    normalized.setdefault("tickets_url", normalized.get("tickets_url", ""))
+    normalized.setdefault("cost", normalized.get("cost", "Free") or "Free")
+    normalized.setdefault("source", normalized.get("source", ""))
+    normalized.setdefault("category", normalized.get("category", "Community"))
+    return normalized
+
+
+def submission_to_event(submission: SubmittedEvent) -> dict:
+    """Convert a SubmittedEvent ORM object into the event dict used by templates."""
+    start_dt = submission.start_datetime
+    if start_dt.tzinfo is None:
+        start_dt = UTC.localize(start_dt)
+    event = {
+        "title": submission.title,
+        "start_iso": start_dt.isoformat(),
+        "location": submission.location,
+        "description": submission.description or "",
+        "category": submission.categories,
+        "source": "Community Submission",
+        "link": submission.info_url or submission.tickets_url or "",
+        "info_url": submission.info_url or submission.tickets_url or "",
+        "tickets_url": submission.tickets_url or "",
+        "cost": submission.cost or "Free",
+        "submitted_event_id": submission.id,
+    }
+    return normalize_event_dict(event)
+
+
+def is_admin_authenticated() -> bool:
+    """Check if the current session is authenticated for admin access."""
+    return session.get("admin_logged_in") is True
+
+
+def refresh_events_cache():
+    """Clear the cached events after admin updates."""
+    try:
+        cache.delete("all_events")
+    except Exception:
+        pass
+
+
+def parse_local_datetime(date_str: Optional[str], time_str: Optional[str], default_time: str = "00:00") -> Optional[datetime]:
+    """Parse date/time strings assuming America/Chicago timezone and return UTC datetime."""
+    if not date_str:
+        return None
+    time_component = (time_str or default_time).strip()
+    try:
+        naive = datetime.strptime(f"{date_str} {time_component}", "%Y-%m-%d %H:%M")
+    except ValueError as err:
+        raise ValueError("Invalid date or time. Please use the provided pickers.") from err
+    local_dt = CENTRAL_TZ.localize(naive)
+    return local_dt.astimezone(UTC)
+
+
+def local_date_time_parts(dt: Optional[datetime]) -> Tuple[str, str]:
+    """Return date/time strings (local) for form fields."""
+    if not dt:
+        return "", ""
+    dt_aware = dt if dt.tzinfo else UTC.localize(dt)
+    local_dt = dt_aware.astimezone(CENTRAL_TZ)
+    return local_dt.strftime("%Y-%m-%d"), local_dt.strftime("%H:%M")
+
+
+def prepare_submission_for_admin(submission: SubmittedEvent) -> dict:
+    """Prepare a submitted event for admin template rendering."""
+    start_date, start_time = local_date_time_parts(submission.start_datetime)
+    end_date, end_time = local_date_time_parts(submission.end_datetime)
+    categories_list = [
+        cat.strip() for cat in (submission.categories or "").split(",") if cat.strip()
+    ]
+    created_date, created_time = local_date_time_parts(submission.created_at)
+    return {
+        "id": submission.id,
+        "title": submission.title,
+        "description": submission.description or "",
+        "location": submission.location,
+        "categories": submission.categories or "",
+        "categories_list": categories_list,
+        "cost": submission.cost or "Free",
+        "info_url": submission.info_url or "",
+        "tickets_url": submission.tickets_url or "",
+        "contact_email": submission.contact_email or "",
+        "status": submission.status,
+        "admin_notes": submission.admin_notes or "",
+        "start_date": start_date,
+        "start_time": start_time,
+        "end_date": end_date,
+        "end_time": end_time,
+        "created_date": created_date,
+        "created_time": created_time,
+    }
+
+
+def update_submission_from_form(submission: SubmittedEvent, form, *, include_admin_fields: bool = True):
+    """Update a SubmittedEvent instance from form data."""
+    title = (form.get("title") or "").strip()
+    if not title:
+        raise ValueError("Event title is required.")
+    submission.title = title
+
+    location = (form.get("location") or "").strip()
+    if not location:
+        raise ValueError("Event location is required.")
+    submission.location = location
+
+    if hasattr(form, "getlist"):
+        selected_categories = form.getlist("categories")
+    else:
+        selected_categories = None
+
+    if selected_categories:
+        categories = [cat.strip() for cat in selected_categories if cat.strip()]
+    else:
+        categories_raw = form.get("categories", "")
+        categories = [cat.strip() for cat in categories_raw.split(",") if cat.strip()]
+
+    if not categories:
+        raise ValueError("Select at least one category.")
+    submission.categories = ", ".join(dict.fromkeys(categories))  # Preserve order, remove duplicates
+
+    start_dt = parse_local_datetime(form.get("start_date"), form.get("start_time"))
+    if not start_dt:
+        raise ValueError("Start date is required.")
+    submission.start_datetime = start_dt
+
+    end_date_value = form.get("end_date")
+    end_time_value = form.get("end_time")
+    if end_date_value or end_time_value:
+        end_dt = parse_local_datetime(
+            end_date_value or form.get("start_date"),
+            end_time_value or form.get("start_time") or "00:00",
+        )
+        submission.end_datetime = end_dt
+    else:
+        submission.end_datetime = None
+
+    cost = (form.get("cost") or "").strip()
+    submission.cost = cost or "Free"
+
+    submission.description = (form.get("description") or "").strip()
+    info_url = (form.get("info_url") or "").strip()
+    tickets_url = (form.get("tickets_url") or "").strip()
+    submission.info_url = info_url or None
+    submission.tickets_url = tickets_url or None
+
+    contact_email = (form.get("contact_email") or "").strip()
+    submission.contact_email = contact_email or None
+
+    if include_admin_fields:
+        admin_notes = (form.get("admin_notes") or "").strip()
+        submission.admin_notes = admin_notes or None
+
+
 # Event sources
 EVENT_SOURCES = [
     # Ole Miss Events
@@ -147,91 +353,88 @@ EVENT_SOURCES = [
 @cache.cached(timeout=600, key_prefix='all_events')
 def load_events():
     """Load events from all sources"""
+    normalized_events = []
     try:
         # Try to fetch real events
         events = collect_all_events(EVENT_SOURCES)
-        
-        # If no events found, return mock data
-        if not events:
-            today = date.today()
-            events = [
-                {
-                    "title": "Ole Miss Football vs Alabama",
-                    "start_iso": (today + timedelta(days=7)).isoformat(),
-                    "location": "Vaught-Hemingway Stadium",
-                    "cost": "Free",
-                    "category": "Sports",
-                    "source": "Ole Miss Athletics",
-                    "link": "https://olemisssports.com",
-                    "description": "Rebels take on the Crimson Tide in a SEC matchup."
-                },
-                {
-                    "title": "Square Books Author Reading",
-                    "start_iso": (today + timedelta(days=3)).isoformat(),
-                    "location": "Square Books",
-                    "cost": "Free",
-                    "category": "Arts & Culture",
-                    "source": "Visit Oxford",
-                    "link": "https://squarebooks.com",
-                    "description": "Join us for an evening with bestselling author discussing their latest work."
-                },
-                {
-                    "title": "Proud Larry's Live Music",
-                    "start_iso": (today + timedelta(days=5)).isoformat(),
-                    "location": "Proud Larry's",
-                    "cost": "$10",
-                    "category": "Music",
-                    "source": "SeatGeek",
-                    "link": "https://proudlarrys.com",
-                    "description": "Local band performing original songs and covers."
-                },
-                {
-                    "title": "Ole Miss Basketball vs Arkansas",
-                    "start_iso": (today + timedelta(days=2)).isoformat(),
-                    "location": "The Pavilion",
-                    "cost": "$15",
-                    "category": "Sports",
-                    "source": "Ole Miss Athletics",
-                    "link": "https://olemisssports.com",
-                    "description": "Men's basketball game against Arkansas."
-                },
-                {
-                    "title": "Oxford Farmers Market",
-                    "start_iso": (today + timedelta(days=1)).isoformat(),
-                    "location": "Oxford Square",
-                    "cost": "Free",
-                    "category": "Community",
-                    "source": "Visit Oxford",
-                    "link": "https://visitoxfordms.com",
-                    "description": "Weekly farmers market with local produce, crafts, and food."
-                },
-                {
-                    "title": "The Lyric Oxford - Concert",
-                    "start_iso": (today + timedelta(days=10)).isoformat(),
-                    "location": "The Lyric Oxford",
-                    "cost": "$25",
-                    "category": "Music",
-                    "source": "Ticketmaster",
-                    "link": "https://www.thelyricoxford.com",
-                    "description": "Live concert featuring local and touring artists."
-                }
-            ]
+        normalized_events = [normalize_event_dict(event) for event in events]
     except Exception as e:
         print(f"Error loading events: {e}")
-        # Fallback to mock data
+        normalized_events = []
+
+    # Add approved submitted events
+    db_session = None
+    try:
+        db_session = db_get_session()
+        now_utc = datetime.now(UTC)
+        cutoff = now_utc + timedelta(days=90)
+        submissions = (
+            db_session.query(SubmittedEvent)
+            .filter(SubmittedEvent.status == "approved")
+            .filter(SubmittedEvent.start_datetime >= now_utc - timedelta(days=1))
+            .filter(SubmittedEvent.start_datetime <= cutoff)
+            .order_by(SubmittedEvent.start_datetime.asc())
+            .all()
+        )
+        for submission in submissions:
+            normalized_events.append(submission_to_event(submission))
+    except Exception as db_error:
+        print(f"[Database] Error loading submitted events: {db_error}")
+    finally:
+        if db_session is not None:
+            db_session.close()
+
+    # Fallback if no events available at all
+    if not normalized_events:
         today = date.today()
-        events = [{
-            "title": "Error Loading Events",
-            "start_iso": today.isoformat(),
-            "location": "Oxford, MS",
-            "cost": "Free",
-            "category": "Community",
-            "source": "System",
-            "link": "#",
-            "description": "Unable to load events at this time."
-        }]
+        fallback_events = [
+            {
+                "title": "Ole Miss Football vs Alabama",
+                "start_iso": (today + timedelta(days=7)).isoformat(),
+                "location": "Vaught-Hemingway Stadium",
+                "cost": "Free",
+                "category": "Sports",
+                "source": "Ole Miss Athletics",
+                "link": "https://olemisssports.com",
+                "description": "Rebels take on the Crimson Tide in a SEC matchup.",
+            },
+            {
+                "title": "Square Books Author Reading",
+                "start_iso": (today + timedelta(days=3)).isoformat(),
+                "location": "Square Books",
+                "cost": "Free",
+                "category": "Arts & Culture",
+                "source": "Visit Oxford",
+                "link": "https://squarebooks.com",
+                "description": "Join us for an evening with bestselling author discussing their latest work.",
+            },
+            {
+                "title": "Proud Larry's Live Music",
+                "start_iso": (today + timedelta(days=5)).isoformat(),
+                "location": "Proud Larry's",
+                "cost": "$10",
+                "category": "Music",
+                "source": "SeatGeek",
+                "link": "https://proudlarrys.com",
+                "description": "Local band performing original songs and covers.",
+            },
+            {
+                "title": "Oxford Farmers Market",
+                "start_iso": (today + timedelta(days=1)).isoformat(),
+                "location": "Oxford Square",
+                "cost": "Free",
+                "category": "Community",
+                "source": "Visit Oxford",
+                "link": "https://visitoxfordms.com",
+                "description": "Weekly farmers market with local produce, crafts, and food.",
+            },
+        ]
+        normalized_events = [normalize_event_dict(event) for event in fallback_events]
+
+    # Ensure events are sorted by start time
+    normalized_events.sort(key=lambda e: e.get("start_iso") or "")
     
-    return events
+    return normalized_events
 
 
 @app.route('/')
@@ -254,7 +457,7 @@ def index():
         pass
     
     # Get unique categories - handle comma-separated categories
-    all_categories = set()
+    all_categories = {"Religious"}  # Ensure Religious pill appears even if no events yet
     for event in events:
         category = event.get('category', 'Other')
         # Split comma-separated categories
@@ -267,7 +470,7 @@ def index():
         'University', 'Education',  # Typically blue-ish
         'Ticketmaster',  # Blue #008CFF
         'Bandsintown',  # Teal #00CEC8
-        'Community', 'Arts & Culture',  # Typically green-ish
+        'Community', 'Religious', 'Arts & Culture',  # Typically green-ish
         'Music', 'Performance',  # Typically pink/purple
         'SeatGeek',  # Orange #FF5B49
         'Ole Miss Athletics',  # Red (athletics)
@@ -291,6 +494,177 @@ def index():
                          categories=categories,
                          total_events=len(events),
                          num_sources=len(EVENT_SOURCES))
+
+
+@app.route('/submit-event', methods=['GET', 'POST'])
+def submit_event():
+    """Public form for submitting local events."""
+    errors = []
+    selected_categories = []
+    form_defaults = {}
+
+    if request.method == 'POST':
+        selected_categories = request.form.getlist('categories')
+        form_defaults = request.form.to_dict()
+        form_defaults['categories'] = selected_categories
+
+        db_session = None
+        try:
+            new_submission = SubmittedEvent(status="pending")
+            # Populate fields (without admin-only notes)
+            update_submission_from_form(new_submission, request.form, include_admin_fields=False)
+            new_submission.submitted_by = (request.form.get("contact_email") or "").strip()
+
+            db_session = db_get_session()
+            db_session.add(new_submission)
+            db_session.commit()
+
+            flash("Thanks! Your event was submitted for review.", "success")
+            return redirect(url_for('submit_event'))
+        except ValueError as ve:
+            errors.append(str(ve))
+        except Exception as exc:
+            errors.append("We couldn't save your event. Please try again.")
+            print(f"[submit_event] Error saving submission: {exc}")
+        finally:
+            if db_session is not None:
+                db_session.close()
+
+    return render_template(
+        'submit_event.html',
+        categories=CATEGORY_CHOICES,
+        errors=errors,
+        selected_categories=selected_categories,
+        form_defaults=form_defaults,
+    )
+
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """Admin login for moderating submissions."""
+    if is_admin_authenticated():
+        return redirect(url_for('admin_events'))
+
+    if request.method == 'POST':
+        username = (request.form.get('username') or "").strip()
+        password = request.form.get('password') or ""
+        next_url = request.form.get('next') or url_for('admin_events')
+
+        if username.lower() == app.config['ADMIN_USERNAME'].lower() and check_password_hash(app.config['ADMIN_PASSWORD_HASH'], password):
+            session['admin_logged_in'] = True
+            flash("Signed in successfully.", "success")
+            return redirect(next_url)
+        else:
+            flash("Invalid username or password.", "error")
+
+    next_param = request.args.get('next', url_for('admin_events'))
+    return render_template('admin_login.html', next_url=next_param)
+
+
+@app.route('/admin/logout')
+def admin_logout():
+    """Clear admin session."""
+    session.pop('admin_logged_in', None)
+    flash("Signed out.", "success")
+    return redirect(url_for('admin_login'))
+
+
+@app.route('/admin/events', methods=['GET', 'POST'])
+def admin_events():
+    """Admin dashboard for reviewing submitted events."""
+    if not is_admin_authenticated():
+        return redirect(url_for('admin_login', next=request.path))
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+        event_id = request.form.get('event_id')
+
+        if not event_id:
+            flash("Missing event identifier.", "error")
+            return redirect(url_for('admin_events'))
+
+        try:
+            submission_id = int(event_id)
+        except ValueError:
+            flash("Invalid event identifier.", "error")
+            return redirect(url_for('admin_events'))
+
+        db_session = db_get_session()
+        submission = db_session.get(SubmittedEvent, submission_id)
+
+        if not submission:
+            db_session.close()
+            flash("Event submission not found.", "error")
+            return redirect(url_for('admin_events'))
+
+        try:
+            if action in ('approve', 'update'):
+                update_submission_from_form(submission, request.form)
+                if action == 'approve':
+                    submission.status = 'approved'
+                db_session.add(submission)
+                message = "Event approved." if action == 'approve' else "Event updated."
+            elif action == 'reject':
+                submission.status = 'rejected'
+                message = "Event rejected."
+            elif action == 'delete':
+                db_session.delete(submission)
+                message = "Submission deleted."
+            else:
+                message = "No changes applied."
+
+            db_session.commit()
+
+            if action in ('approve', 'update', 'delete'):
+                refresh_events_cache()
+
+            flash(message, "success")
+        except ValueError as ve:
+            db_session.rollback()
+            flash(str(ve), "error")
+        except Exception as exc:
+            db_session.rollback()
+            flash("Unexpected error updating submission.", "error")
+            print(f"[admin_events] Error handling submission {event_id}: {exc}")
+        finally:
+            db_session.close()
+
+        return redirect(url_for('admin_events'))
+
+    # GET request - show submissions
+    db_session = db_get_session()
+    pending_submissions = (
+        db_session.query(SubmittedEvent)
+        .filter(SubmittedEvent.status == "pending")
+        .order_by(SubmittedEvent.created_at.asc())
+        .all()
+    )
+    approved_submissions = (
+        db_session.query(SubmittedEvent)
+        .filter(SubmittedEvent.status == "approved")
+        .order_by(SubmittedEvent.start_datetime.asc())
+        .all()
+    )
+    rejected_submissions = (
+        db_session.query(SubmittedEvent)
+        .filter(SubmittedEvent.status == "rejected")
+        .order_by(SubmittedEvent.updated_at.desc())
+        .limit(10)
+        .all()
+    )
+    db_session.close()
+
+    pending_events = [prepare_submission_for_admin(event) for event in pending_submissions]
+    approved_events = [prepare_submission_for_admin(event) for event in approved_submissions]
+    rejected_events = [prepare_submission_for_admin(event) for event in rejected_submissions]
+
+    return render_template(
+        'admin_events.html',
+        pending_events=pending_events,
+        approved_events=approved_events,
+        rejected_events=rejected_events,
+        categories=CATEGORY_CHOICES,
+    )
 
 
 @app.route('/api/events')

@@ -1,8 +1,16 @@
 // Oxford Events JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     const filterPills = document.querySelectorAll('.filter-pill');
+    const allPill = document.querySelector('.filter-pill[data-category="All"]');
     const searchInput = document.getElementById('searchInput');
     const eventCards = document.querySelectorAll('.event-card');
+    const eventDescriptions = Array.from(eventCards).map(card => {
+        const descriptionEl = card.querySelector('.event-description');
+        return descriptionEl ? descriptionEl.textContent.toLowerCase() : '';
+    });
+    
+    const activeCategories = new Set();
+    const excludedCategories = new Set();
     
     // Status polling for loading indicator
     const loadingStatus = document.getElementById('loadingStatus');
@@ -64,55 +72,130 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    function updateAllPillState() {
+        if (!allPill) {
+            return;
+        }
+        if (activeCategories.size === 0 && excludedCategories.size === 0) {
+            allPill.classList.add('active');
+        } else {
+            allPill.classList.remove('active');
+        }
+    }
+
+    function resetFilters() {
+        activeCategories.clear();
+        excludedCategories.clear();
+        filterPills.forEach(pill => {
+            pill.classList.remove('active');
+            pill.classList.remove('excluded');
+        });
+        if (allPill) {
+            allPill.classList.add('active');
+        }
+        filterEvents();
+    }
+
+    function toggleActiveCategory(category, pill) {
+        if (excludedCategories.has(category)) {
+            excludedCategories.delete(category);
+            pill.classList.remove('excluded');
+        }
+
+        if (activeCategories.has(category)) {
+            activeCategories.delete(category);
+            pill.classList.remove('active');
+        } else {
+            activeCategories.add(category);
+            pill.classList.add('active');
+        }
+        updateAllPillState();
+        filterEvents();
+    }
+
+    function toggleExcludedCategory(category, pill) {
+        if (excludedCategories.has(category)) {
+            excludedCategories.delete(category);
+            pill.classList.remove('excluded');
+        } else {
+            excludedCategories.add(category);
+            pill.classList.add('excluded');
+            if (activeCategories.has(category)) {
+                activeCategories.delete(category);
+                pill.classList.remove('active');
+            }
+        }
+        updateAllPillState();
+        filterEvents();
+    }
+
     // Filter by category
     filterPills.forEach(pill => {
-        pill.addEventListener('click', function() {
-            // Toggle active state - if already active, turn it off
-            const wasActive = this.classList.contains('active');
-            filterPills.forEach(p => p.classList.remove('active'));
-            
-            if (!wasActive) {
-                // Was not active, make it active
-                this.classList.add('active');
-                const category = this.getAttribute('data-category');
-                filterEvents(category, searchInput.value);
-            } else {
-                // Was active, show all
-                filterEvents('All', searchInput.value);
-            }
+        const category = pill.getAttribute('data-category');
+        const dismiss = pill.querySelector('.pill-dismiss');
+
+        if (category === 'All') {
+            pill.addEventListener('click', () => {
+                resetFilters();
+            });
+            return;
+        }
+
+        pill.addEventListener('click', () => {
+            toggleActiveCategory(category, pill);
         });
+
+        if (dismiss) {
+            dismiss.addEventListener('click', (event) => {
+                event.stopPropagation();
+                toggleExcludedCategory(category, pill);
+            });
+
+            dismiss.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    toggleExcludedCategory(category, pill);
+                }
+            });
+        }
     });
     
     // Search functionality
     searchInput.addEventListener('input', function() {
-        const activePill = document.querySelector('.filter-pill.active');
-        const category = activePill ? activePill.getAttribute('data-category') : 'All';
-        filterEvents(category, this.value);
+        filterEvents();
     });
     
-    function filterEvents(category, searchTerm) {
-        eventCards.forEach(card => {
-            const cardCategory = card.getAttribute('data-category');
-            const title = card.getAttribute('data-title');
-            const location = card.getAttribute('data-location');
-            
-            // Category filter - handle comma-separated categories
-            let categoryMatch = false;
-            if (category === 'All') {
-                categoryMatch = true;
-            } else {
-                // Check if the card's category (which may be comma-separated) contains the selected category
-                const cardCategories = cardCategory.split(',').map(c => c.trim());
-                categoryMatch = cardCategories.includes(category);
+    function filterEvents() {
+        const searchTerm = searchInput.value.trim().toLowerCase();
+
+        eventCards.forEach((card, index) => {
+            const cardCategory = card.getAttribute('data-category') || '';
+            const title = card.getAttribute('data-title') || '';
+            const location = card.getAttribute('data-location') || '';
+            const description = eventDescriptions[index] || '';
+
+            const cardCategories = cardCategory.split(',').map(c => c.trim()).filter(Boolean);
+
+            const isExcluded = cardCategories.some(cat => excludedCategories.has(cat));
+            if (isExcluded) {
+                card.classList.add('hidden');
+                return;
             }
-            
-            // Search filter
-            const searchMatch = !searchTerm || 
-                              title.includes(searchTerm.toLowerCase()) || 
-                              location.includes(searchTerm.toLowerCase());
-            
-            // Show/hide card
-            if (categoryMatch && searchMatch) {
+
+            let matchesCategory = true;
+            if (activeCategories.size > 0) {
+                matchesCategory = cardCategories.some(cat => activeCategories.has(cat));
+            }
+
+            let matchesSearch = true;
+            if (searchTerm) {
+                matchesSearch =
+                    title.includes(searchTerm) ||
+                    location.includes(searchTerm) ||
+                    description.includes(searchTerm);
+            }
+
+            if (matchesCategory && matchesSearch) {
                 card.classList.remove('hidden');
             } else {
                 card.classList.add('hidden');
@@ -121,6 +204,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Initialize - show all events
-    filterEvents('All', '');
+    resetFilters();
 });
 
