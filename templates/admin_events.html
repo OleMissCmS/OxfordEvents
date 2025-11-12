@@ -13,7 +13,11 @@
         <div class="hero">
             <div class="hero-header">
                 <h1>Manage Event Submissions</h1>
-                <a class="hero-link" href="{{ url_for('admin_logout') }}">Sign Out</a>
+                <div class="hero-actions">
+                    <a class="hero-link" href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+                    <a class="hero-link" href="{{ url_for('index') }}" target="_blank" rel="noopener">View Live Site</a>
+                    <a class="hero-link hero-link-secondary" href="{{ url_for('admin_logout') }}">Sign Out</a>
+                </div>
             </div>
             <p>Review submissions, fine-tune details, and approve events for the Oxford Happenings calendar.</p>
         </div>
@@ -30,7 +34,7 @@
 
         <div class="admin-section">
             <div class="admin-toolbar">
-                <a class="btn-link" href="{{ url_for('index') }}">View live site</a>
+                <a class="btn-link" href="{{ url_for('admin_dashboard') }}">← Back to Dashboard</a>
             </div>
 
             {% if pending_events %}

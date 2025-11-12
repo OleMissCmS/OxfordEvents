@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Oxford Happenings</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="accent-bar"></div>
+    <div class="main-container">
+        <div class="hero">
+            <div class="hero-header">
+                <h1>Admin Dashboard</h1>
+                <div class="hero-actions">
+                    <a class="hero-link" href="{{ url_for('admin_events') }}">Manage Submissions</a>
+                    <a class="hero-link" href="{{ url_for('index') }}" target="_blank" rel="noopener">View Live Site</a>
+                    <a class="hero-link hero-link-secondary" href="{{ url_for('admin_logout') }}">Sign Out</a>
+                </div>
+            </div>
+            <p>Monitor source health, track cache status, and keep community happenings up to date.</p>
+        </div>
+
+        <div class="admin-dashboard">
+            <section class="admin-card">
+                <header>
+                    <h2>Source Health</h2>
+                    <div class="dashboard-meta">
+                        {% if scraper_summary.generated_at %}
+                        <span class="text-muted">Updated {{ scraper_summary.generated_at|format_datetime }}</span>
+                        {% else %}
+                        <span class="text-muted">Awaiting first scrape...</span>
+                        {% endif %}
+                        <span class="badge">Cached Events: {{ cached_events }}</span>
+                    </div>
+                </header>
+                {% if scraper_summary.sources %}
+                <div class="scraper-grid">
+                    {% for source in scraper_summary.sources %}
+                    <div class="scraper-card status-{{ source.status }}">
+                        <div class="scraper-card-header">
+                            <h3>{{ source.name }}</h3>
+                            <span class="badge">{{ source.status|title }}</span>
+                        </div>
+                        <dl class="scraper-metrics">
+                            <div>
+                                <dt>Events (total)</dt>
+                                <dd>{{ source.events_total }}</dd>
+                            </div>
+                            <div>
+                                <dt>Events (last 7 days)</dt>
+                                <dd>{{ source.events_last_week }}</dd>
+                            </div>
+                            <div>
+                                <dt>Fetch time</dt>
+                                <dd>{{ '%.1f'|format(source.duration_ms) }} ms</dd>
+                            </div>
+                        </dl>
+                        {% if source.last_error %}
+                        <p class="scraper-note">{{ source.last_error }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No scraper runs recorded yet. The cache will populate after the next scrape.</p>
+                {% endif %}
+            </section>
+
+            <section class="admin-card">
+                <header>
+                    <h2>Submission Queue</h2>
+                    <div class="dashboard-meta">
+                        <span class="badge">Pending: {{ submission_summary.pending }}</span>
+                    </div>
+                </header>
+                <div class="submission-summary">
+                    <div class="summary-stat">
+                        <span class="summary-count">{{ submission_summary.pending }}</span>
+                        <span class="summary-label">Awaiting Approval</span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="summary-count">{{ submission_summary.approved }}</span>
+                        <span class="summary-label">Published</span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="summary-count">{{ submission_summary.rejected }}</span>
+                        <span class="summary-label">Rejected</span>
+                    </div>
+                    <div class="summary-cta">
+                        <a class="btn-primary" href="{{ url_for('admin_events') }}">Review Submissions</a>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

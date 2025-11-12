@@ -82,13 +82,12 @@
             <div class="form-group">
                 <label>Categories *</label>
                 <p class="form-hint">Select all categories that apply. This helps people find your happening.</p>
-                <div class="checkbox-grid">
+                {% set selected_categories_csv = form_defaults.get('categories', ', '.join(selected_categories)) %}
+                <input type="hidden" id="submission_categories" name="categories" value="{{ selected_categories_csv }}">
+                <div class="pill-selector pill-selector-form" data-input="submission_categories">
                     {% for category in categories %}
-                    <label class="checkbox">
-                        <input type="checkbox" name="categories" value="{{ category }}"
-                               {% if category in selected_categories %}checked{% endif %}>
-                        <span>{{ category }}</span>
-                    </label>
+                    {% set is_selected = category in selected_categories %}
+                    <button type="button" class="pill-selector-pill {{ 'selected' if is_selected else '' }}" data-value="{{ category }}">{{ category }}</button>
                     {% endfor %}
                 </div>
             </div>

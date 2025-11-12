@@ -4,13 +4,22 @@ Event scraping utilities for fetching from multiple sources
 
 import io
 import re
+import time
+import copy
 from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dateutil import parser as dtp, tz
 import requests
 from icalendar import Calendar
 import feedparser
 from bs4 import BeautifulSoup
+
+
+LAST_SOURCE_METRICS: Dict[str, Any] = {
+    "generated_at": None,
+    "total_events": 0,
+    "sources": {},
+}
 
 
 def fetch_ics_events(url: str, source_name: str) -> List[Dict[str, Any]]:
@@ -978,10 +987,19 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         pass
     
     all_events = []
+    metrics: Dict[str, Dict[str, Any]] = {}
     
     for idx, source in enumerate(sources):
         source_type = source.get('type')
         source_name = source.get('name', 'Unknown')
+        metrics[source_name] = {
+            "status": "pending",
+            "duration_ms": 0.0,
+            "fetched_events": 0,
+            "events_total": 0,
+            "events_last_week": 0,
+            "error": None,
+        }
         
         # Update status for this source
         try:
@@ -998,6 +1016,8 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             pass
         
         # Wrap each source fetch in try/except to prevent one failure from blocking others
+        events: List[Dict[str, Any]] = []
+        start_time = time.perf_counter()
         try:
             if source_type == 'ics':
                 url = source.get('url')
@@ -1052,11 +1072,15 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                         events = fetch_seatgeek_events(lat, lon, radius)
                         all_events.extend(events)
             
+            metrics[source_name]["fetched_events"] += len(events)
+            metrics[source_name]["status"] = "ok"
         except Exception as e:
             # Log error but continue processing other sources
             print(f"[collect_all_events] ERROR fetching {source_name}: {str(e)[:100]}")
-            # Continue to next source
-            continue
+            metrics[source_name]["status"] = "error"
+            metrics[source_name]["error"] = str(e)
+        finally:
+            metrics[source_name]["duration_ms"] = (time.perf_counter() - start_time) * 1000.0
     
     # Filter out duplicates (especially Ole Miss Athletic events from Visit Oxford)
     print(f"[collect_all_events] Removing duplicates from {len(all_events)} total events")
@@ -1098,6 +1122,30 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         deduplicated_events.append(event)
     
     print(f"[collect_all_events] After deduplication: {len(deduplicated_events)} events")
+
+    now_utc = datetime.now(timezone.utc)
+    one_week_ago = now_utc - timedelta(days=7)
+    for event in deduplicated_events:
+        source = event.get('source') or 'Unknown'
+        if source not in metrics:
+            continue
+        metrics[source]["events_total"] += 1
+        start_iso = event.get('start_iso')
+        if not start_iso:
+            continue
+        try:
+            event_dt = datetime.fromisoformat(start_iso.replace('Z', '+00:00'))
+        except Exception:
+            try:
+                event_dt = dtp.parse(start_iso)
+            except Exception:
+                continue
+        if event_dt.tzinfo is None:
+            event_dt = event_dt.replace(tzinfo=timezone.utc)
+        else:
+            event_dt = event_dt.astimezone(timezone.utc)
+        if event_dt >= one_week_ago:
+            metrics[source]["events_last_week"] += 1
     
     # Filter to next 3 weeks
     now = datetime.now(tz.tzlocal())
@@ -1190,8 +1238,28 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         clear_status()
     except Exception:
         pass
-    
+
+    for data in metrics.values():
+        data["duration_ms"] = round(data["duration_ms"], 2)
+        if data["status"] == "pending":
+            data["status"] = "warning"
+            if data["error"] is None:
+                data["error"] = "Source did not run during the last scrape."
+        if data["status"] == "ok" and data["events_total"] == 0:
+            data["status"] = "warning"
+            if data["error"] is None:
+                data["error"] = "No upcoming events found during the last scrape."
+
+    LAST_SOURCE_METRICS["generated_at"] = now_utc.isoformat()
+    LAST_SOURCE_METRICS["total_events"] = len(result)
+    LAST_SOURCE_METRICS["sources"] = metrics
+
     return result
+
+
+def get_last_source_metrics() -> Dict[str, Any]:
+    """Return a deep copy of the most recent scraper metrics."""
+    return copy.deepcopy(LAST_SOURCE_METRICS)
 
 
 def _add_image_urls_to_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

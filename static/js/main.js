@@ -40,11 +40,11 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 // Show status if loading, hide if complete/unknown
-        if (data.status === 'loading' && data.step !== undefined && data.total_steps !== undefined) {
+                if (data.status === 'loading' && data.step !== undefined && data.total_steps !== undefined) {
                     // Show status with step counter
                     if (loadingStatus) {
-                loadingStatus.classList.remove('hidden');
-                loadingStatus.style.display = 'block';
+                        loadingStatus.classList.remove('hidden');
+                        loadingStatus.style.display = 'block';
                     }
                     if (statusText) {
                         let stepText = '';
@@ -58,8 +58,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     // Loading complete or unknown, hide status
                     if (loadingStatus) {
-                loadingStatus.style.display = '';
-                loadingStatus.classList.add('hidden');
+                        loadingStatus.style.display = '';
+                        loadingStatus.classList.add('hidden');
                     }
                     if (statusPollInterval) {
                         clearInterval(statusPollInterval);
@@ -131,17 +131,36 @@ document.addEventListener('DOMContentLoaded', function() {
         filterEvents();
     }
 
+    function isBeyondWindow(dateFilter) {
+        if (!dateFilter || dateFilter.type === 'none' || !dateFilter.selectedDates.length) {
+            return false;
+        }
+        const cutoff = Date.now() + threeWeekWindowMs;
+        return dateFilter.selectedDates.some(dateObj => dateObj && dateObj.getTime() > cutoff);
+    }
+
     function indicateDateCollection() {
         if (!dateFilterStatus) {
+            return;
+        }
+        const dateFilter = getActiveDateFilter();
+        const beyondWindow = isBeyondWindow(dateFilter);
+        if (!beyondWindow) {
+            if (dateStatusTimer) {
+                clearTimeout(dateStatusTimer);
+            }
+            dateFilterStatus.textContent = '';
+            dateFilterStatus.classList.add('hidden');
             return;
         }
         if (dateStatusTimer) {
             clearTimeout(dateStatusTimer);
         }
-        dateFilterStatus.textContent = 'Collecting happenings...';
+        dateFilterStatus.classList.remove('hidden');
+        dateFilterStatus.textContent = 'Collecting extended happenings...';
         dateStatusTimer = setTimeout(() => {
-            dateFilterStatus.textContent = 'All Happenings Collected';
-        }, 1200);
+            dateFilterStatus.textContent = 'Extended happenings ready.';
+        }, 1400);
     }
 
     function parseDateValue(value, endOfDay = false) {
@@ -179,8 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
             dateFilterWarning.classList.add('hidden');
             return;
         }
-        const cutoff = Date.now() + threeWeekWindowMs;
-        const beyondWindow = dateFilter.selectedDates.some(dateObj => dateObj && dateObj.getTime() > cutoff);
+        const beyondWindow = isBeyondWindow(dateFilter);
         if (beyondWindow) {
             dateFilterWarning.classList.remove('hidden');
         } else {

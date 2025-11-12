@@ -132,9 +132,9 @@ body {
 }
 
 .filter-pill {
-    padding: 0.45rem 0.9rem 0.45rem 1rem;
+    padding: 0.35rem 0.75rem 0.35rem 0.85rem;
     border-radius: 999px;
-    font-size: 0.875rem;
+    font-size: 0.82rem;
     font-weight: 500;
     border: 2px solid;
     background: transparent;
@@ -144,7 +144,7 @@ body {
     font-family: 'Inter', sans-serif;
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.35rem;
 }
 
 .filter-pill:hover {
@@ -155,27 +155,28 @@ body {
 .filter-pill .pill-label {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.2rem;
 }
 
 .filter-pill .pill-divider {
-    display: inline-block;
-    width: 2px;
-    height: 70%;
-    background-color: currentColor;
-    opacity: 0.4;
-    border-radius: 1px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    opacity: 0.45;
 }
 
 .filter-pill .pill-dismiss {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 1.1rem;
-    height: 1.1rem;
+    width: 0.95rem;
+    height: 0.95rem;
     border-radius: 999px;
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     line-height: 1;
     cursor: pointer;
 }
@@ -831,6 +832,15 @@ body {
     gap: 0.4rem;
 }
 
+.pill-selector-form {
+    margin-top: 0.5rem;
+}
+
+.pill-selector-form .pill-selector-pill {
+    padding: 0.35rem 0.9rem;
+    font-size: 0.82rem;
+}
+
 .pill-selector-pill {
     border: 1px solid #ced4da;
     background-color: #f8f9fa;
@@ -881,6 +891,115 @@ body {
 
 .admin-card .form-card:last-child {
     margin-bottom: 0;
+}
+
+.admin-dashboard {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.dashboard-meta {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.scraper-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.scraper-card {
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 1rem;
+    background: #f9fbff;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.scraper-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.scraper-card.status-ok {
+    border-left: 4px solid #4caf50;
+}
+
+.scraper-card.status-warning {
+    border-left: 4px solid #ff9800;
+    background: #fff8e6;
+}
+
+.scraper-card.status-error {
+    border-left: 4px solid #f44336;
+    background: #fff1f0;
+}
+
+.scraper-metrics {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.scraper-metrics div {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #444;
+}
+
+.scraper-metrics dt {
+    font-weight: 600;
+}
+
+.scraper-metrics dd {
+    margin: 0;
+    font-weight: 600;
+}
+
+.scraper-note {
+    font-size: 0.78rem;
+    color: #aa3a2e;
+    margin: 0;
+}
+
+.submission-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    align-items: center;
+}
+
+.summary-stat {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.summary-count {
+    display: block;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #2c7be5;
+}
+
+.summary-label {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.summary-cta {
+    display: flex;
+    justify-content: center;
 }
 
 .admin-card header {

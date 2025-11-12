@@ -23,6 +23,7 @@ from flask_wtf.csrf import CSRFError, generate_csrf
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from urllib.parse import urlparse, urljoin
+import threading
 
 from lib.event_scraper import collect_all_events
 from lib.database import (
@@ -109,6 +110,33 @@ cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT':
 
 # Initialize database on startup (using flag to run only once)
 _db_initialized = False
+
+_cache_warm_lock = threading.Lock()
+_cache_warm_active = False
+
+
+def warm_events_cache_async(force: bool = False):
+    """Warm the cached events list in a background thread to reduce perceived latency."""
+    global _cache_warm_active
+    if not force and cache.get('all_events'):
+        return
+
+    with _cache_warm_lock:
+        if _cache_warm_active:
+            return
+        _cache_warm_active = True
+
+    def _warm():
+        try:
+            load_events()
+        except Exception as exc:
+            app.logger.warning("Background cache warm failed: %s", exc)
+        finally:
+            global _cache_warm_active
+            with _cache_warm_lock:
+                _cache_warm_active = False
+
+    threading.Thread(target=_warm, daemon=True).start()
 
 @app.before_request
 def init_app():
@@ -315,6 +343,7 @@ def refresh_events_cache():
         cache.delete("all_events")
     except Exception:
         pass
+    warm_events_cache_async(force=True)
 
 
 def parse_local_datetime(date_str: Optional[str], time_str: Optional[str], default_time: str = "00:00") -> Optional[datetime]:
@@ -369,6 +398,51 @@ def prepare_submission_for_admin(submission: SubmittedEvent) -> dict:
     }
 
 
+def get_submission_summary() -> dict:
+    """Return counts of submissions by status."""
+    session = db_get_session()
+    try:
+        pending = session.query(SubmittedEvent).filter(SubmittedEvent.status == "pending").count()
+        approved = session.query(SubmittedEvent).filter(SubmittedEvent.status == "approved").count()
+        rejected = session.query(SubmittedEvent).filter(SubmittedEvent.status == "rejected").count()
+    finally:
+        session.close()
+    return {
+        "pending": pending,
+        "approved": approved,
+        "rejected": rejected,
+        "total": pending + approved + rejected,
+    }
+
+
+def get_scraper_health_summary() -> dict:
+    """Fetch the latest scraper/source metrics."""
+    try:
+        from lib.event_scraper import get_last_source_metrics
+
+        metrics = get_last_source_metrics()
+    except Exception as exc:
+        app.logger.warning("Could not load scraper metrics: %s", exc)
+        metrics = {}
+
+    sources = []
+    for name, data in sorted(metrics.get("sources", {}).items(), key=lambda item: item[0].lower()):
+        sources.append({
+            "name": name,
+            "status": data.get("status", "unknown"),
+            "events_total": data.get("events_total", 0),
+            "events_last_week": data.get("events_last_week", 0),
+            "duration_ms": data.get("duration_ms", 0.0),
+            "last_error": data.get("error"),
+        })
+
+    return {
+        "generated_at": metrics.get("generated_at"),
+        "total_events": metrics.get("total_events", 0),
+        "sources": sources,
+    }
+
+
 def update_submission_from_form(submission: SubmittedEvent, form, *, include_admin_fields: bool = True):
     """Update a SubmittedEvent instance from form data."""
     title = (form.get("title") or "").strip()
@@ -387,7 +461,9 @@ def update_submission_from_form(submission: SubmittedEvent, form, *, include_adm
         selected_categories = None
 
     if selected_categories:
-        categories = [cat.strip() for cat in selected_categories if cat.strip()]
+        categories = []
+        for cat in selected_categories:
+            categories.extend([c.strip() for c in cat.split(',') if c.strip()])
     else:
         categories_raw = form.get("categories", "")
         categories = [cat.strip() for cat in categories_raw.split(",") if cat.strip()]
@@ -601,15 +677,19 @@ def submit_event():
     selected_categories = []
     form_defaults = {}
 
+    if request.method == 'GET':
+        warm_events_cache_async()
+
     if request.method == 'POST':
         app.logger.info(
             "Submission attempt from %s for title '%s'",
             request.remote_addr,
             (request.form.get("title") or "").strip(),
         )
-        selected_categories = request.form.getlist('categories')
+        categories_raw = request.form.get('categories', '')
+        selected_categories = [cat.strip() for cat in categories_raw.split(',') if cat.strip()]
         form_defaults = request.form.to_dict()
-        form_defaults['categories'] = selected_categories
+        form_defaults['categories'] = ", ".join(selected_categories)
 
         db_session = None
         try:
@@ -628,6 +708,7 @@ def submit_event():
                 request.remote_addr,
             )
             flash("Thanks! Your event was submitted for review.", "success")
+            warm_events_cache_async()
             return redirect(url_for('submit_event'))
         except ValueError as ve:
             errors.append(str(ve))
@@ -647,6 +728,27 @@ def submit_event():
     )
 
 
+@app.route('/admin')
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    """Admin landing page with scraper health overview."""
+    if not is_admin_authenticated():
+        return redirect(url_for('admin_login', next=request.path))
+
+    warm_events_cache_async()
+
+    scraper_summary = get_scraper_health_summary()
+    submission_summary = get_submission_summary()
+    cached_events = cache.get('all_events') or []
+
+    return render_template(
+        'admin_dashboard.html',
+        scraper_summary=scraper_summary,
+        submission_summary=submission_summary,
+        cached_events=len(cached_events),
+    )
+
+
 @app.route('/admin/login', methods=['GET', 'POST'])
 @limiter.limit("5 per minute")
 def admin_login():
@@ -658,7 +760,7 @@ def admin_login():
         username = (request.form.get('username') or "").strip()
         password = request.form.get('password') or ""
         requested_next = request.form.get('next')
-        next_url = _safe_redirect_target(requested_next, 'admin_events')
+        next_url = _safe_redirect_target(requested_next, 'admin_dashboard')
 
         app.logger.info(
             "Admin login attempt for username=%s from %s",
@@ -675,6 +777,7 @@ def admin_login():
                 request.remote_addr,
             )
             flash("Signed in successfully.", "success")
+            warm_events_cache_async()
             return redirect(next_url)
         else:
             app.logger.warning(
@@ -685,7 +788,7 @@ def admin_login():
             flash("Invalid username or password.", "error")
 
     next_param = request.args.get('next')
-    safe_next = _safe_redirect_target(next_param, 'admin_events')
+    safe_next = _safe_redirect_target(next_param, 'admin_dashboard')
     return render_template('admin_login.html', next_url=safe_next)
 
 
@@ -708,6 +811,8 @@ def admin_events():
             request.remote_addr,
         )
         return redirect(url_for('admin_login', next=request.path))
+
+    warm_events_cache_async()
 
     if request.method == 'POST':
         action = request.form.get('action')

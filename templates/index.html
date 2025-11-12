@@ -19,7 +19,6 @@
                 <h1>Oxford Happenings</h1>
                 <div class="hero-actions">
                     <a class="hero-link" href="{{ url_for('submit_event') }}">Submit a Happening</a>
-                    <a class="hero-link hero-link-secondary" href="{{ url_for('admin_login') }}">Admin Login</a>
                 </div>
             </div>
             <p>Browse concerts, athletics, community gatherings, arts, and more happening in and around Oxford over the next few weeks.</p>
@@ -41,7 +40,7 @@
                     <label for="dateRangeEnd" class="date-filter-label">End date</label>
                     <input type="date" id="dateRangeEnd" class="date-filter-input">
                     <div id="dateFilterWarning" class="date-warning hidden">Fetching happenings beyond our current 3-week window. This may take a moment…</div>
-                    <div id="dateFilterStatus" class="date-status">All Happenings Collected</div>
+                    <div id="dateFilterStatus" class="date-status hidden"></div>
                 </div>
             </div>
             <div class="filter-chips" id="filterChips">
@@ -51,7 +50,7 @@
                 {% for category in categories %}
                 <button class="filter-pill" data-category="{{ category }}">
                     <span class="pill-label">{{ category }}</span>
-                    <span class="pill-divider" aria-hidden="true"></span>
+                    <span class="pill-divider" aria-hidden="true">|</span>
                     <span class="pill-dismiss" role="button" tabindex="0" aria-label="Hide {{ category }}">×</span>
                 </button>
                 {% endfor %}
@@ -126,7 +125,7 @@
 
         <!-- Footer -->
         <div class="footer">
-            Last updated: Just now | {{ num_sources }} sources &middot; <a href="{{ url_for('admin_login') }}" class="footer-link">Admin Login</a>
+            Last updated: Just now | {{ num_sources }} sources
         </div>
     </div>
 
