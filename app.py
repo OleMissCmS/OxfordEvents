@@ -434,6 +434,7 @@ def get_scraper_health_summary() -> dict:
             "events_last_week": data.get("events_last_week", 0),
             "duration_ms": data.get("duration_ms", 0.0),
             "last_error": data.get("error"),
+            "url": data.get("url"),
         })
 
     return {

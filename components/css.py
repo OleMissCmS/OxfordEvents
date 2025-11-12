@@ -32,13 +32,6 @@ BANDSINTOWN_CSS = """
     background-color: #FFFFFF !important;
 }
 
-/* Top accent bar - subtle blue */
-.accent-bar { 
-    height: 4px; 
-    background: linear-gradient(90deg, #007BFF 0%, #0056b3 100%); 
-    margin-bottom: 0; 
-}
-
 /* Hero - clean white with subtle gray text */
 .hero {
     background: #FFFFFF;

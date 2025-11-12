@@ -992,6 +992,15 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     for idx, source in enumerate(sources):
         source_type = source.get('type')
         source_name = source.get('name', 'Unknown')
+        source_url = source.get('url')
+        if not source_url and source_type == 'api':
+            parser = source.get('parser')
+            if parser == 'ticketmaster':
+                source_url = 'https://www.ticketmaster.com'
+            elif parser == 'seatgeek':
+                source_url = 'https://seatgeek.com'
+            elif parser == 'bandsintown':
+                source_url = 'https://www.bandsintown.com'
         metrics[source_name] = {
             "status": "pending",
             "duration_ms": 0.0,
@@ -999,6 +1008,7 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "events_total": 0,
             "events_last_week": 0,
             "error": None,
+            "url": source_url,
         }
         
         # Update status for this source

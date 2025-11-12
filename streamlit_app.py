@@ -114,7 +114,6 @@ def load_events():
 
 
 # Header (Bandsintown style)
-st.markdown('<div class="accent-bar"></div>', unsafe_allow_html=True)
 st.markdown("""
 <div class="hero">
   <h1>Concerts & Events in Oxford</h1>

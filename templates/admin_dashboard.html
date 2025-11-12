@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="accent-bar"></div>
     <div class="main-container">
         <div class="hero">
             <div class="hero-header">
@@ -40,7 +39,13 @@
                     {% for source in scraper_summary.sources %}
                     <div class="scraper-card status-{{ source.status }}">
                         <div class="scraper-card-header">
-                            <h3>{{ source.name }}</h3>
+                            <h3>
+                                {% if source.url %}
+                                <a href="{{ source.url }}" target="_blank" rel="noopener">{{ source.name }}</a>
+                                {% else %}
+                                {{ source.name }}
+                                {% endif %}
+                            </h3>
                             <span class="badge">{{ source.status|title }}</span>
                         </div>
                         <dl class="scraper-metrics">
