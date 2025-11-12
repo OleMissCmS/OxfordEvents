@@ -37,6 +37,7 @@
         {% endif %}
 
         <form class="form-card" method="post" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-grid">
                 <div class="form-group wide">
                     <label for="title">Event Title *</label>

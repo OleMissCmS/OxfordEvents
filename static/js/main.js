@@ -40,10 +40,11 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 // Show status if loading, hide if complete/unknown
-                if (data.status === 'loading' && data.step !== undefined && data.total_steps !== undefined) {
+        if (data.status === 'loading' && data.step !== undefined && data.total_steps !== undefined) {
                     // Show status with step counter
                     if (loadingStatus) {
-                        loadingStatus.style.display = 'block';
+                loadingStatus.classList.remove('hidden');
+                loadingStatus.style.display = 'block';
                     }
                     if (statusText) {
                         let stepText = '';
@@ -57,7 +58,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     // Loading complete or unknown, hide status
                     if (loadingStatus) {
-                        loadingStatus.style.display = 'none';
+                loadingStatus.style.display = '';
+                loadingStatus.classList.add('hidden');
                     }
                     if (statusPollInterval) {
                         clearInterval(statusPollInterval);
@@ -73,6 +75,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Start polling on page load
     startStatusPolling();
+
+    // Hide Ole Miss logo placeholder if it fails to load
+    document.querySelectorAll('.ole-miss-logo').forEach((logo) => {
+        logo.addEventListener('error', () => {
+            logo.classList.add('hidden');
+        });
+    });
     
     // Also check status when page becomes visible (in case tab was inactive)
     document.addEventListener('visibilitychange', function() {

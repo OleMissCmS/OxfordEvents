@@ -92,6 +92,7 @@ body {
 
 /* Loading Status */
 .loading-status {
+    display: none;
     margin-top: 0.75rem;
     padding: 0.5rem 0;
     color: #9E9E9E;

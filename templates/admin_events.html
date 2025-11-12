@@ -42,6 +42,7 @@
                 <div class="admin-form-grid">
                     {% for event in pending_events %}
                     <form method="post" class="form-card admin-entry" novalidate>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="event_id" value="{{ event.id }}">
                         <div class="text-muted">Submitted {{ event.created_date }} {{ event.created_time }}</div>
                         <div class="form-grid compact-grid">
@@ -124,6 +125,7 @@
                 <div class="admin-form-grid">
                     {% for event in approved_events %}
                     <form method="post" class="form-card admin-entry" novalidate>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="event_id" value="{{ event.id }}">
                         <div class="text-muted">Published {{ event.start_date }} {{ event.start_time }}</div>
                         <div class="form-grid compact-grid">

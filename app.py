@@ -18,6 +18,11 @@ import os
 from typing import Optional, Tuple
 from werkzeug.security import check_password_hash, generate_password_hash
 import pytz
+from flask_wtf import CSRFProtect
+from flask_wtf.csrf import CSRFError, generate_csrf
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from urllib.parse import urlparse, urljoin
 
 from lib.event_scraper import collect_all_events
 from lib.database import (
@@ -33,12 +38,49 @@ app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 app.config['SECRET_KEY'] = os.environ.get("FLASK_SECRET_KEY", "change-me")
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = "Lax"
+_allow_insecure_cookies = os.environ.get("ALLOW_INSECURE_COOKIES")
+app.config['SESSION_COOKIE_SECURE'] = _allow_insecure_cookies not in {"1", "true", "True"}
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
+app.config['WTF_CSRF_TIME_LIMIT'] = 60 * 60 * 8  # 8 hours
 
-DEFAULT_ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "CmSCMU")
-DEFAULT_ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Champer")
-ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH") or generate_password_hash(
-    DEFAULT_ADMIN_PASSWORD
+csrf = CSRFProtect(app)
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    storage_uri=os.environ.get("RATE_LIMIT_STORAGE_URI", "memory://"),
+    default_limits=[],
 )
+
+@app.context_processor
+def inject_csrf_token():
+    """Expose CSRF token helper to Jinja templates."""
+    return {'csrf_token': generate_csrf}
+
+DEFAULT_ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME") or "CmSCMU"
+_env_admin_password_hash = os.environ.get("ADMIN_PASSWORD_HASH")
+_env_admin_password = os.environ.get("ADMIN_PASSWORD")
+_default_admin_password_hash = (
+    "scrypt:32768:8:1$Oay9OOwF6doIKTvD$"
+    "f51cbbe1f4e1255867cfc9ec52eff455c9886ef87f8e0994baa9b8f81b598024"
+    "e56322155f9a09e6c992716506b5786e3048b8d11defbda9187b39183284c2af"
+)
+
+if _env_admin_password_hash:
+    ADMIN_PASSWORD_HASH = _env_admin_password_hash
+    app.logger.info("Using ADMIN_PASSWORD_HASH from environment for admin authentication.")
+elif _env_admin_password:
+    ADMIN_PASSWORD_HASH = generate_password_hash(_env_admin_password)
+    app.logger.warning(
+        "ADMIN_PASSWORD provided; hashed at startup. Prefer supplying ADMIN_PASSWORD_HASH directly."
+    )
+else:
+    ADMIN_PASSWORD_HASH = _default_admin_password_hash
+    app.logger.info(
+        "Using built-in fallback admin hash. Set ADMIN_PASSWORD_HASH to override this default."
+    )
+
 app.config['ADMIN_USERNAME'] = DEFAULT_ADMIN_USERNAME
 app.config['ADMIN_PASSWORD_HASH'] = ADMIN_PASSWORD_HASH
 
@@ -80,19 +122,49 @@ def init_app():
                 log_storage_setup()
             except Exception:
                 pass
-            
+
             init_database()
-            
+
             # Try to migrate JSON data once (if any exists)
             try:
                 migrate_json_to_db()
             except Exception as e:
                 print(f"[Database] Migration skipped or failed: {e}")
-            
+
             _db_initialized = True
         except Exception as e:
             print(f"[Database] Database initialization skipped (using JSON fallback): {e}")
             _db_initialized = True  # Mark as initialized even if failed
+
+
+@app.after_request
+def add_security_headers(response):
+    """Inject HTTP security headers on every response."""
+    response.headers.setdefault(
+        'Strict-Transport-Security',
+        'max-age=63072000; includeSubDomains; preload',
+    )
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('X-Frame-Options', 'DENY')
+    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    response.headers.setdefault('Permissions-Policy', "geolocation=(), microphone=(), camera=()")
+
+    csp = os.environ.get("CONTENT_SECURITY_POLICY")
+    if not csp:
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self'; "
+            "style-src 'self' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data: https:; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none'; "
+            "form-action 'self'; "
+            "base-uri 'self'"
+        )
+    response.headers.setdefault('Content-Security-Policy', csp)
+    return response
+
 
 # Custom Jinja2 filters
 @app.template_filter('format_datetime')
@@ -218,6 +290,25 @@ def is_admin_authenticated() -> bool:
     return session.get("admin_logged_in") is True
 
 
+def _is_safe_redirect_target(target: Optional[str]) -> bool:
+    """Ensure redirects stay on the same host to prevent open redirects."""
+    if not target:
+        return False
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return (
+        test_url.scheme in ('http', 'https')
+        and ref_url.netloc == test_url.netloc
+    )
+
+
+def _safe_redirect_target(target: Optional[str], fallback_endpoint: str) -> str:
+    """Return a safe redirect target or fallback to a known endpoint."""
+    if target and _is_safe_redirect_target(target):
+        return target
+    return url_for(fallback_endpoint)
+
+
 def refresh_events_cache():
     """Clear the cached events after admin updates."""
     try:
@@ -327,10 +418,16 @@ def update_submission_from_form(submission: SubmittedEvent, form, *, include_adm
     submission.description = (form.get("description") or "").strip()
     info_url = (form.get("info_url") or "").strip()
     tickets_url = (form.get("tickets_url") or "").strip()
+    if info_url and not info_url.lower().startswith(("http://", "https://")):
+        raise ValueError("Event details URL must start with http:// or https://.")
+    if tickets_url and not tickets_url.lower().startswith(("http://", "https://")):
+        raise ValueError("Ticket URL must start with http:// or https://.")
     submission.info_url = info_url or None
     submission.tickets_url = tickets_url or None
 
     contact_email = (form.get("contact_email") or "").strip()
+    if contact_email and "@" not in contact_email:
+        raise ValueError("Provide a valid email address.")
     submission.contact_email = contact_email or None
 
     if include_admin_fields:
@@ -497,6 +594,7 @@ def index():
 
 
 @app.route('/submit-event', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
 def submit_event():
     """Public form for submitting local events."""
     errors = []
@@ -504,6 +602,11 @@ def submit_event():
     form_defaults = {}
 
     if request.method == 'POST':
+        app.logger.info(
+            "Submission attempt from %s for title '%s'",
+            request.remote_addr,
+            (request.form.get("title") or "").strip(),
+        )
         selected_categories = request.form.getlist('categories')
         form_defaults = request.form.to_dict()
         form_defaults['categories'] = selected_categories
@@ -519,13 +622,18 @@ def submit_event():
             db_session.add(new_submission)
             db_session.commit()
 
+            app.logger.info(
+                "Submission stored with ID %s from %s",
+                new_submission.id,
+                request.remote_addr,
+            )
             flash("Thanks! Your event was submitted for review.", "success")
             return redirect(url_for('submit_event'))
         except ValueError as ve:
             errors.append(str(ve))
         except Exception as exc:
             errors.append("We couldn't save your event. Please try again.")
-            print(f"[submit_event] Error saving submission: {exc}")
+            app.logger.exception("[submit_event] Error saving submission")
         finally:
             if db_session is not None:
                 db_session.close()
@@ -540,6 +648,7 @@ def submit_event():
 
 
 @app.route('/admin/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
 def admin_login():
     """Admin login for moderating submissions."""
     if is_admin_authenticated():
@@ -548,22 +657,43 @@ def admin_login():
     if request.method == 'POST':
         username = (request.form.get('username') or "").strip()
         password = request.form.get('password') or ""
-        next_url = request.form.get('next') or url_for('admin_events')
+        requested_next = request.form.get('next')
+        next_url = _safe_redirect_target(requested_next, 'admin_events')
+
+        app.logger.info(
+            "Admin login attempt for username=%s from %s",
+            username,
+            request.remote_addr,
+        )
 
         if username.lower() == app.config['ADMIN_USERNAME'].lower() and check_password_hash(app.config['ADMIN_PASSWORD_HASH'], password):
+            session.permanent = True
             session['admin_logged_in'] = True
+            app.logger.info(
+                "Admin login successful for username=%s from %s",
+                username,
+                request.remote_addr,
+            )
             flash("Signed in successfully.", "success")
             return redirect(next_url)
         else:
+            app.logger.warning(
+                "Admin login failed for username=%s from %s",
+                username,
+                request.remote_addr,
+            )
             flash("Invalid username or password.", "error")
 
-    next_param = request.args.get('next', url_for('admin_events'))
-    return render_template('admin_login.html', next_url=next_param)
+    next_param = request.args.get('next')
+    safe_next = _safe_redirect_target(next_param, 'admin_events')
+    return render_template('admin_login.html', next_url=safe_next)
 
 
 @app.route('/admin/logout')
 def admin_logout():
     """Clear admin session."""
+    if is_admin_authenticated():
+        app.logger.info("Admin logout from %s", request.remote_addr)
     session.pop('admin_logged_in', None)
     flash("Signed out.", "success")
     return redirect(url_for('admin_login'))
@@ -573,6 +703,10 @@ def admin_logout():
 def admin_events():
     """Admin dashboard for reviewing submitted events."""
     if not is_admin_authenticated():
+        app.logger.warning(
+            "Blocked unauthorized access to admin dashboard from %s",
+            request.remote_addr,
+        )
         return redirect(url_for('admin_login', next=request.path))
 
     if request.method == 'POST':
@@ -618,6 +752,12 @@ def admin_events():
             if action in ('approve', 'update', 'delete'):
                 refresh_events_cache()
 
+            app.logger.info(
+                "Admin action '%s' applied to submission %s from %s",
+                action,
+                submission_id,
+                request.remote_addr,
+            )
             flash(message, "success")
         except ValueError as ve:
             db_session.rollback()
@@ -625,7 +765,7 @@ def admin_events():
         except Exception as exc:
             db_session.rollback()
             flash("Unexpected error updating submission.", "error")
-            print(f"[admin_events] Error handling submission {event_id}: {exc}")
+            app.logger.exception("Error handling submission %s", event_id)
         finally:
             db_session.close()
 
@@ -675,6 +815,7 @@ def api_events():
 
 
 @app.route('/api/status')
+@limiter.limit("120 per minute")
 def api_status():
     """API endpoint for loading status"""
     try:
@@ -686,6 +827,7 @@ def api_status():
 
 
 @app.route('/api/clear-cache')
+@limiter.limit("5 per minute")
 def clear_cache():
     """Clear the events cache - useful for testing"""
     try:
@@ -996,6 +1138,21 @@ END:VCALENDAR"""
     response.headers['Content-Type'] = 'text/calendar; charset=utf-8'
     response.headers['Content-Disposition'] = f'attachment; filename="{title[:50]}.ics"'
     return response
+
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(error):
+    """Provide a user-friendly error response for CSRF failures."""
+    app.logger.warning(
+        "CSRF validation failed on %s from %s: %s",
+        request.path,
+        request.remote_addr,
+        error.description,
+    )
+    if request.path.startswith('/api/'):
+        return jsonify({"status": "error", "message": "CSRF validation failed."}), 400
+    flash("Your session expired. Please try submitting the form again.", "error")
+    return redirect(request.referrer or url_for('index')), 400
 
 
 if __name__ == '__main__':

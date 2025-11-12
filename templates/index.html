@@ -24,7 +24,7 @@
             </div>
             <p>Browse concerts, athletics, community gatherings, arts, and more happening in and around Oxford over the next few weeks.</p>
             <!-- Loading Status -->
-            <div id="loadingStatus" class="loading-status" style="display: none;">
+            <div id="loadingStatus" class="loading-status hidden">
                 <span id="statusText">Loading events...</span>
             </div>
         </div>
@@ -85,7 +85,7 @@
                 <div class="event-header">
                     {% if 'Ole Miss Athletics' in event.category %}
                     <div class="athletics-header">
-                        <img src="{{ url_for('static', filename='images/ole-miss-logo.png') }}" alt="Ole Miss" class="ole-miss-logo" onerror="this.style.display='none'">
+                        <img src="{{ url_for('static', filename='images/ole-miss-logo.png') }}" alt="Ole Miss" class="ole-miss-logo">
                     </div>
                     {% endif %}
                 </div>
