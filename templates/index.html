@@ -3,11 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Discover concerts, athletics, community gatherings, arts, and more happening in Oxford, Mississippi.">
     <title>Oxford Happenings - Upcoming in Oxford</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
+    <!-- Dark Mode Toggle -->
+    <button id="darkModeToggle" class="dark-mode-toggle" aria-label="Toggle dark mode">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <!-- Hero Carousel Section -->
+    <div class="hero-carousel">
+        <div class="carousel-slide active" style="background-image: linear-gradient(rgba(19, 41, 75, 0.7), rgba(19, 41, 75, 0.7)), url('https://images.unsplash.com/photo-1511578314322-379afb476865?w=1920&q=80');">
+            <div class="carousel-content">
+                <h1 class="carousel-title">Discover What's Happening in Oxford</h1>
+                <p class="carousel-subtitle">Your guide to concerts, athletics, community gatherings, arts, and more</p>
+            </div>
+        </div>
+        <div class="carousel-slide" style="background-image: linear-gradient(rgba(19, 41, 75, 0.7), rgba(19, 41, 75, 0.7)), url('https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=1920&q=80');">
+            <div class="carousel-content">
+                <h1 class="carousel-title">Experience Oxford's Vibrant Community</h1>
+                <p class="carousel-subtitle">From Ole Miss Athletics to local music venues</p>
+            </div>
+        </div>
+        <div class="carousel-slide" style="background-image: linear-gradient(rgba(19, 41, 75, 0.7), rgba(19, 41, 75, 0.7)), url('https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1920&q=80');">
+            <div class="carousel-content">
+                <h1 class="carousel-title">Never Miss a Moment</h1>
+                <p class="carousel-subtitle">Stay connected with Oxford's cultural scene</p>
+            </div>
+        </div>
+        <div class="carousel-indicators">
+            <span class="indicator active" data-slide="0"></span>
+            <span class="indicator" data-slide="1"></span>
+            <span class="indicator" data-slide="2"></span>
+        </div>
+    </div>
+
     <!-- Main Container -->
     <div class="main-container">
         <!-- Hero Section -->
@@ -15,7 +49,9 @@
             <div class="hero-header">
                 <h1>Oxford Happenings</h1>
                 <div class="hero-actions">
-                    <a class="hero-link" href="{{ url_for('submit_event') }}">Submit a Happening</a>
+                    <a class="hero-link" href="{{ url_for('submit_event') }}">
+                        <i class="fas fa-plus-circle"></i> Submit a Happening
+                    </a>
                 </div>
             </div>
             <p>Browse concerts, athletics, community gatherings, arts, and more happening in and around Oxford over the next few weeks.</p>
@@ -29,15 +65,69 @@
         <div class="filter-section">
             <div class="filter-controls">
                 <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="Search happenings...">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="searchInput" placeholder="Search happenings..." aria-label="Search events">
+                </div>
+                <div class="advanced-filters-toggle">
+                    <button id="advancedFiltersBtn" class="btn-filter-toggle" aria-label="Show advanced filters">
+                        <i class="fas fa-filter"></i> Advanced Filters
+                    </button>
+                </div>
+                <div class="view-toggle">
+                    <button id="listViewBtn" class="view-btn active" aria-label="List view">
+                        <i class="fas fa-list"></i>
+                    </button>
+                    <button id="calendarViewBtn" class="view-btn" aria-label="Calendar view">
+                        <i class="fas fa-calendar"></i>
+                    </button>
                 </div>
                 <div class="date-filter date-filter-inline">
-                    <label for="dateRangeStart" class="date-filter-label">Start date</label>
-                    <input type="date" id="dateRangeStart" class="date-filter-input">
-                    <label for="dateRangeEnd" class="date-filter-label">End date</label>
-                    <input type="date" id="dateRangeEnd" class="date-filter-input">
+                    <label for="dateRangeStart" class="date-filter-label"><i class="fas fa-calendar-alt"></i> Start date</label>
+                    <input type="date" id="dateRangeStart" class="date-filter-input" aria-label="Start date">
+                    <label for="dateRangeEnd" class="date-filter-label"><i class="fas fa-calendar-alt"></i> End date</label>
+                    <input type="date" id="dateRangeEnd" class="date-filter-input" aria-label="End date">
                     <div id="dateFilterWarning" class="date-warning hidden">Fetching happenings beyond our current 3-week window. This may take a moment…</div>
                     <div id="dateFilterStatus" class="date-status hidden"></div>
+                </div>
+            </div>
+            <!-- Advanced Filters Panel -->
+            <div id="advancedFiltersPanel" class="advanced-filters-panel hidden">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="locationFilter"><i class="fas fa-map-marker-alt"></i> Location</label>
+                        <select id="locationFilter" class="filter-select" aria-label="Filter by location">
+                            <option value="">All Locations</option>
+                            <option value="grove">The Grove</option>
+                            <option value="library">J.D. Williams Library</option>
+                            <option value="square">Oxford Square</option>
+                            <option value="stadium">Vaught-Hemingway Stadium</option>
+                            <option value="tad-smith">Tad Smith Coliseum</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="priceFilter"><i class="fas fa-dollar-sign"></i> Price</label>
+                        <select id="priceFilter" class="filter-select" aria-label="Filter by price">
+                            <option value="">All Prices</option>
+                            <option value="free">Free Only</option>
+                            <option value="paid">Paid Events</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="accessibilityFilter"><i class="fas fa-wheelchair"></i> Accessibility</label>
+                        <select id="accessibilityFilter" class="filter-select" aria-label="Filter by accessibility">
+                            <option value="">All Events</option>
+                            <option value="accessible">Wheelchair Accessible</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="sortBy"><i class="fas fa-sort"></i> Sort By</label>
+                        <select id="sortBy" class="filter-select" aria-label="Sort events">
+                            <option value="date">Date (Earliest First)</option>
+                            <option value="date-desc">Date (Latest First)</option>
+                            <option value="popularity">Popularity</option>
+                            <option value="title">Title (A-Z)</option>
+                        </select>
+                    </div>
                 </div>
             </div>
             <div class="filter-chips" id="filterChips">
@@ -78,43 +168,87 @@
         <!-- Events Grid -->
         <div class="events-grid" id="eventsGrid">
             {% for event in events %}
-            <div class="event-card" data-category="{{ event.category }}" data-title="{{ event.title|lower }}" data-location="{{ event.location|lower }}" data-start="{{ event.start_iso }}">
-                <div class="event-header">
+            {% set detail_link = event.info_url or event.link %}
+            {% set is_free = event.cost and 'Free' in event.cost %}
+            {% set is_today = event.start_iso and event.start_iso[:10] == today %}
+            <div class="event-card" 
+                 data-category="{{ event.category }}" 
+                 data-title="{{ event.title|lower }}" 
+                 data-location="{{ event.location|lower }}" 
+                 data-start="{{ event.start_iso }}"
+                 data-cost="{{ event.cost or 'Free' }}"
+                 data-event-id="{{ loop.index0 }}"
+                 onclick="openEventModal({{ loop.index0 }})">
+                <div class="event-image-container">
                     {% if 'Ole Miss Athletics' in event.category %}
                     <div class="athletics-header">
                         <img src="{{ url_for('static', filename='images/ole-miss-logo.png') }}" alt="Ole Miss" class="ole-miss-logo">
                     </div>
+                    {% else %}
+                    <img src="https://images.unsplash.com/photo-1511578314322-379afb476865?w=400&h=250&fit=crop&q=80" 
+                         alt="{{ event.title }}" 
+                         class="event-image"
+                         loading="lazy">
                     {% endif %}
+                    <div class="event-badges">
+                        {% if is_free %}
+                        <span class="badge badge-free"><i class="fas fa-tag"></i> Free</span>
+                        {% endif %}
+                        {% if is_today %}
+                        <span class="badge badge-today"><i class="fas fa-calendar-day"></i> Today</span>
+                        {% endif %}
+                    </div>
+                    <button class="favorite-btn" onclick="event.stopPropagation(); toggleFavorite({{ loop.index0 }})" aria-label="Add to favorites">
+                        <i class="far fa-heart"></i>
+                    </button>
                 </div>
                 <div class="event-content">
-                    <div class="event-date">{{ event.start_iso|format_datetime }}</div>
+                    <div class="event-date">
+                        <i class="fas fa-calendar-alt"></i> {{ event.start_iso|format_datetime }}
+                    </div>
                     <h3 class="event-title">
-                        {% set detail_link = event.info_url or event.link %}
                         {% if detail_link %}
-                        <a href="{{ detail_link }}" target="_blank" rel="noopener">{{ event.title }}</a>
+                        <a href="{{ detail_link }}" target="_blank" rel="noopener" onclick="event.stopPropagation()">{{ event.title }}</a>
                         {% else %}
                         {{ event.title }}
                         {% endif %}
                     </h3>
-                    <div class="event-venue">{{ event.location }}</div>
+                    <div class="event-venue">
+                        <i class="fas fa-map-marker-alt"></i> {{ event.location }}
+                    </div>
                     <div class="event-meta">
-                        <span class="event-time">{{ event.cost }}</span>
+                        <span class="event-cost {% if is_free %}event-cost-free{% endif %}">
+                            <i class="fas fa-dollar-sign"></i> {{ event.cost or 'Free' }}
+                        </span>
                         <span class="event-category">{{ event.category }}</span>
                     </div>
                     <div class="event-description">{{ event.description|truncate_description }}</div>
                     <div class="event-actions">
-                        {% if detail_link %}
-                        <a href="{{ detail_link }}" class="btn-secondary" target="_blank" rel="noopener">Event Details</a>
-                        {% endif %}
+                        <button class="btn-details" onclick="event.stopPropagation(); openEventModal({{ loop.index0 }})">
+                            <i class="fas fa-info-circle"></i> View Details
+                        </button>
                         {% if event.tickets_url %}
-                        <a href="{{ event.tickets_url }}" class="btn-tickets" target="_blank" rel="noopener">Tickets</a>
+                        <a href="{{ event.tickets_url }}" class="btn-tickets" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+                            <i class="fas fa-ticket-alt"></i> Tickets
+                        </a>
                         {% elif event.cost and event.cost != 'Free' and detail_link %}
-                        <a href="{{ detail_link }}" class="btn-tickets" target="_blank" rel="noopener">Tickets</a>
+                        <a href="{{ detail_link }}" class="btn-tickets" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+                            <i class="fas fa-ticket-alt"></i> Tickets
+                        </a>
                         {% endif %}
                     </div>
                     <div class="calendar-links">
-                        <a href="{{ event|google_calendar_link }}" target="_blank" class="calendar-btn google-cal">Google Calendar</a>
-                        <a href="{{ event|ics_calendar_link }}" class="calendar-btn apple-cal">Apple Calendar</a>
+                        <a href="{{ event|google_calendar_link }}" target="_blank" class="calendar-btn google-cal" onclick="event.stopPropagation()">
+                            <i class="fab fa-google"></i> Google
+                        </a>
+                        <a href="{{ event|ics_calendar_link }}" class="calendar-btn apple-cal" onclick="event.stopPropagation()">
+                            <i class="fab fa-apple"></i> Apple
+                        </a>
+                    </div>
+                    <div class="event-share">
+                        <button class="share-btn" onclick="event.stopPropagation(); shareEvent({{ loop.index0 }})" aria-label="Share event">
+                            <i class="fas fa-share-alt"></i> Share
+                        </button>
                     </div>
                 </div>
             </div>
@@ -127,6 +261,56 @@
         </div>
     </div>
 
+    <!-- Event Details Modal -->
+    <div id="eventModal" class="event-modal hidden">
+        <div class="modal-overlay" onclick="closeEventModal()"></div>
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeEventModal()" aria-label="Close modal">
+                <i class="fas fa-times"></i>
+            </button>
+            <div id="modalBody" class="modal-body">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar View Container (hidden by default) -->
+    <div id="calendarView" class="calendar-view hidden">
+        <div class="calendar-container">
+            <div class="calendar-header">
+                <button id="prevMonth" class="calendar-nav-btn">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <h2 id="calendarMonthYear"></h2>
+                <button id="nextMonth" class="calendar-nav-btn">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div id="calendarGrid" class="calendar-grid">
+                <!-- Calendar will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Pass event data to JavaScript
+        const eventsData = [
+            {% for event in events %}
+            {
+                id: {{ loop.index0 }},
+                title: {{ event.title|tojson }},
+                start_iso: {{ event.start_iso|tojson }},
+                location: {{ event.location|tojson }},
+                description: {{ (event.description or '')|tojson }},
+                cost: {{ (event.cost or 'Free')|tojson }},
+                category: {{ event.category|tojson }},
+                info_url: {{ (event.info_url or '')|tojson }},
+                tickets_url: {{ (event.tickets_url or '')|tojson }},
+                link: {{ (event.link or '')|tojson }}
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+    </script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

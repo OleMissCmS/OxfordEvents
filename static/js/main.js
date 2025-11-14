@@ -374,3 +374,495 @@ document.addEventListener('DOMContentLoaded', function() {
     resetFilters();
 });
 
+// ===== NEW FEATURES =====
+
+// Carousel Functionality
+(function() {
+    const slides = document.querySelectorAll('.carousel-slide');
+    const indicators = document.querySelectorAll('.indicator');
+    let currentSlide = 0;
+    
+    function showSlide(index) {
+        slides.forEach((slide, i) => {
+            slide.classList.toggle('active', i === index);
+        });
+        indicators.forEach((indicator, i) => {
+            indicator.classList.toggle('active', i === index);
+        });
+    }
+    
+    function nextSlide() {
+        currentSlide = (currentSlide + 1) % slides.length;
+        showSlide(currentSlide);
+    }
+    
+    // Auto-advance carousel
+    if (slides.length > 0) {
+        setInterval(nextSlide, 5000);
+        
+        // Click indicators to navigate
+        indicators.forEach((indicator, index) => {
+            indicator.addEventListener('click', () => {
+                currentSlide = index;
+                showSlide(currentSlide);
+            });
+        });
+    }
+})();
+
+// Dark Mode Toggle
+(function() {
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    const body = document.body;
+    
+    // Load saved preference
+    const isDarkMode = localStorage.getItem('darkMode') === 'true';
+    if (isDarkMode) {
+        body.classList.add('dark-mode');
+        if (darkModeToggle) {
+            darkModeToggle.querySelector('i').classList.replace('fa-moon', 'fa-sun');
+        }
+    }
+    
+    if (darkModeToggle) {
+        darkModeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            const isDark = body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDark);
+            
+            const icon = darkModeToggle.querySelector('i');
+            if (isDark) {
+                icon.classList.replace('fa-moon', 'fa-sun');
+            } else {
+                icon.classList.replace('fa-sun', 'fa-moon');
+            }
+        });
+    }
+})();
+
+// Advanced Filters
+(function() {
+    const advancedFiltersBtn = document.getElementById('advancedFiltersBtn');
+    const advancedFiltersPanel = document.getElementById('advancedFiltersPanel');
+    const locationFilter = document.getElementById('locationFilter');
+    const priceFilter = document.getElementById('priceFilter');
+    const accessibilityFilter = document.getElementById('accessibilityFilter');
+    const sortBy = document.getElementById('sortBy');
+    
+    if (advancedFiltersBtn && advancedFiltersPanel) {
+        advancedFiltersBtn.addEventListener('click', () => {
+            advancedFiltersPanel.classList.toggle('hidden');
+            const isOpen = !advancedFiltersPanel.classList.contains('hidden');
+            advancedFiltersBtn.textContent = isOpen ? 'Hide Filters' : 'Advanced Filters';
+        });
+    }
+    
+    // Apply filters when changed
+    [locationFilter, priceFilter, accessibilityFilter, sortBy].forEach(filter => {
+        if (filter) {
+            filter.addEventListener('change', () => {
+                // Call the existing filterEvents function from the main scope
+                if (typeof window.filterEvents === 'function') {
+                    window.filterEvents();
+                } else {
+                    // Fallback: trigger the existing filterEvents from DOMContentLoaded scope
+                    const searchInput = document.getElementById('searchInput');
+                    if (searchInput) {
+                        searchInput.dispatchEvent(new Event('input'));
+                    }
+                }
+            });
+        }
+    });
+})();
+
+// View Toggle (List/Calendar)
+(function() {
+    const listViewBtn = document.getElementById('listViewBtn');
+    const calendarViewBtn = document.getElementById('calendarViewBtn');
+    const eventsGrid = document.getElementById('eventsGrid');
+    const calendarView = document.getElementById('calendarView');
+    
+    if (listViewBtn && calendarViewBtn) {
+        listViewBtn.addEventListener('click', () => {
+            listViewBtn.classList.add('active');
+            calendarViewBtn.classList.remove('active');
+            if (eventsGrid) eventsGrid.classList.remove('hidden');
+            if (calendarView) calendarView.classList.add('hidden');
+        });
+        
+        calendarViewBtn.addEventListener('click', () => {
+            calendarViewBtn.classList.add('active');
+            listViewBtn.classList.remove('active');
+            if (eventsGrid) eventsGrid.classList.add('hidden');
+            if (calendarView) {
+                calendarView.classList.remove('hidden');
+                renderCalendar();
+            }
+        });
+    }
+})();
+
+// Calendar View
+function renderCalendar() {
+    if (!window.eventsData) return;
+    
+    const calendarGrid = document.getElementById('calendarGrid');
+    const calendarMonthYear = document.getElementById('calendarMonthYear');
+    if (!calendarGrid || !calendarMonthYear) return;
+    
+    const today = new Date();
+    let currentMonth = today.getMonth();
+    let currentYear = today.getFullYear();
+    
+    function updateCalendar() {
+        const firstDay = new Date(currentYear, currentMonth, 1);
+        const lastDay = new Date(currentYear, currentMonth + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startingDayOfWeek = firstDay.getDay();
+        
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+        
+        calendarMonthYear.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+        
+        // Clear grid
+        calendarGrid.innerHTML = '';
+        
+        // Add day headers
+        const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        dayHeaders.forEach(day => {
+            const header = document.createElement('div');
+            header.className = 'calendar-day-header';
+            header.textContent = day;
+            calendarGrid.appendChild(header);
+        });
+        
+        // Add empty cells for days before month starts
+        for (let i = 0; i < startingDayOfWeek; i++) {
+            const empty = document.createElement('div');
+            calendarGrid.appendChild(empty);
+        }
+        
+        // Add days
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayElement = document.createElement('div');
+            dayElement.className = 'calendar-day';
+            
+            const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const dayEvents = window.eventsData.filter(event => {
+                if (!event.start_iso) return false;
+                return event.start_iso.startsWith(dateStr);
+            });
+            
+            if (dayEvents.length > 0) {
+                dayElement.classList.add('has-events');
+            }
+            
+            const dayNumber = document.createElement('div');
+            dayNumber.className = 'calendar-day-number';
+            dayNumber.textContent = day;
+            dayElement.appendChild(dayNumber);
+            
+            if (dayEvents.length > 0) {
+                const eventsCount = document.createElement('div');
+                eventsCount.className = 'calendar-day-events';
+                eventsCount.textContent = `${dayEvents.length} event${dayEvents.length > 1 ? 's' : ''}`;
+                dayElement.appendChild(eventsCount);
+            }
+            
+            dayElement.addEventListener('click', () => {
+                // Switch to list view and filter by date
+                if (document.getElementById('listViewBtn')) {
+                    document.getElementById('listViewBtn').click();
+                }
+                if (document.getElementById('dateRangeStart')) {
+                    document.getElementById('dateRangeStart').value = dateStr;
+                    document.getElementById('dateRangeEnd').value = dateStr;
+                    filterEvents();
+                }
+            });
+            
+            calendarGrid.appendChild(dayElement);
+        }
+    }
+    
+    // Navigation
+    const prevMonth = document.getElementById('prevMonth');
+    const nextMonth = document.getElementById('nextMonth');
+    
+    if (prevMonth) {
+        prevMonth.addEventListener('click', () => {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            updateCalendar();
+        });
+    }
+    
+    if (nextMonth) {
+        nextMonth.addEventListener('click', () => {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            updateCalendar();
+        });
+    }
+    
+    updateCalendar();
+}
+
+// Event Modal
+function openEventModal(eventId) {
+    if (!window.eventsData || !window.eventsData[eventId]) return;
+    
+    const event = window.eventsData[eventId];
+    const modal = document.getElementById('eventModal');
+    const modalBody = document.getElementById('modalBody');
+    
+    if (!modal || !modalBody) return;
+    
+    const eventDate = event.start_iso ? new Date(event.start_iso).toLocaleString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+    }) : 'Date TBA';
+    
+    modalBody.innerHTML = `
+        <div class="modal-event-header">
+            <h2>${event.title || 'Event'}</h2>
+            <div class="modal-event-meta">
+                <div class="modal-meta-item">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>${eventDate}</span>
+                </div>
+                <div class="modal-meta-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>${event.location || 'Location TBA'}</span>
+                </div>
+                <div class="modal-meta-item">
+                    <i class="fas fa-dollar-sign"></i>
+                    <span>${event.cost || 'Free'}</span>
+                </div>
+                <div class="modal-meta-item">
+                    <i class="fas fa-tag"></i>
+                    <span>${event.category || 'Event'}</span>
+                </div>
+            </div>
+        </div>
+        ${event.description ? `<div class="modal-event-description"><p>${event.description}</p></div>` : ''}
+        <div class="modal-event-actions">
+            ${event.info_url ? `<a href="${event.info_url}" target="_blank" class="btn-details"><i class="fas fa-external-link-alt"></i> Event Details</a>` : ''}
+            ${event.tickets_url ? `<a href="${event.tickets_url}" target="_blank" class="btn-tickets"><i class="fas fa-ticket-alt"></i> Buy Tickets</a>` : ''}
+            <button class="share-btn" onclick="shareEvent(${eventId})"><i class="fas fa-share-alt"></i> Share Event</button>
+        </div>
+        ${event.location ? `<div class="modal-event-map">
+            <iframe 
+                width="100%" 
+                height="300" 
+                style="border:0" 
+                loading="lazy" 
+                allowfullscreen
+                src="https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6d-s6Y4cZZuwBFU&q=${encodeURIComponent(event.location)}">
+            </iframe>
+        </div>` : ''}
+    `;
+    
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeEventModal() {
+    const modal = document.getElementById('eventModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeEventModal();
+    }
+});
+
+// Favorites (localStorage)
+function toggleFavorite(eventId) {
+    if (!window.eventsData || !window.eventsData[eventId]) return;
+    
+    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+    const index = favorites.indexOf(eventId);
+    
+    const favoriteBtn = document.querySelector(`[data-event-id="${eventId}"] .favorite-btn`);
+    
+    if (index > -1) {
+        favorites.splice(index, 1);
+        if (favoriteBtn) {
+            favoriteBtn.classList.remove('favorited');
+            favoriteBtn.querySelector('i').classList.replace('fa-heart', 'far fa-heart');
+        }
+    } else {
+        favorites.push(eventId);
+        if (favoriteBtn) {
+            favoriteBtn.classList.add('favorited');
+            favoriteBtn.querySelector('i').classList.replace('far', 'fas');
+        }
+    }
+    
+    localStorage.setItem('favorites', JSON.stringify(favorites));
+}
+
+// Load favorites on page load
+(function() {
+    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+    favorites.forEach(eventId => {
+        const favoriteBtn = document.querySelector(`[data-event-id="${eventId}"] .favorite-btn`);
+        if (favoriteBtn) {
+            favoriteBtn.classList.add('favorited');
+            const icon = favoriteBtn.querySelector('i');
+            if (icon) {
+                icon.classList.replace('far', 'fas');
+            }
+        }
+    });
+})();
+
+// Share Event
+function shareEvent(eventId) {
+    if (!window.eventsData || !window.eventsData[eventId]) return;
+    
+    const event = window.eventsData[eventId];
+    const shareData = {
+        title: event.title,
+        text: `${event.title} - ${event.location || 'Oxford'}`,
+        url: window.location.href
+    };
+    
+    if (navigator.share) {
+        navigator.share(shareData).catch(err => console.log('Error sharing', err));
+    } else {
+        // Fallback: copy to clipboard
+        const text = `${event.title}\n${event.location || 'Oxford'}\n${event.start_iso ? new Date(event.start_iso).toLocaleDateString() : ''}\n${window.location.href}`;
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Event details copied to clipboard!');
+        });
+    }
+}
+
+// Enhanced Filter Events (with advanced filters)
+function filterEvents() {
+    const searchTerm = (document.getElementById('searchInput')?.value.trim().toLowerCase() || '');
+    const locationFilter = document.getElementById('locationFilter')?.value || '';
+    const priceFilter = document.getElementById('priceFilter')?.value || '';
+    const sortBy = document.getElementById('sortBy')?.value || 'date';
+    
+    const eventCards = document.querySelectorAll('.event-card');
+    
+    eventCards.forEach(card => {
+        const title = card.getAttribute('data-title') || '';
+        const location = card.getAttribute('data-location') || '';
+        const cost = card.getAttribute('data-cost') || '';
+        const category = card.getAttribute('data-category') || '';
+        const startIso = card.getAttribute('data-start') || '';
+        
+        let matches = true;
+        
+        // Search filter
+        if (searchTerm && !title.includes(searchTerm) && !location.includes(searchTerm)) {
+            matches = false;
+        }
+        
+        // Location filter
+        if (locationFilter && !location.toLowerCase().includes(locationFilter.toLowerCase())) {
+            matches = false;
+        }
+        
+        // Price filter
+        if (priceFilter === 'free' && !cost.toLowerCase().includes('free')) {
+            matches = false;
+        } else if (priceFilter === 'paid' && cost.toLowerCase().includes('free')) {
+            matches = false;
+        }
+        
+        // Category filter (from existing code)
+        const cardCategories = category.split(',').map(c => c.trim()).filter(Boolean);
+        const activeCategories = new Set(Array.from(document.querySelectorAll('.filter-pill.active')).map(p => p.getAttribute('data-category')));
+        const excludedCategories = new Set(Array.from(document.querySelectorAll('.filter-pill.excluded')).map(p => p.getAttribute('data-category')));
+        
+        if (excludedCategories.size > 0 && cardCategories.some(cat => excludedCategories.has(cat))) {
+            matches = false;
+        }
+        
+        if (activeCategories.size > 0 && !activeCategories.has('All')) {
+            if (!cardCategories.some(cat => activeCategories.has(cat))) {
+                matches = false;
+            }
+        }
+        
+        // Date filter (from existing code)
+        const dateRangeStart = document.getElementById('dateRangeStart')?.value;
+        const dateRangeEnd = document.getElementById('dateRangeEnd')?.value;
+        
+        if (dateRangeStart || dateRangeEnd) {
+            const eventDate = startIso ? new Date(startIso) : null;
+            if (eventDate) {
+                if (dateRangeStart && eventDate < new Date(dateRangeStart)) {
+                    matches = false;
+                }
+                if (dateRangeEnd && eventDate > new Date(dateRangeEnd + 'T23:59:59')) {
+                    matches = false;
+                }
+            }
+        }
+        
+        if (matches) {
+            card.classList.remove('hidden');
+        } else {
+            card.classList.add('hidden');
+        }
+    });
+    
+    // Sort events
+    const visibleCards = Array.from(eventCards).filter(card => !card.classList.contains('hidden'));
+    const eventsGrid = document.getElementById('eventsGrid');
+    
+    if (eventsGrid && sortBy) {
+        visibleCards.sort((a, b) => {
+            if (sortBy === 'date') {
+                const dateA = a.getAttribute('data-start') || '';
+                const dateB = b.getAttribute('data-start') || '';
+                return dateA.localeCompare(dateB);
+            } else if (sortBy === 'date-desc') {
+                const dateA = a.getAttribute('data-start') || '';
+                const dateB = b.getAttribute('data-start') || '';
+                return dateB.localeCompare(dateA);
+            } else if (sortBy === 'title') {
+                const titleA = a.getAttribute('data-title') || '';
+                const titleB = b.getAttribute('data-title') || '';
+                return titleA.localeCompare(titleB);
+            }
+            return 0;
+        });
+        
+        visibleCards.forEach(card => {
+            eventsGrid.appendChild(card);
+        });
+    }
+}
+
+// Make functions globally available
+window.openEventModal = openEventModal;
+window.closeEventModal = closeEventModal;
+window.toggleFavorite = toggleFavorite;
+window.shareEvent = shareEvent;
+window.filterEvents = filterEvents;
+window.renderCalendar = renderCalendar;
+

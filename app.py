@@ -663,11 +663,14 @@ def index():
     # Add any remaining categories alphabetically
     categories = ordered_categories + sorted(remaining_categories)
     
+    today_str = date.today().isoformat()
+    
     return render_template('index.html', 
                          events=events,
                          categories=categories,
                          total_events=len(events),
-                         num_sources=len(EVENT_SOURCES))
+                         num_sources=len(EVENT_SOURCES),
+                         today=today_str)
 
 
 @app.route('/submit-event', methods=['GET', 'POST'])
