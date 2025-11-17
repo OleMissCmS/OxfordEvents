@@ -15,7 +15,7 @@ function EventCard({ event }) {
       <img
         src={imageUrl || '/placeholder.jpg'}
         alt={title}
-        className="w-full h-40 object-cover"
+        className="w-full h-40 object-cover rounded-t-lg"
         loading="lazy"
       />
       <div className="p-5 flex flex-col gap-3">
