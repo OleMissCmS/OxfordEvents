@@ -1,0 +1,22 @@
+{
+  "name": "event-image-backend",
+  "version": "1.0.0",
+  "description": "Express API that enriches events with context-aware images from Ticketmaster, SeatGeek, Bandsintown, Unsplash, and Pexels.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "keyword-extractor": "^0.0.22"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
+
