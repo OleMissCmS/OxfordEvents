@@ -215,32 +215,34 @@
                         <span class="event-category">{{ event.category }}</span>
                     </div>
                     <div class="event-description">{{ event.description|truncate_description }}</div>
-                    <div class="event-actions">
-                        <button class="btn-details" onclick="event.stopPropagation(); openEventModal({{ loop.index0 }})">
-                            <i class="fas fa-info-circle"></i> View Details
-                        </button>
-                        {% if event.tickets_url %}
-                        <a href="{{ event.tickets_url }}" class="btn-tickets" target="_blank" rel="noopener" onclick="event.stopPropagation()">
-                            <i class="fas fa-ticket-alt"></i> Tickets
-                        </a>
-                        {% elif event.cost and event.cost != 'Free' and detail_link %}
-                        <a href="{{ detail_link }}" class="btn-tickets" target="_blank" rel="noopener" onclick="event.stopPropagation()">
-                            <i class="fas fa-ticket-alt"></i> Tickets
-                        </a>
-                        {% endif %}
-                    </div>
-                    <div class="calendar-links">
-                        <a href="{{ event|google_calendar_link }}" target="_blank" class="calendar-btn google-cal" onclick="event.stopPropagation()">
-                            <i class="fab fa-google"></i> Google
-                        </a>
-                        <a href="{{ event|ics_calendar_link }}" class="calendar-btn apple-cal" onclick="event.stopPropagation()">
-                            <i class="fab fa-apple"></i> Apple
-                        </a>
-                    </div>
-                    <div class="event-share">
-                        <button class="share-btn" onclick="event.stopPropagation(); shareEvent({{ loop.index0 }})" aria-label="Share event">
-                            <i class="fas fa-share-alt"></i> Share
-                        </button>
+                    <div class="event-footer">
+                        <div class="event-actions">
+                            <button class="btn-details" onclick="event.stopPropagation(); openEventModal({{ loop.index0 }})">
+                                <i class="fas fa-info-circle"></i> View Details
+                            </button>
+                            {% if event.tickets_url %}
+                            <a href="{{ event.tickets_url }}" class="btn-tickets" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+                                <i class="fas fa-ticket-alt"></i> Tickets
+                            </a>
+                            {% elif event.cost and event.cost != 'Free' and detail_link %}
+                            <a href="{{ detail_link }}" class="btn-tickets" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+                                <i class="fas fa-ticket-alt"></i> Tickets
+                            </a>
+                            {% endif %}
+                        </div>
+                        <div class="calendar-links">
+                            <a href="{{ event|google_calendar_link }}" target="_blank" class="calendar-btn google-cal" onclick="event.stopPropagation()">
+                                <i class="fab fa-google"></i> Google
+                            </a>
+                            <a href="{{ event|ics_calendar_link }}" class="calendar-btn apple-cal" onclick="event.stopPropagation()">
+                                <i class="fab fa-apple"></i> Apple
+                            </a>
+                        </div>
+                        <div class="event-share">
+                            <button class="share-btn" onclick="event.stopPropagation(); shareEvent({{ loop.index0 }})" aria-label="Share event">
+                                <i class="fas fa-share-alt"></i> Share
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
