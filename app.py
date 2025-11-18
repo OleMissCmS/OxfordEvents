@@ -300,7 +300,17 @@ def ics_calendar_link(event):
 @app.template_filter('get_event_image_url')
 def get_event_image_url(event):
     """Get event image URL using the image processing logic"""
+    # Ensure event is a dict
+    if not isinstance(event, dict):
+        return "https://via.placeholder.com/400x250/f8f9fa/6C757D?text=Event"
+    
     try:
+        # First check if event already has an image URL
+        if event.get('image'):
+            img_url = event.get('image', '').strip()
+            if img_url and img_url.startswith('http'):
+                return img_url
+        
         from utils.image_processing import get_event_image
         image_result, error = get_event_image(event)
         
@@ -313,21 +323,30 @@ def get_event_image_url(event):
             # For sports matchups, use the sports-image endpoint
             try:
                 title = event.get('title', '')
+                if not title:
+                    return "https://via.placeholder.com/400x250/f8f9fa/6C757D?text=Event"
                 event_hash = event.get('hash', '')
                 image_url = url_for('sports_image', title=title)
+                params = []
                 if event_hash:
-                    image_url += f'?hash={event_hash}'
+                    params.append(f'hash={event_hash}')
                 if event.get('start_iso'):
-                    image_url += f"&date={event['start_iso']}"
+                    from urllib.parse import quote
+                    params.append(f"date={quote(str(event['start_iso']))}")
                 if event.get('location'):
-                    image_url += f"&location={event['location']}"
+                    from urllib.parse import quote
+                    params.append(f"location={quote(str(event['location']))}")
+                if params:
+                    image_url += '?' + '&'.join(params)
                 return image_url
             except Exception as e:
                 app.logger.error(f"Error generating sports image URL: {e}")
+                import traceback
+                app.logger.error(traceback.format_exc())
                 return "https://via.placeholder.com/400x250/f8f9fa/6C757D?text=Event"
         
         # If it's a string URL, return it directly
-        if isinstance(image_result, str):
+        if isinstance(image_result, str) and image_result.strip():
             # If it's a local path starting with /static, return as-is
             if image_result.startswith('/static') or image_result.startswith('static'):
                 return image_result if image_result.startswith('/') else f'/{image_result}'
