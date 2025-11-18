@@ -99,14 +99,29 @@ def fetch_rss_events(url: str, source_name: str) -> List[Dict[str, Any]]:
                 "cost": "Free"
             }
             
-            # Try to parse date
+            # Try to parse date - check multiple date fields
+            date_str = None
             if hasattr(entry, 'published'):
+                date_str = entry.published
+            elif hasattr(entry, 'updated'):
+                date_str = entry.updated
+            elif hasattr(entry, 'published_parsed') and entry.published_parsed:
+                # Use parsed date if available
+                from datetime import datetime
                 try:
-                    event['start_iso'] = dtp.parse(entry.published).isoformat()
+                    date_str = datetime(*entry.published_parsed[:6]).isoformat()
                 except:
                     pass
             
-            events.append(event)
+            if date_str:
+                try:
+                    event['start_iso'] = dtp.parse(date_str).isoformat()
+                except:
+                    pass
+            
+            # Only add events with valid dates
+            if event.get('start_iso'):
+                events.append(event)
     except Exception as e:
         print(f"Error fetching RSS from {url}: {e}")
     

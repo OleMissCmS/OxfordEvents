@@ -1059,7 +1059,30 @@ def sports_image(title):
             teams = detect_sports_teams(title)
             if teams:
                 away, home = teams
-                matchup_img, error = create_team_matchup_image(away, home)
+                
+                # Determine background image for Ole Miss Athletics
+                background_image_path = None
+                location_lower = (location_str or '').lower()
+                title_lower = title.lower()
+                
+                # Check if this is Ole Miss Athletics and determine venue
+                if "pavilion" in location_lower or "basketball" in title_lower:
+                    background_image_path = os.path.join("static", "images", "fallbacks", "Pavilion.webp")
+                elif "swayze" in location_lower or "baseball" in title_lower:
+                    background_image_path = os.path.join("static", "images", "fallbacks", "Swayze.jpg")
+                elif "vaught" in location_lower or "hemingway" in location_lower or "football" in title_lower:
+                    background_image_path = os.path.join("static", "images", "fallbacks", "Vaught.jpg")
+                
+                # Check if background image exists
+                if background_image_path and not os.path.exists(background_image_path):
+                    background_image_path = None
+                
+                matchup_img, error = create_team_matchup_image(
+                    away, 
+                    home, 
+                    background_image_path=background_image_path,
+                    background_opacity=0.6
+                )
                 result_queue.put(('success', matchup_img, error))
             else:
                 result_queue.put(('no_teams', None, None))

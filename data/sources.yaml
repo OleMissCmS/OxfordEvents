@@ -4,7 +4,7 @@
 - name: Visit Oxford (DMO)
   type: html
   url: https://visitoxfordms.com/events/
-  parser: simple_list
+  parser: visit_oxford
   group: Community
 
 - name: Oxford Chamber — Events
