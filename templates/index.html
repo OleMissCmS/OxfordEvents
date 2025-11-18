@@ -206,11 +206,42 @@
                         <img src="{{ url_for('static', filename='images/ole-miss-logo.png') }}" alt="Ole Miss" class="ole-miss-logo">
                     </div>
                     {% else %}
-                    <img src="{{ event|get_event_image_url }}" 
+                    {% if event.image and event.image.startswith('http') %}
+                    <img src="{{ event.image }}" 
                          alt="{{ event.title }}" 
                          class="event-image"
                          loading="lazy"
-                         onerror="this.src='https://via.placeholder.com/400x250/f8f9fa/6C757D?text=Event'">
+                         onerror="this.src='{{ url_for('static', filename='images/fallbacks/default.jpg') }}'">
+                    {% elif event.category == 'Community' %}
+                    {% set hash_val = (event.title|string|hash) % 2 %}
+                    {% if hash_val == 0 %}
+                    <img src="{{ url_for('static', filename='images/fallbacks/Community1.webp') }}" 
+                         alt="{{ event.title }}" 
+                         class="event-image"
+                         loading="lazy">
+                    {% else %}
+                    <img src="{{ url_for('static', filename='images/fallbacks/Community2.jpg') }}" 
+                         alt="{{ event.title }}" 
+                         class="event-image"
+                         loading="lazy">
+                    {% endif %}
+                    {% elif event.category == 'University' %}
+                    <img src="{{ url_for('static', filename='images/fallbacks/University.jpg') }}" 
+                         alt="{{ event.title }}" 
+                         class="event-image"
+                         loading="lazy">
+                    {% elif 'Proud Larry' in event.location %}
+                    <img src="{{ url_for('static', filename='images/fallbacks/Proud_Larrys.jpg') }}" 
+                         alt="{{ event.title }}" 
+                         class="event-image"
+                         loading="lazy">
+                    {% else %}
+                    <img src="{{ url_for('static', filename='images/fallbacks/default.jpg') }}" 
+                         alt="{{ event.title }}" 
+                         class="event-image"
+                         loading="lazy"
+                         onerror="this.src='https://via.placeholder.com/400x250/f8f9fa/6C757D?text={{ event.category|replace(' ', '+') }}'">
+                    {% endif %}
                     {% endif %}
                     <div class="event-badges">
                         {% if is_free %}
