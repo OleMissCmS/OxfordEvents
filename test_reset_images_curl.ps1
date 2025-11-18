@@ -45,6 +45,14 @@ try {
         throw "Could not find CSRF token on login page."
     }
 
+    # Extract next field (if present)
+    $nextPattern = 'name="next"[^>]*value="([^"]*)"'
+    $nextMatch = [regex]::Match($loginPage.Content, $nextPattern)
+    $nextValue = "/admin/dashboard"
+    if ($nextMatch.Success) {
+        $nextValue = $nextMatch.Groups[1].Value
+    }
+
     # Post login with CSRF token
     $loginResponse = Invoke-WebRequest -Uri "$BaseUrl/admin/login" `
         -WebSession $session `
@@ -53,7 +61,7 @@ try {
             username = $Username
             password = $Password
             csrf_token = $csrfToken
-            next = "/admin/dashboard"
+            next = $nextValue
         }) `
         -ContentType "application/x-www-form-urlencoded" `
         -MaximumRedirection 5 `
@@ -63,6 +71,12 @@ try {
 } catch {
     Write-Host "ERROR: Login failed" -ForegroundColor Red
     Write-Host $_.Exception.Message
+    if ($_.Exception.Response) {
+        $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+        $responseBody = $reader.ReadToEnd()
+        Write-Host "Response body:" -ForegroundColor Yellow
+        Write-Host $responseBody
+    }
     exit 1
 }
 
