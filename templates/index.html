@@ -174,6 +174,21 @@
                 <div class="event-image-container">
                     {% set matchup = get_matchup_data(event) %}
                     {% if matchup and matchup.has_logos %}
+                    {# Use generated composite image with background for Ole Miss Athletics #}
+                    {% if 'Ole Miss Athletics' in event.category %}
+                    {% set event_hash = event.get('hash', '') %}
+                    {% set image_url = url_for('sports_image', title=event.title|urlencode) %}
+                    {% if event_hash %}
+                    {% set image_url = image_url + '?hash=' + event_hash + '&date=' + (event.start_iso|urlencode if event.start_iso else '') + '&location=' + (event.location|urlencode if event.location else '') %}
+                    {% else %}
+                    {% set image_url = image_url + '?date=' + (event.start_iso|urlencode if event.start_iso else '') + '&location=' + (event.location|urlencode if event.location else '') %}
+                    {% endif %}
+                    <img src="{{ image_url }}" 
+                         alt="{{ event.title }}" 
+                         class="event-image"
+                         loading="lazy">
+                    {% else %}
+                    {# For non-Ole Miss Athletics sports, use the matchup graphic #}
                     <div class="matchup-graphic">
                         <div class="matchup-team matchup-away">
                             <img src="{{ matchup.away_logo }}" alt="{{ matchup.opponent }}" class="matchup-logo" onerror="this.style.display='none'">
@@ -185,6 +200,7 @@
                             <span class="matchup-team-name">Ole Miss</span>
                         </div>
                     </div>
+                    {% endif %}
                     {% elif 'Ole Miss Athletics' in event.category %}
                     <div class="athletics-header">
                         <img src="{{ url_for('static', filename='images/ole-miss-logo.png') }}" alt="Ole Miss" class="ole-miss-logo">

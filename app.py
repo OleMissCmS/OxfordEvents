@@ -1065,17 +1065,34 @@ def sports_image(title):
                 location_lower = (location_str or '').lower()
                 title_lower = title.lower()
                 
+                print(f"[sports-image] Checking venue for: title='{title}', location='{location_str}'")
+                
                 # Check if this is Ole Miss Athletics and determine venue
-                if "pavilion" in location_lower or "basketball" in title_lower:
+                # More flexible matching for venue names
+                if "pavilion" in location_lower or "basketball" in title_lower or "mbb" in title_lower or "wbb" in title_lower:
                     background_image_path = os.path.join("static", "images", "fallbacks", "Pavilion.webp")
+                    print(f"[sports-image] Detected Pavilion venue, using: {background_image_path}")
                 elif "swayze" in location_lower or "baseball" in title_lower:
                     background_image_path = os.path.join("static", "images", "fallbacks", "Swayze.jpg")
+                    print(f"[sports-image] Detected Swayze venue, using: {background_image_path}")
                 elif "vaught" in location_lower or "hemingway" in location_lower or "football" in title_lower:
                     background_image_path = os.path.join("static", "images", "fallbacks", "Vaught.jpg")
+                    print(f"[sports-image] Detected Vaught venue, using: {background_image_path}")
                 
-                # Check if background image exists
-                if background_image_path and not os.path.exists(background_image_path):
-                    background_image_path = None
+                # Try multiple path variations
+                if background_image_path:
+                    # Try relative path first
+                    if not os.path.exists(background_image_path):
+                        # Try absolute path from app root
+                        app_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                        abs_path = os.path.join(app_root, background_image_path)
+                        if os.path.exists(abs_path):
+                            background_image_path = abs_path
+                            print(f"[sports-image] Found background at absolute path: {abs_path}")
+                        else:
+                            print(f"[sports-image] WARNING: Background image not found at {background_image_path} or {abs_path}")
+                    else:
+                        print(f"[sports-image] Found background at relative path: {background_image_path}")
                 
                 matchup_img, error = create_team_matchup_image(
                     away, 

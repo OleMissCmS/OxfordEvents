@@ -293,28 +293,63 @@ def create_team_matchup_image(
         
         # Create base image - use background if provided, otherwise solid color
         has_background = False
-        if background_image_path and os.path.exists(background_image_path):
-            try:
-                # Load background image
-                bg_img = Image.open(background_image_path)
-                # Resize to match display size (400x150)
-                bg_img = bg_img.resize((width, height), Image.Resampling.LANCZOS)
-                # Convert to RGBA for transparency
-                if bg_img.mode != 'RGBA':
-                    bg_img = bg_img.convert('RGBA')
-                
-                # Apply opacity to background
-                alpha = bg_img.split()[3]
-                alpha = alpha.point(lambda p: int(p * background_opacity))
-                bg_img.putalpha(alpha)
-                
-                # Create base image with background
-                img = Image.new("RGB", (width, height), color="#f8f9fa")
-                img.paste(bg_img, (0, 0), bg_img)
-                has_background = True
-            except Exception as e:
-                # If background loading fails, use solid color
-                print(f"[create_team_matchup_image] Failed to load background: {e}")
+        if background_image_path:
+            # Try multiple path variations
+            possible_paths = [
+                background_image_path,  # Original path
+                os.path.join(os.getcwd(), background_image_path),  # Relative to current working directory
+                os.path.abspath(background_image_path),  # Absolute path
+            ]
+            
+            # Also try with app root if we can find it
+            import sys
+            if hasattr(sys, '_getframe'):
+                try:
+                    # Try to find the project root
+                    current_file = os.path.abspath(__file__)
+                    project_root = os.path.dirname(os.path.dirname(current_file))
+                    possible_paths.append(os.path.join(project_root, background_image_path))
+                except:
+                    pass
+            
+            bg_img = None
+            loaded_path = None
+            
+            for path in possible_paths:
+                if os.path.exists(path):
+                    try:
+                        bg_img = Image.open(path)
+                        loaded_path = path
+                        print(f"[create_team_matchup_image] Successfully loaded background from: {path}")
+                        break
+                    except Exception as e:
+                        print(f"[create_team_matchup_image] Failed to open {path}: {e}")
+                        continue
+            
+            if bg_img:
+                try:
+                    # Resize to match display size (400x150)
+                    bg_img = bg_img.resize((width, height), Image.Resampling.LANCZOS)
+                    # Convert to RGBA for transparency
+                    if bg_img.mode != 'RGBA':
+                        bg_img = bg_img.convert('RGBA')
+                    
+                    # Apply opacity to background
+                    alpha = bg_img.split()[3]
+                    alpha = alpha.point(lambda p: int(p * background_opacity))
+                    bg_img.putalpha(alpha)
+                    
+                    # Create base image with background
+                    img = Image.new("RGB", (width, height), color="#f8f9fa")
+                    img.paste(bg_img, (0, 0), bg_img)
+                    has_background = True
+                    print(f"[create_team_matchup_image] Background image applied successfully (opacity: {background_opacity})")
+                except Exception as e:
+                    # If background processing fails, use solid color
+                    print(f"[create_team_matchup_image] Failed to process background: {e}")
+                    img = Image.new("RGB", (width, height), color="#f8f9fa")
+            else:
+                print(f"[create_team_matchup_image] Background image not found. Tried paths: {possible_paths}")
                 img = Image.new("RGB", (width, height), color="#f8f9fa")
         else:
             # Create base image matching display size
