@@ -13,13 +13,24 @@ if [ -z "$PASSWORD" ]; then
 fi
 
 echo "Step 1: Logging in to get session cookie..."
-# Login and save cookies
 COOKIE_JAR=$(mktemp)
+
+# Fetch login page to grab CSRF token
+LOGIN_PAGE=$(curl -s -c "$COOKIE_JAR" "$BASE_URL/admin/login")
+CSRF_TOKEN=$(echo "$LOGIN_PAGE" | perl -ne 'print "$1\n" if /name="csrf_token" type="hidden" value="([^"]+)"/' | head -n1)
+
+if [ -z "$CSRF_TOKEN" ]; then
+    echo "ERROR: Could not find CSRF token on login page."
+    rm -f "$COOKIE_JAR"
+    exit 1
+fi
+
 LOGIN_RESPONSE=$(curl -s -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
     -X POST "$BASE_URL/admin/login" \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -d "username=$USERNAME" \
     -d "password=$PASSWORD" \
+    -d "csrf_token=$CSRF_TOKEN" \
     -d "next=/admin/dashboard" \
     -L -w "\n%{http_code}")
 

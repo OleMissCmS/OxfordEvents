@@ -946,6 +946,7 @@ def clear_cache():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@csrf.exempt
 @app.route('/api/admin/reset-images', methods=['POST'])
 @limiter.limit("10 per hour")
 def admin_reset_images():

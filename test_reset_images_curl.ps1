@@ -12,27 +12,35 @@ if (-not $Password) {
 }
 
 $BaseUrl = "https://oxfordevents.onrender.com"
-$CookieJar = [System.IO.Path]::GetTempFileName()
 
 Write-Host "Step 1: Logging in to get session cookie..." -ForegroundColor Cyan
 
-# Login and save cookies
-$loginBody = @{
-    username = $Username
-    password = $Password
-    next = "/admin/dashboard"
-} | ConvertTo-Json
-
 try {
+    # First load the login page to get CSRF token
+    $loginPage = Invoke-WebRequest `
+        -Uri "$BaseUrl/admin/login" `
+        -Method GET `
+        -SessionVariable session `
+        -ErrorAction Stop
+
+    $csrfRegex = 'name="csrf_token" type="hidden" value="([^"]+)"'
+    $csrfMatch = [regex]::Match($loginPage.Content, $csrfRegex)
+    if (-not $csrfMatch.Success) {
+        throw "Could not find CSRF token on login page."
+    }
+    $csrfToken = $csrfMatch.Groups[1].Value
+
+    # Post login with CSRF token
     $loginResponse = Invoke-WebRequest -Uri "$BaseUrl/admin/login" `
+        -WebSession $session `
         -Method POST `
         -Body (@{
             username = $Username
             password = $Password
+            csrf_token = $csrfToken
             next = "/admin/dashboard"
         }) `
         -ContentType "application/x-www-form-urlencoded" `
-        -SessionVariable session `
         -MaximumRedirection 5 `
         -ErrorAction Stop
 
@@ -50,7 +58,6 @@ try {
     $resetResponse = Invoke-RestMethod -Uri "$BaseUrl/api/admin/reset-images" `
         -Method POST `
         -WebSession $session `
-        -ContentType "application/json" `
         -ErrorAction Stop
 
     Write-Host "HTTP Status: 200" -ForegroundColor Green
