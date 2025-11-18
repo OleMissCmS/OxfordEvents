@@ -201,6 +201,10 @@
                         </div>
                     </div>
                     {% endif %}
+                    {% elif 'Turner Center' in event.category %}
+                    <div class="turner-center-placeholder">
+                        Campus Rec
+                    </div>
                     {% elif 'Ole Miss Athletics' in event.category %}
                     <div class="athletics-header">
                         <img src="{{ url_for('static', filename='images/ole-miss-logo.png') }}" alt="Ole Miss" class="ole-miss-logo">
