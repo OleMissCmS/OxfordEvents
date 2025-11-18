@@ -225,6 +225,23 @@ def truncate_description(value, max_words=50):
         return value
     return " ".join(words[:max_words]) + "..."
 
+
+@app.context_processor
+def inject_sports_helpers():
+    """Inject sports helper functions into all templates"""
+    from utils.sports_helpers import (
+        is_sports_event,
+        get_opponent_from_event,
+        get_team_logo_url,
+        get_matchup_data
+    )
+    return {
+        'is_sports_event': is_sports_event,
+        'get_opponent_from_event': get_opponent_from_event,
+        'get_team_logo_url': get_team_logo_url,
+        'get_matchup_data': get_matchup_data,
+    }
+
 def clean_calendar_title(title):
     """Remove date patterns from event title for calendar invites"""
     import re

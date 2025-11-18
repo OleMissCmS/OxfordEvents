@@ -172,7 +172,20 @@
                  data-event-id="{{ loop.index0 }}"
                  onclick="openEventModal({{ loop.index0 }})">
                 <div class="event-image-container">
-                    {% if 'Ole Miss Athletics' in event.category %}
+                    {% set matchup = get_matchup_data(event) %}
+                    {% if matchup and matchup.has_logos %}
+                    <div class="matchup-graphic">
+                        <div class="matchup-team matchup-away">
+                            <img src="{{ matchup.away_logo }}" alt="{{ matchup.opponent }}" class="matchup-logo" onerror="this.style.display='none'">
+                            <span class="matchup-team-name">{{ matchup.opponent }}</span>
+                        </div>
+                        <div class="matchup-vs">VS</div>
+                        <div class="matchup-team matchup-home">
+                            <img src="{{ matchup.home_logo }}" alt="Ole Miss" class="matchup-logo" onerror="this.style.display='none'">
+                            <span class="matchup-team-name">Ole Miss</span>
+                        </div>
+                    </div>
+                    {% elif 'Ole Miss Athletics' in event.category %}
                     <div class="athletics-header">
                         <img src="{{ url_for('static', filename='images/ole-miss-logo.png') }}" alt="Ole Miss" class="ole-miss-logo">
                     </div>
