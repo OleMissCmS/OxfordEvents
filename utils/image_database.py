@@ -361,6 +361,43 @@ def fetch_duckduckgo_image(query: str, num_results: int = 5) -> Optional[str]:
         return None
 
 
+def fetch_pexels_image(query: str, num_results: int = 5) -> Optional[str]:
+    """Fetch image using Pexels API"""
+    api_key = os.environ.get('PEXELS_API_KEY')
+    if not api_key:
+        return None
+    
+    try:
+        search_query = f"{query} oxford MS"
+        headers = {
+            'Authorization': api_key,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        }
+        
+        response = requests.get(
+            'https://api.pexels.com/v1/search',
+            params={'query': search_query, 'per_page': num_results, 'orientation': 'landscape'},
+            headers=headers,
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            photos = data.get('photos', [])
+            
+            for photo in photos:
+                img_url = photo.get('src', {}).get('medium') or photo.get('src', {}).get('large')
+                if img_url:
+                    # Return the Pexels URL directly (they allow hotlinking)
+                    print(f"[image_database] Found Pexels image: {img_url[:80]}...")
+                    return img_url
+        
+        return None
+    except Exception as e:
+        print(f"[image_database] Pexels error for '{query}': {e}")
+        return None
+
+
 def fetch_bing_image(query: str, num_results: int = 5) -> Optional[str]:
     """Fetch image using Bing Image Search"""
     try:
@@ -668,13 +705,23 @@ def get_venue_image(venue_name: str, event_hash: str = None) -> Optional[str]:
     image_path = fetch_wikipedia_venue_image(venue_name)
     
     if not image_path:
+        # Try Pexels API first (fast, reliable, allows hotlinking)
+        print(f"[image_database] Trying Pexels API for: {venue_name}")
+        image_path = fetch_pexels_image(venue_name, num_results=3)
+    
+    if not image_path:
         # Try multiple search engines as fallback with short timeout (don't block page load)
         print(f"[image_database] Trying multiple search engines for: {venue_name}")
         image_path = fetch_google_image(venue_name, timeout=5)  # 5 second max timeout
     
     if image_path:
         # Save to venue database
-        source = 'wikipedia' if 'wikipedia' in image_path.lower() else 'search_engine'
+        if 'wikipedia' in image_path.lower():
+            source = 'wikipedia'
+        elif 'pexels' in image_path.lower():
+            source = 'pexels'
+        else:
+            source = 'search_engine'
         try:
             from lib.database import get_session, VenueImage
             session = get_session()
