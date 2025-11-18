@@ -226,6 +226,58 @@ def truncate_description(value, max_words=50):
         return value
     return " ".join(words[:max_words]) + "..."
 
+@app.template_filter('format_weekday')
+def format_weekday(value):
+    """Extract weekday abbreviation from ISO datetime string"""
+    if not value:
+        return ""
+    try:
+        dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        weekday_map = {0: 'MON', 1: 'TUE', 2: 'WED', 3: 'THU', 4: 'FRI', 5: 'SAT', 6: 'SUN'}
+        return weekday_map[dt.weekday()]
+    except:
+        try:
+            from dateutil import parser as dtp
+            dt = dtp.parse(value)
+            weekday_map = {0: 'MON', 1: 'TUE', 2: 'WED', 3: 'THU', 4: 'FRI', 5: 'SAT', 6: 'SUN'}
+            return weekday_map[dt.weekday()]
+        except:
+            return ""
+
+@app.template_filter('format_time')
+def format_time(value):
+    """Extract time from ISO datetime string"""
+    if not value:
+        return ""
+    try:
+        dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        time_str = dt.strftime("%I:%M %p").replace(" 0", " ").lstrip("0")
+        return time_str
+    except:
+        try:
+            from dateutil import parser as dtp
+            dt = dtp.parse(value)
+            time_str = dt.strftime("%I:%M %p").replace(" 0", " ").lstrip("0")
+            return time_str
+        except:
+            return ""
+
+@app.template_filter('is_weekend')
+def is_weekend(value):
+    """Check if date is a weekend (Saturday or Sunday)"""
+    if not value:
+        return False
+    try:
+        dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        return dt.weekday() >= 5  # Saturday = 5, Sunday = 6
+    except:
+        try:
+            from dateutil import parser as dtp
+            dt = dtp.parse(value)
+            return dt.weekday() >= 5
+        except:
+            return False
+
 
 @app.context_processor
 def inject_sports_helpers():

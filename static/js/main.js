@@ -701,19 +701,27 @@ function toggleFavorite(eventId) {
     const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
     const index = favorites.indexOf(eventId);
     
-    const favoriteBtn = document.querySelector(`[data-event-id="${eventId}"] .favorite-btn`);
+    const favoriteBtn = document.querySelector(`.event-card[data-event-id="${eventId}"] .favorite-btn`);
     
     if (index > -1) {
         favorites.splice(index, 1);
         if (favoriteBtn) {
             favoriteBtn.classList.remove('favorited');
-            favoriteBtn.querySelector('i').classList.replace('fa-heart', 'far fa-heart');
+            const icon = favoriteBtn.querySelector('i');
+            if (icon) {
+                icon.classList.remove('fas', 'fa-heart');
+                icon.classList.add('far', 'fa-heart');
+            }
         }
     } else {
         favorites.push(eventId);
         if (favoriteBtn) {
             favoriteBtn.classList.add('favorited');
-            favoriteBtn.querySelector('i').classList.replace('far', 'fas');
+            const icon = favoriteBtn.querySelector('i');
+            if (icon) {
+                icon.classList.remove('far');
+                icon.classList.add('fas');
+            }
         }
     }
     
@@ -724,7 +732,7 @@ function toggleFavorite(eventId) {
 (function() {
     const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
     favorites.forEach(eventId => {
-        const favoriteBtn = document.querySelector(`[data-event-id="${eventId}"] .favorite-btn`);
+        const favoriteBtn = document.querySelector(`.event-card[data-event-id="${eventId}"] .favorite-btn`);
         if (favoriteBtn) {
             favoriteBtn.classList.add('favorited');
             const icon = favoriteBtn.querySelector('i');

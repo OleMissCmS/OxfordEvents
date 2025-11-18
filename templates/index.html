@@ -6,7 +6,7 @@
     <meta name="description" content="Discover concerts, athletics, community gatherings, arts, and more happening in Oxford, Mississippi.">
     <title>Oxford Happenings - Upcoming in Oxford</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Montserrat:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
@@ -163,6 +163,20 @@
             {% set detail_link = event.info_url or event.link %}
             {% set is_free = event.cost and 'Free' in event.cost %}
             {% set is_today = event.start_iso and event.start_iso[:10] == today %}
+            {% set weekday = event.start_iso|format_weekday if event.start_iso else '' %}
+            {% set time_str = event.start_iso|format_time if event.start_iso else '' %}
+            {% set is_weekend = event.start_iso|is_weekend if event.start_iso else False %}
+            {% set cost_str = event.cost or 'Free' %}
+            {% set cost_badge = '' %}
+            {% if not is_free and cost_str != 'Free' and cost_str != 'Varies' %}
+                {% if '-' in cost_str %}
+                    {% set cost_badge = cost_str %}
+                {% elif cost_str.startswith('$') %}
+                    {% set cost_badge = 'From ' + cost_str %}
+                {% else %}
+                    {% set cost_badge = cost_str %}
+                {% endif %}
+            {% endif %}
             <div class="event-card" 
                  data-category="{{ event.category }}" 
                  data-title="{{ event.title|lower }}" 
@@ -203,7 +217,7 @@
                     {% endif %}
                     {% elif 'Turner Center' in event.category %}
                     <div class="turner-center-placeholder">
-                        Campus Rec
+                        <i class="fas fa-dumbbell"></i>
                     </div>
                     {% elif 'Ole Miss Athletics' in event.category %}
                     <div class="athletics-header">
@@ -215,7 +229,7 @@
                          alt="{{ event.title }}" 
                          class="event-image"
                          loading="lazy"
-                         onerror="this.src='{{ url_for('static', filename='images/fallbacks/default.jpg') }}'">
+                         onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'no-image-placeholder\'><i class=\'fas fa-calendar-alt\'></i></div>'">
                     {% elif event.category == 'Community' %}
                     {% set hash_val = (event.title|string|hash) % 2 %}
                     {% if hash_val == 0 %}
@@ -240,26 +254,39 @@
                          class="event-image"
                          loading="lazy">
                     {% else %}
-                    <img src="{{ url_for('static', filename='images/fallbacks/default.jpg') }}" 
-                         alt="{{ event.title }}" 
-                         class="event-image"
-                         loading="lazy"
-                         onerror="this.src='https://via.placeholder.com/400x250/f8f9fa/6C757D?text={{ event.category|replace(' ', '+') }}'">
+                    <div class="no-image-placeholder">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
                     {% endif %}
                     {% endif %}
+                    {# Badges on top-right of image #}
                     <div class="event-badges">
                         {% if is_free %}
-                        <span class="badge badge-free"><i class="fas fa-tag"></i> Free</span>
+                        <span class="badge badge-free">Free</span>
+                        {% elif cost_badge %}
+                        <span class="badge badge-cost">{{ cost_badge }}</span>
                         {% endif %}
                         {% if is_today %}
-                        <span class="badge badge-today"><i class="fas fa-calendar-day"></i> Today</span>
+                        <span class="badge badge-today">Today</span>
+                        {% elif is_weekend %}
+                        <span class="badge badge-weekend">This Weekend</span>
                         {% endif %}
                     </div>
+                    {# Favorite heart button bottom-right #}
+                    <button class="favorite-btn" onclick="event.stopPropagation(); toggleFavorite({{ loop.index0 }})" aria-label="Add to favorites">
+                        <i class="far fa-heart"></i>
+                    </button>
                 </div>
                 <div class="event-content">
-                    <div class="event-date">
-                        <i class="fas fa-calendar-alt"></i> {{ event.start_iso|format_datetime }}
-                    </div>
+                    {# Date line - small uppercase weekday #}
+                    {% if weekday %}
+                    <div class="event-date-line">{{ weekday }}</div>
+                    {% endif %}
+                    {# Time - large bold navy #}
+                    {% if time_str %}
+                    <div class="event-time">{{ time_str }}</div>
+                    {% endif %}
+                    {# Title - large bold navy, Playfair Display #}
                     <h3 class="event-title">
                         {% if detail_link %}
                         <a href="{{ detail_link }}" target="_blank" rel="noopener" onclick="event.stopPropagation()">{{ event.title }}</a>
@@ -267,16 +294,11 @@
                         {{ event.title }}
                         {% endif %}
                     </h3>
-                    <div class="event-venue">
-                        <i class="fas fa-map-marker-alt"></i> {{ event.location }}
-                    </div>
-                    <div class="event-meta">
-                        <span class="event-cost {% if is_free %}event-cost-free{% endif %}">
-                            <i class="fas fa-dollar-sign"></i> {{ event.cost or 'Free' }}
-                        </span>
-                        <span class="event-category">{{ event.category }}</span>
-                    </div>
+                    {# Location - ox-red, medium weight #}
+                    <div class="event-venue">{{ event.location }}</div>
+                    {# Description - 2-3 lines max, truncate #}
                     <div class="event-description">{{ event.description|truncate_description }}</div>
+                    {# Footer with actions #}
                     <div class="event-footer">
                         <div class="event-actions">
                             <button class="btn-details" onclick="event.stopPropagation(); openEventModal({{ loop.index0 }})">
