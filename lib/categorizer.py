@@ -5,16 +5,26 @@ Smart categorization for events based on title and description
 import re
 
 
-def categorize_event(title: str, description: str = "", source: str = "") -> str:
+def categorize_event(title: str, description: str = "", source: str = "", location: str = "") -> str:
     """
-    Intelligently categorize an event based on its title, description, and source.
-    Returns a category string.
+    Intelligently categorize an event based on its title, description, source, and location.
+    Returns a category string (can be comma-separated for multiple categories).
     """
     # Combine all text for analysis
     text = f"{title} {description}".lower()
+    location_lower = location.lower() if location else ""
     source_lower = source.lower()
     
-    # Check source-specific categories first
+    # Check for Turner Center FIRST (special case: always add Sports category, regardless of source)
+    # This takes priority over source-specific categories
+    if "turner center" in location_lower or "turner center" in text:
+        # Turner Center events get both "Turner Center" and "Sports" categories
+        # If it's from a source API, we'll add that too
+        if source_lower in ["ticketmaster", "bandsintown", "seatgeek"]:
+            return f"Turner Center, Sports, {source_lower.capitalize()}"
+        return "Turner Center, Sports"
+    
+    # Check source-specific categories (these take priority for non-Turner Center events)
     if source_lower == "ticketmaster":
         return "Ticketmaster"
     

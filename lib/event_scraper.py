@@ -35,14 +35,15 @@ def fetch_ics_events(url: str, source_name: str) -> List[Dict[str, Any]]:
                 if component.name == "VEVENT":
                     title = str(component.get('summary', ''))
                     description = str(component.get('description', ''))
+                    location = str(component.get('location', ''))
                     
-                    # Smart categorization
-                    category = categorize_event(title, description, source_name)
+                    # Smart categorization (pass location for Turner Center detection)
+                    category = categorize_event(title, description, source_name, location)
                     
                     event = {
                         "title": title,
                         "start_iso": component.get('dtstart').dt.isoformat() if component.get('dtstart') else None,
-                        "location": str(component.get('location', '')),
+                        "location": location,
                         "description": description,
                         "category": category,
                         "source": source_name,
@@ -84,8 +85,8 @@ def fetch_rss_events(url: str, source_name: str) -> List[Dict[str, Any]]:
             # Remove unwanted phrases
             clean_desc = clean_desc.replace('View on site', '').replace('Email this event', '').strip()
             
-            # Smart categorization (after processing description)
-            category = categorize_event(entry.title, clean_desc, source_name)
+            # Smart categorization (after processing description, pass location for Turner Center detection)
+            category = categorize_event(entry.title, clean_desc, source_name, location)
             
             event = {
                 "title": entry.title,
@@ -347,12 +348,14 @@ def _parse_visit_oxford(soup, source_name: str, base_url: str) -> List[Dict[str,
                 if title and date_str:
                     try:
                         parsed_date = dtp.parse(date_str)
+                        from lib.categorizer import categorize_event
+                        category = categorize_event(title, "", source_name, location)
                         event = {
                             "title": title,
                             "start_iso": parsed_date.isoformat(),
                             "location": location,
                             "description": "",
-                            "category": "Community",
+                            "category": category,
                             "source": source_name,
                             "link": link,
                             "cost": "Free"  # Default for community events
@@ -381,12 +384,15 @@ def _parse_generic(soup, source_name: str, base_url: str) -> List[Dict[str, Any]
                 title = title_elem.get_text(strip=True) if title_elem else ''
                 
                 if title:
+                    from lib.categorizer import categorize_event
+                    location = "Oxford, MS"
+                    category = categorize_event(title, "", source_name, location)
                     event = {
                         "title": title,
                         "start_iso": None,
-                        "location": "Oxford, MS",
+                        "location": location,
                         "description": "",
-                        "category": "Community",
+                        "category": category,
                         "source": source_name,
                         "link": base_url,
                         "cost": "Free"
@@ -493,12 +499,17 @@ def fetch_seatgeek_events(lat: float, lon: float, radius: str = "25mi") -> List[
                         is_olemiss_athletics = True
                         break
                 
-                # Determine category - use comma-separated for multiple categories
-                if is_olemiss_athletics:
-                    category = "Ole Miss Athletics,SeatGeek"
+                # Determine category using categorize_event (for Turner Center detection)
+                from lib.categorizer import categorize_event
+                category = categorize_event(title, description, "SeatGeek", venue_location)
+                
+                # If Ole Miss Athletics was detected, add it to the category
+                if is_olemiss_athletics and "Ole Miss Athletics" not in category:
+                    if category == "SeatGeek":
+                        category = "Ole Miss Athletics, SeatGeek"
+                    else:
+                        category = f"{category}, Ole Miss Athletics"
                     print(f"[SeatGeek] Identified Ole Miss Athletics event: {title}")
-                else:
-                    category = "SeatGeek"
                 
                 event = {
                     "title": title,
@@ -585,13 +596,19 @@ def fetch_ticketmaster_events(city: str, state_code: str) -> List[Dict[str, Any]
                 # Extract venue name safely
                 venues = item.get('_embedded', {}).get('venues', [])
                 venue_name = venues[0].get('name', 'Unknown Venue') if venues else 'Unknown Venue'
+                venue_location = f"{venue_name}, {city}"
+                
+                # Use categorize_event for Turner Center detection
+                from lib.categorizer import categorize_event
+                description = item.get('info', '') or item.get('description', '')
+                category = categorize_event(item.get('name', ''), description, "Ticketmaster", venue_location)
                 
                 event = {
                     "title": item.get('name', ''),
                     "start_iso": start_iso,
-                    "location": f"{venue_name}, {city}",
-                    "description": item.get('info', '') or item.get('description', ''),
-                    "category": "Ticketmaster",  # Use dedicated Ticketmaster category
+                    "location": venue_location,
+                    "description": description,
+                    "category": category,
                     "source": "Ticketmaster",
                     "link": item.get('url', ''),
                     "cost": f"${item.get('priceRanges', [{}])[0].get('min', 0)}" if item.get('priceRanges') else "Varies"

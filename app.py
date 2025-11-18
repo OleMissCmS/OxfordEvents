@@ -97,6 +97,7 @@ CATEGORY_CHOICES = [
     "Performance",
     "Sports",
     "Ole Miss Athletics",
+    "Turner Center",
     "Education",
     "University",
     "Ticketmaster",
