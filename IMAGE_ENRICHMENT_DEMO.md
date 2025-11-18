@@ -75,3 +75,5 @@ The backend ships with sample data (Digital Scholarship Interest Group, Oxford F
 - Add rate limiting + retry logic around Unsplash/Pexels calls.
 - Consider background jobs to pre-enrich events on ingestion instead of per-request.
 
+
+

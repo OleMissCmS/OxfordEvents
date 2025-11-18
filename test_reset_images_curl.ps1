@@ -54,6 +54,12 @@ try {
     }
 
     # Post login with CSRF token
+    $headers = @{
+        "Content-Type" = "application/x-www-form-urlencoded"
+        "Referer" = "$BaseUrl/admin/login"
+        "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) PowerShellScript"
+    }
+
     $loginResponse = Invoke-WebRequest -Uri "$BaseUrl/admin/login" `
         -WebSession $session `
         -Method POST `
@@ -63,7 +69,7 @@ try {
             csrf_token = $csrfToken
             next = $nextValue
         }) `
-        -ContentType "application/x-www-form-urlencoded" `
+        -Headers $headers `
         -MaximumRedirection 5 `
         -ErrorAction Stop
 
@@ -71,6 +77,10 @@ try {
 } catch {
     Write-Host "ERROR: Login failed" -ForegroundColor Red
     Write-Host $_.Exception.Message
+    if ($_.Exception.Response) {
+        Write-Host ("HTTP Status: {0}" -f $_.Exception.Response.StatusCode.value__) -ForegroundColor Yellow
+        Write-Host ("Status Description: {0}" -f $_.Exception.Response.StatusDescription) -ForegroundColor Yellow
+    }
     if ($_.Exception.Response) {
         $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
         $responseBody = $reader.ReadToEnd()

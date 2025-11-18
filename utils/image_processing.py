@@ -264,10 +264,13 @@ def create_team_matchup_image(
     away_team: Tuple[str, str], 
     home_team: Tuple[str, str], 
     width: int = 400, 
-    height: int = 150  # Match display height
+    height: int = 150,  # Match display height
+    background_image_path: Optional[str] = None,
+    background_opacity: float = 0.6
 ) -> Tuple[Optional[io.BytesIO], Optional[str]]:
     """
     Create composite image with away team (upper left), home team (lower right), diagonal divider.
+    Optionally uses a background image (e.g., venue photo) with transparency.
     Returns (BytesIO buffer or None, error_message or None).
     Image size matches display size (400x150) to prevent cropping.
     """
@@ -288,12 +291,47 @@ def create_team_matchup_image(
         if not home_logo:
             return None, f"Failed to download home team logo: {home_team[0]} (tried: {home_urls_str})"
         
-        # Create base image matching display size
-        img = Image.new("RGB", (width, height), color="#f8f9fa")
+        # Create base image - use background if provided, otherwise solid color
+        has_background = False
+        if background_image_path and os.path.exists(background_image_path):
+            try:
+                # Load background image
+                bg_img = Image.open(background_image_path)
+                # Resize to match display size (400x150)
+                bg_img = bg_img.resize((width, height), Image.Resampling.LANCZOS)
+                # Convert to RGBA for transparency
+                if bg_img.mode != 'RGBA':
+                    bg_img = bg_img.convert('RGBA')
+                
+                # Apply opacity to background
+                alpha = bg_img.split()[3]
+                alpha = alpha.point(lambda p: int(p * background_opacity))
+                bg_img.putalpha(alpha)
+                
+                # Create base image with background
+                img = Image.new("RGB", (width, height), color="#f8f9fa")
+                img.paste(bg_img, (0, 0), bg_img)
+                has_background = True
+            except Exception as e:
+                # If background loading fails, use solid color
+                print(f"[create_team_matchup_image] Failed to load background: {e}")
+                img = Image.new("RGB", (width, height), color="#f8f9fa")
+        else:
+            # Create base image matching display size
+            img = Image.new("RGB", (width, height), color="#f8f9fa")
+        
         draw = ImageDraw.Draw(img)
         
         # Draw diagonal line from bottom-left to top-right
-        draw.line([(0, height), (width, 0)], fill="#000000", width=2)
+        # Use thicker, semi-transparent line that works on both backgrounds and solid colors
+        if has_background:
+            # On background images, use white with shadow for better visibility
+            draw.line([(0, height), (width, 0)], fill="#FFFFFF", width=3)
+            # Add a subtle shadow/outline for better visibility
+            draw.line([(1, height), (width + 1, 0)], fill="#000000", width=1)
+        else:
+            # On solid backgrounds, use black
+            draw.line([(0, height), (width, 0)], fill="#000000", width=2)
         
         # Calculate safe positioning with generous padding for 150px height
         padding = 15  # Padding from edges
@@ -325,38 +363,84 @@ def create_team_matchup_image(
 def get_event_image(event: dict) -> Tuple[Any, Optional[str]]:
     """
     Get event image URL or generated sports matchup image.
+    Priority order:
+    1. API-provided image (from SeatGeek, Ticketmaster, Bandsintown)
+    2. Sports matchup image (for sports events)
+       - For Ole Miss Athletics: venue background + logos overlay
+    3. Location-specific image (Proud Larry's uses Proud_Larrys.jpg)
+    4. Category-specific placeholder (user-provided fallback images)
+       - Community: alternates between Community1.jpg and Community2.jpg
+       - University: University.jpg
+    
     Returns (image_url_or_buffer, error_message).
     """
     title = event.get("title", "")
     category = event.get("category", "")
     location = event.get("location", "")
     
-    # Check if this is a sports event
-    is_sports = category == "Sports" or "vs" in title.lower() or "@" in title.lower()
+    # PRIORITY 1: Check for API-provided image first (from SeatGeek, Ticketmaster, Bandsintown)
+    url = (event.get("image") or event.get("img") or "").strip()
+    if url:
+        return url, None
+    
+    # PRIORITY 2: Check if this is a sports event (generate matchup image)
+    is_sports = category == "Sports" or category == "Ole Miss Athletics" or "vs" in title.lower() or "@" in title.lower()
+    is_olemiss_athletics = category == "Ole Miss Athletics"
     
     if is_sports:
         teams = detect_sports_teams(title)
         if teams:
             away, home = teams
-            matchup_img, error = create_team_matchup_image(away, home)
+            
+            # For Ole Miss Athletics, try to get venue-specific background image
+            background_image_path = None
+            if is_olemiss_athletics:
+                location_lower = location.lower()
+                title_lower = title.lower()
+                
+                # Determine sport and venue from location or title
+                if "pavilion" in location_lower or "basketball" in title_lower:
+                    # Basketball at The Pavilion (webp file)
+                    background_image_path = os.path.join("static", "images", "fallbacks", "Pavilion.webp")
+                elif "swayze" in location_lower or "baseball" in title_lower:
+                    # Baseball at Swayze Field
+                    background_image_path = os.path.join("static", "images", "fallbacks", "Swayze.jpg")
+                elif "vaught" in location_lower or "hemingway" in location_lower or "football" in title_lower:
+                    # Football at Vaught-Hemingway Stadium
+                    background_image_path = os.path.join("static", "images", "fallbacks", "Vaught.jpg")
+                
+                # Check if background image exists
+                if background_image_path and not os.path.exists(background_image_path):
+                    background_image_path = None
+            
+            # Create matchup image with optional background
+            matchup_img, error = create_team_matchup_image(
+                away, 
+                home, 
+                background_image_path=background_image_path,
+                background_opacity=0.6  # 60% opacity for background
+            )
             if matchup_img:
                 return matchup_img, None
             # If matchup image creation fails, return the specific error
             return None, error or f"Failed to create matchup image for {away[0]} vs {home[0]}"
     
-    # Try to get regular event image
-    url = (event.get("image") or event.get("img") or "").strip()
-    if url:
-        return url, None
+    # PRIORITY 3: Try to get location-specific image
+    # Special case: Proud Larry's uses Proud_Larrys.jpg
+    location_lower = location.lower() if location else ""
+    if "proud larry" in location_lower or "proud larrys" in location_lower:
+        proud_larrys_path = os.path.join("static", "images", "fallbacks", "Proud_Larrys.jpg")
+        if os.path.exists(proud_larrys_path):
+            return f"/{proud_larrys_path.replace(os.sep, '/')}", None
     
-    # Try to get location-specific image
+    # Try general location image search
     location_img = search_location_image(location)
     if location_img:
         return location_img, None
     
-    # Fallback to category-specific placeholder
+    # PRIORITY 4: Fallback to category-specific placeholder (user-provided images)
     from utils.placeholder_images import get_placeholder_image
-    placeholder = get_placeholder_image(category or "default")
+    placeholder = get_placeholder_image(category or "default", event_title=title)
     return placeholder, None
 
 

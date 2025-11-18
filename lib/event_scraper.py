@@ -255,6 +255,21 @@ def _parse_bandsintown(soup, source_name: str, base_url: str) -> List[Dict[str, 
                     if date_match:
                         date_str = date_match.group(1)
                 
+                # Extract image from Bandsintown HTML
+                event_image = None
+                # Look for image in event container
+                img_elem = container.find('img')
+                if img_elem:
+                    img_src = img_elem.get('src') or img_elem.get('data-src')
+                    if img_src:
+                        # Convert relative URLs to absolute
+                        if img_src.startswith('//'):
+                            event_image = 'https:' + img_src
+                        elif img_src.startswith('/'):
+                            event_image = 'https://www.bandsintown.com' + img_src
+                        elif img_src.startswith('http'):
+                            event_image = img_src
+                
                 # Create title from artist name
                 title = artist if artist else f"Concert at {venue}"
                 
@@ -285,6 +300,12 @@ def _parse_bandsintown(soup, source_name: str, base_url: str) -> List[Dict[str, 
                             "link": link,
                             "cost": "Varies"
                         }
+                        
+                        # Add image if found
+                        if event_image:
+                            event["image"] = event_image
+                            print(f"[Bandsintown] Found image for event: {title[:50]}")
+                        
                         if start_iso:  # Only add if we have a valid date
                             events.append(event)
             except Exception as e:
@@ -491,8 +512,20 @@ def fetch_seatgeek_events(lat: float, lon: float, radius: str = "25mi") -> List[
                    any(sport in title_lower for sport in sports_keywords):
                     is_olemiss_athletics = True
                 
-                # Check performers for Ole Miss
+                # Check performers for Ole Miss and extract images
                 performers = item.get('performers', [])
+                event_image = None
+                
+                # Extract image from SeatGeek API response
+                # Priority: event.image > performers[0].image > venue.image
+                if item.get('image'):
+                    event_image = item.get('image')
+                elif performers:
+                    # Try first performer's image
+                    first_performer = performers[0]
+                    if first_performer.get('image'):
+                        event_image = first_performer.get('image')
+                
                 for performer in performers:
                     performer_name = performer.get('name', '').lower()
                     if any(term in performer_name for term in ['ole miss', 'rebels', 'ole miss rebels']):
@@ -521,6 +554,11 @@ def fetch_seatgeek_events(lat: float, lon: float, radius: str = "25mi") -> List[
                     "link": item.get('url', item.get('short_title_url', '')),
                     "cost": cost
                 }
+                
+                # Add image if found
+                if event_image:
+                    event["image"] = event_image
+                    print(f"[SeatGeek] Found image for event: {title[:50]}")
                 
                 if event['start_iso']:
                     events.append(event)
@@ -603,6 +641,27 @@ def fetch_ticketmaster_events(city: str, state_code: str) -> List[Dict[str, Any]
                 description = item.get('info', '') or item.get('description', '')
                 category = categorize_event(item.get('name', ''), description, "Ticketmaster", venue_location)
                 
+                # Extract image from Ticketmaster API response
+                # Ticketmaster provides images array with different sizes
+                event_image = None
+                images = item.get('images', [])
+                if images:
+                    # Prefer 16x9 ratio (landscape) for event cards, then 4x3, then any
+                    for ratio in ['16_9', '4_3']:
+                        for img in images:
+                            if img.get('ratio') == ratio and img.get('url'):
+                                event_image = img.get('url')
+                                break
+                        if event_image:
+                            break
+                    
+                    # If no preferred ratio found, use first available image
+                    if not event_image:
+                        for img in images:
+                            if img.get('url'):
+                                event_image = img.get('url')
+                                break
+                
                 event = {
                     "title": item.get('name', ''),
                     "start_iso": start_iso,
@@ -613,6 +672,11 @@ def fetch_ticketmaster_events(city: str, state_code: str) -> List[Dict[str, Any]
                     "link": item.get('url', ''),
                     "cost": f"${item.get('priceRanges', [{}])[0].get('min', 0)}" if item.get('priceRanges') else "Varies"
                 }
+                
+                # Add image if found
+                if event_image:
+                    event["image"] = event_image
+                    print(f"[Ticketmaster] Found image for event: {event['title'][:50]}")
                 
                 if event['start_iso']:
                     events.append(event)
