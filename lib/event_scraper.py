@@ -474,11 +474,26 @@ def fetch_seatgeek_events(lat: float, lon: float, radius: str = "25mi") -> List[
             events_list = data.get('events', [])
             print(f"[SeatGeek] API returned {len(events_list)} events")
             
+            olemiss_count = 0
             for item in events_list:
-                # Extract date/time
+                # Extract date/time - try multiple fields
                 datetime_local = item.get('datetime_local')
                 if not datetime_local:
                     datetime_local = item.get('datetime_utc')
+                if not datetime_local:
+                    # Try datetime_tbd or other date fields
+                    datetime_local = item.get('datetime_tbd') or item.get('datetime')
+                
+                # If still no date, try to parse from other fields
+                if not datetime_local:
+                    # Check for date in other formats
+                    date_str = item.get('announce_date') or item.get('created_at')
+                    if date_str:
+                        try:
+                            parsed = dtp.parse(date_str)
+                            datetime_local = parsed.isoformat()
+                        except:
+                            pass
                 
                 # Extract venue information
                 venue = item.get('venue', {})
@@ -554,10 +569,11 @@ def fetch_seatgeek_events(lat: float, lon: float, radius: str = "25mi") -> List[
                 # If Ole Miss Athletics was detected, add it to the category
                 if is_olemiss_athletics and "Ole Miss Athletics" not in category:
                     if category == "SeatGeek":
-                        category = "Ole Miss Athletics, SeatGeek"
+                        category = "Ole Miss Athletics"
                     else:
-                        category = f"{category}, Ole Miss Athletics"
-                    print(f"[SeatGeek] Identified Ole Miss Athletics event: {title}")
+                        category = f"Ole Miss Athletics, {category}"
+                    olemiss_count += 1
+                    print(f"[SeatGeek] Identified Ole Miss Athletics event: {title} (venue: {venue_name}, date: {datetime_local})")
                 
                 event = {
                     "title": title,
@@ -575,10 +591,16 @@ def fetch_seatgeek_events(lat: float, lon: float, radius: str = "25mi") -> List[
                     event["image"] = event_image
                     print(f"[SeatGeek] Found image for event: {title[:50]}")
                 
-                if event['start_iso']:
-                    events.append(event)
-                else:
-                    print(f"[SeatGeek] Skipping event '{event['title'][:50]}' - no valid date")
+                # Always add the event, even if no date (will be filtered later)
+                # This ensures we don't lose events due to date parsing issues
+                events.append(event)
+                if not event['start_iso']:
+                    print(f"[SeatGeek] WARNING: Event '{event['title'][:50]}' has no valid date - will be filtered later")
+                elif is_olemiss_athletics:
+                    print(f"[SeatGeek] Added Ole Miss Athletics event: {title} (date: {datetime_local})")
+            
+            print(f"[SeatGeek] Total Ole Miss Athletics events identified: {olemiss_count}")
+            print(f"[SeatGeek] Total events added: {len(events)}")
         elif response.status_code == 401:
             print(f"[SeatGeek] ERROR: Unauthorized (401) - API key may be invalid or expired")
             try:
@@ -1217,11 +1239,21 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 continue
         
         # Create deduplication key using cleaned title
-        key = f"{title_clean}_{date}_{location}"
+        # For Ole Miss Athletics, be more lenient - only deduplicate if exact match
+        category_str = event.get("category", "")
+        is_athletics = "Ole Miss Athletics" in category_str
+        
+        if is_athletics:
+            # For athletics, use source + title + date for deduplication (more specific)
+            source = event.get('source', '')
+            key = f"{source}_{title_clean}_{date}_{location}"
+        else:
+            # For other events, use standard deduplication
+            key = f"{title_clean}_{date}_{location}"
         
         # Skip if we've seen this exact event before
         if key in seen_events:
-            print(f"[collect_all_events] Filtering duplicate: {event.get('title')}")
+            print(f"[collect_all_events] Filtering duplicate: {event.get('title')} (key: {key[:80]})")
             continue
         
         seen_events[key] = True
@@ -1262,6 +1294,15 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     
     athletics_count = 0
     athletics_filtered = 0
+    athletics_before_filter = 0
+    
+    # Count athletics events before filtering
+    for event in deduplicated_events:
+        category_str = event.get("category", "")
+        if "Ole Miss Athletics" in category_str:
+            athletics_before_filter += 1
+    
+    print(f"[collect_all_events] Found {athletics_before_filter} Ole Miss Athletics events before date filtering")
     
     for event in deduplicated_events:
         if event.get("start_iso"):
@@ -1271,7 +1312,9 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 if event_date.tzinfo is None:
                     event_date = event_date.replace(tzinfo=tz.tzlocal())
                 
-                is_athletics = event.get("category") == "Ole Miss Athletics"
+                # Check if this is an athletics event (category might be "Ole Miss Athletics" or "Ole Miss Athletics, SeatGeek")
+                category_str = event.get("category", "")
+                is_athletics = "Ole Miss Athletics" in category_str
                 if is_athletics:
                     athletics_count += 1
                 
@@ -1287,8 +1330,20 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                     else:
                         print(f"[collect_all_events] Athletics event filtered (too far): {event.get('title')} - {event_date.isoformat()} ({days_diff} days away)")
             except Exception as e:
-                print(f"[collect_all_events] Error parsing date for event {event.get('title', 'unknown')}: {e}")
+                # For athletics events, log the error but don't skip - try to keep them
+                category_str = event.get("category", "")
+                is_athletics = "Ole Miss Athletics" in category_str
+                if is_athletics:
+                    print(f"[collect_all_events] ERROR parsing date for athletics event {event.get('title', 'unknown')}: {e} - start_iso: {event.get('start_iso')}")
+                else:
+                    print(f"[collect_all_events] Error parsing date for event {event.get('title', 'unknown')}: {e}")
                 continue
+        else:
+            # Log events without dates, especially athletics
+            category_str = event.get("category", "")
+            is_athletics = "Ole Miss Athletics" in category_str
+            if is_athletics:
+                print(f"[collect_all_events] WARNING: Athletics event '{event.get('title')}' has no start_iso - skipping")
     
     print(f"[collect_all_events] Filtered result: {len(filtered_events)} total events ({athletics_filtered} athletics)")
     
