@@ -299,69 +299,45 @@ def ics_calendar_link(event):
 
 @app.template_filter('get_event_image_url')
 def get_event_image_url(event):
-    """Get event image URL using the image processing logic"""
+    """Get event image URL - simplified to avoid expensive operations during template rendering"""
     # Ensure event is a dict
     if not isinstance(event, dict):
         return "https://via.placeholder.com/400x250/f8f9fa/6C757D?text=Event"
     
     try:
-        # First check if event already has an image URL
+        # First priority: Use event's existing image field if available
         if event.get('image'):
-            img_url = event.get('image', '').strip()
-            if img_url and img_url.startswith('http'):
+            img_url = str(event.get('image', '')).strip()
+            if img_url and (img_url.startswith('http') or img_url.startswith('/')):
                 return img_url
         
-        from utils.image_processing import get_event_image
-        image_result, error = get_event_image(event)
+        # Second priority: For sports/Ole Miss Athletics, use sports-image endpoint
+        category = event.get('category', '')
+        if 'Ole Miss Athletics' in category or category == 'Sports':
+            title = event.get('title', '')
+            if title:
+                try:
+                    image_url = url_for('sports_image', title=title)
+                    params = []
+                    if event.get('hash'):
+                        params.append(f'hash={event.get("hash")}')
+                    if event.get('start_iso'):
+                        from urllib.parse import quote
+                        params.append(f"date={quote(str(event['start_iso']))}")
+                    if event.get('location'):
+                        from urllib.parse import quote
+                        params.append(f"location={quote(str(event['location']))}")
+                    if params:
+                        image_url += '?' + '&'.join(params)
+                    return image_url
+                except Exception:
+                    pass
         
-        # If there was an error or no result, use fallback
-        if error or image_result is None:
-            return "https://via.placeholder.com/400x250/f8f9fa/6C757D?text=Event"
-        
-        # If it's a BytesIO buffer (sports matchup), we need to use the sports-image endpoint
-        if hasattr(image_result, 'read'):
-            # For sports matchups, use the sports-image endpoint
-            try:
-                title = event.get('title', '')
-                if not title:
-                    return "https://via.placeholder.com/400x250/f8f9fa/6C757D?text=Event"
-                event_hash = event.get('hash', '')
-                image_url = url_for('sports_image', title=title)
-                params = []
-                if event_hash:
-                    params.append(f'hash={event_hash}')
-                if event.get('start_iso'):
-                    from urllib.parse import quote
-                    params.append(f"date={quote(str(event['start_iso']))}")
-                if event.get('location'):
-                    from urllib.parse import quote
-                    params.append(f"location={quote(str(event['location']))}")
-                if params:
-                    image_url += '?' + '&'.join(params)
-                return image_url
-            except Exception as e:
-                app.logger.error(f"Error generating sports image URL: {e}")
-                import traceback
-                app.logger.error(traceback.format_exc())
-                return "https://via.placeholder.com/400x250/f8f9fa/6C757D?text=Event"
-        
-        # If it's a string URL, return it directly
-        if isinstance(image_result, str) and image_result.strip():
-            # If it's a local path starting with /static, return as-is
-            if image_result.startswith('/static') or image_result.startswith('static'):
-                return image_result if image_result.startswith('/') else f'/{image_result}'
-            # If it's a full URL, return as-is
-            if image_result.startswith('http'):
-                return image_result
-            # Otherwise, assume it's a local path
-            return f'/{image_result}' if not image_result.startswith('/') else image_result
-        
-        # Fallback to placeholder
-        return "https://via.placeholder.com/400x250/f8f9fa/6C757D?text=Event"
+        # Third priority: Use placeholder based on category
+        category = category or 'Event'
+        return f"https://via.placeholder.com/400x250/f8f9fa/6C757D?text={category.replace(' ', '+')}"
     except Exception as e:
         app.logger.error(f"Error in get_event_image_url: {e}")
-        import traceback
-        app.logger.error(traceback.format_exc())
         return "https://via.placeholder.com/400x250/f8f9fa/6C757D?text=Event"
 
 
