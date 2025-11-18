@@ -206,10 +206,11 @@
                         <img src="{{ url_for('static', filename='images/ole-miss-logo.png') }}" alt="Ole Miss" class="ole-miss-logo">
                     </div>
                     {% else %}
-                    <img src="https://images.unsplash.com/photo-1511578314322-379afb476865?w=400&h=250&fit=crop&q=80" 
+                    <img src="{{ event|get_event_image_url }}" 
                          alt="{{ event.title }}" 
                          class="event-image"
-                         loading="lazy">
+                         loading="lazy"
+                         onerror="this.src='https://via.placeholder.com/400x250/f8f9fa/6C757D?text=Event'">
                     {% endif %}
                     <div class="event-badges">
                         {% if is_free %}

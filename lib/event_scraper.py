@@ -458,6 +458,7 @@ def fetch_seatgeek_events(lat: float, lon: float, radius: str = "25mi") -> List[
         
         print(f"[SeatGeek] API key found (first 8 chars: {api_key[:8]}...)")
         
+        # First search: by location coordinates (Oxford, MS)
         params = {
             'client_id': api_key,
             'lat': lat,
@@ -467,6 +468,7 @@ def fetch_seatgeek_events(lat: float, lon: float, radius: str = "25mi") -> List[
             'page': 1
         }
         
+        print(f"[SeatGeek] Searching by coordinates: lat={lat}, lon={lon}, radius={radius}")
         response = requests.get(url, params=params, timeout=10)
         
         if response.status_code == 200:
@@ -600,7 +602,161 @@ def fetch_seatgeek_events(lat: float, lon: float, radius: str = "25mi") -> List[
                     print(f"[SeatGeek] Added Ole Miss Athletics event: {title} (date: {datetime_local})")
             
             print(f"[SeatGeek] Total Ole Miss Athletics events identified: {olemiss_count}")
-            print(f"[SeatGeek] Total events added: {len(events)}")
+            print(f"[SeatGeek] Total events added from coordinate search: {len(events)}")
+            
+            # Second search: by query for "University of Mississippi" and specific venues
+            # This helps catch events that might be tagged differently
+            query_searches = [
+                "University of Mississippi",
+                "Ole Miss",
+                "The Pavilion at Ole Miss",
+                "Vaught-Hemingway Stadium",
+                "Swayze Field"
+            ]
+            
+            # Track event titles we've already seen to avoid duplicates
+            seen_titles = {event.get('title', '').lower() for event in events}
+            
+            for query in query_searches:
+                try:
+                    query_params = {
+                        'client_id': api_key,
+                        'q': query,
+                        'per_page': 100,
+                        'page': 1
+                    }
+                    print(f"[SeatGeek] Searching by query: '{query}'")
+                    query_response = requests.get(url, params=query_params, timeout=10)
+                    
+                    if query_response.status_code == 200:
+                        query_data = query_response.json()
+                        query_events_list = query_data.get('events', [])
+                        print(f"[SeatGeek] Query '{query}' returned {len(query_events_list)} events")
+                        
+                        # Process query results
+                        for item in query_events_list:
+                            title = item.get('title', item.get('short_title', 'Untitled Event'))
+                            title_lower = title.lower()
+                            
+                            # Skip if we've already seen this event
+                            if title_lower in seen_titles:
+                                continue
+                            
+                            # Only add events that are in Oxford, MS area or at Ole Miss venues
+                            venue = item.get('venue', {})
+                            venue_name = venue.get('name', '').lower()
+                            venue_city = venue.get('city', '').lower()
+                            venue_state = venue.get('state', '').lower()
+                            
+                            # Check if this event is relevant (Oxford, MS or Ole Miss venue)
+                            is_relevant = False
+                            if venue_city == 'oxford' and venue_state == 'ms':
+                                is_relevant = True
+                            elif any(term in venue_name for term in ['ole miss', 'pavilion', 'vaught', 'swayze', 'hemingway', 'university of mississippi']):
+                                is_relevant = True
+                            elif any(term in title_lower for term in ['ole miss', 'rebels', 'university of mississippi']):
+                                is_relevant = True
+                            
+                            if not is_relevant:
+                                continue
+                            
+                            # Extract date/time - same logic as coordinate search
+                            datetime_local = item.get('datetime_local')
+                            if not datetime_local:
+                                datetime_local = item.get('datetime_utc')
+                            if not datetime_local:
+                                datetime_local = item.get('datetime_tbd') or item.get('datetime')
+                            if not datetime_local:
+                                date_str = item.get('announce_date') or item.get('created_at')
+                                if date_str:
+                                    try:
+                                        parsed = dtp.parse(date_str)
+                                        datetime_local = parsed.isoformat()
+                                    except:
+                                        pass
+                            
+                            # Extract venue information
+                            venue_location = venue_name
+                            if venue.get('city'):
+                                venue_location = f"{venue.get('name', 'Unknown Venue')}, {venue.get('city')}"
+                            if venue.get('state'):
+                                venue_location = f"{venue.get('name', 'Unknown Venue')}, {venue.get('city')}, {venue.get('state')}"
+                            
+                            # Extract price information
+                            stats = item.get('stats', {})
+                            price_min = stats.get('lowest_price')
+                            cost = "Varies"
+                            if price_min is not None:
+                                cost = f"${int(price_min)}"
+                            
+                            # Extract description
+                            description = item.get('description', '') or item.get('short_title', '')
+                            
+                            # Check if this is an Ole Miss Athletics event
+                            is_olemiss_athletics = False
+                            olemiss_venues = [
+                                'vaught-hemingway', 'vaught hemingway', 'hemingway stadium',
+                                'the pavilion', 'pavilion', 'ole miss pavilion',
+                                'swayze field', 'swayze',
+                                'ole miss softball complex', 'softball complex',
+                                'ole miss', 'rebels', 'ole miss rebels'
+                            ]
+                            
+                            venue_name_lower = venue.get('name', '').lower()
+                            if any(venue_term in venue_name_lower for venue_term in olemiss_venues):
+                                is_olemiss_athletics = True
+                            
+                            sports_keywords = ['football', 'basketball', 'baseball', 'softball', ' vs ', ' vs. ', 'game']
+                            if any(term in title_lower for term in ['ole miss', 'rebels', 'ole miss rebels']) and \
+                               any(sport in title_lower for sport in sports_keywords):
+                                is_olemiss_athletics = True
+                            
+                            # Extract image
+                            event_image = None
+                            if item.get('image'):
+                                event_image = item.get('image')
+                            elif item.get('performers'):
+                                first_performer = item.get('performers', [])[0]
+                                if first_performer.get('image'):
+                                    event_image = first_performer.get('image')
+                            
+                            # Determine category
+                            from lib.categorizer import categorize_event
+                            category = categorize_event(title, description, "SeatGeek", venue_location)
+                            
+                            if is_olemiss_athletics and "Ole Miss Athletics" not in category:
+                                if category == "SeatGeek":
+                                    category = "Ole Miss Athletics"
+                                else:
+                                    category = f"Ole Miss Athletics, {category}"
+                                olemiss_count += 1
+                                print(f"[SeatGeek] Query search identified Ole Miss Athletics event: {title}")
+                            
+                            event = {
+                                "title": title,
+                                "start_iso": datetime_local,
+                                "location": venue_location,
+                                "description": description,
+                                "category": category,
+                                "source": "SeatGeek",
+                                "link": item.get('url', item.get('short_title_url', '')),
+                                "cost": cost
+                            }
+                            
+                            if event_image:
+                                event["image"] = event_image
+                            
+                            events.append(event)
+                            seen_titles.add(title_lower)
+                            print(f"[SeatGeek] Added event from query search: {title}")
+                    else:
+                        print(f"[SeatGeek] Query search '{query}' returned status {query_response.status_code}")
+                except Exception as e:
+                    print(f"[SeatGeek] Error in query search for '{query}': {e}")
+                    continue
+            
+            print(f"[SeatGeek] Total events after query searches: {len(events)}")
+            print(f"[SeatGeek] Total Ole Miss Athletics events: {olemiss_count}")
         elif response.status_code == 401:
             print(f"[SeatGeek] ERROR: Unauthorized (401) - API key may be invalid or expired")
             try:
