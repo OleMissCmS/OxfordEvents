@@ -946,6 +946,52 @@ def clear_cache():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route('/api/admin/reset-images', methods=['POST'])
+@limiter.limit("10 per hour")
+def admin_reset_images():
+    """Admin-only endpoint to reset all cached event images"""
+    if not is_admin_authenticated():
+        app.logger.warning(
+            "Blocked unauthorized access to reset-images from %s",
+            request.remote_addr,
+        )
+        return jsonify({"status": "error", "message": "Authentication required"}), 401
+    
+    try:
+        # Import reset function from script
+        import sys
+        from pathlib import Path
+        project_root = Path(__file__).parent
+        if str(project_root) not in sys.path:
+            sys.path.insert(0, str(project_root))
+        
+        from scripts.reset_event_images import reset_event_images
+        
+        deleted_rows, removed_files, images_dir = reset_event_images()
+        
+        # Also clear the Flask cache to force fresh image generation
+        cache.clear()
+        
+        app.logger.info(
+            "Image reset completed: %d rows deleted, %d files removed from %s (admin: %s)",
+            deleted_rows,
+            removed_files,
+            images_dir,
+            request.remote_addr,
+        )
+        
+        return jsonify({
+            "status": "success",
+            "message": "Event images reset successfully",
+            "deleted_rows": deleted_rows,
+            "removed_files": removed_files,
+            "images_dir": images_dir,
+        })
+    except Exception as e:
+        app.logger.error("Error resetting images: %s", e, exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route('/api/sports-image/<path:title>')
 def sports_image(title):
     """Generate sports matchup image with caching and database storage"""
