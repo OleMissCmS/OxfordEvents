@@ -23,12 +23,27 @@ try {
         -SessionVariable session `
         -ErrorAction Stop
 
-    $csrfRegex = 'name="csrf_token" type="hidden" value="([^"]+)"'
-    $csrfMatch = [regex]::Match($loginPage.Content, $csrfRegex)
-    if (-not $csrfMatch.Success) {
+    # Try multiple regex patterns to find CSRF token (attribute order may vary)
+    $csrfPatterns = @(
+        'name="csrf_token"[^>]*value="([^"]+)"',
+        'value="([^"]+)"[^>]*name="csrf_token"',
+        'csrf_token"[^>]*value="([^"]+)"'
+    )
+    
+    $csrfToken = $null
+    foreach ($pattern in $csrfPatterns) {
+        $csrfMatch = [regex]::Match($loginPage.Content, $pattern)
+        if ($csrfMatch.Success) {
+            $csrfToken = $csrfMatch.Groups[1].Value
+            break
+        }
+    }
+    
+    if (-not $csrfToken) {
+        Write-Host "DEBUG: Login page content (first 2000 chars):" -ForegroundColor Yellow
+        Write-Host $loginPage.Content.Substring(0, [Math]::Min(2000, $loginPage.Content.Length)) -ForegroundColor Yellow
         throw "Could not find CSRF token on login page."
     }
-    $csrfToken = $csrfMatch.Groups[1].Value
 
     # Post login with CSRF token
     $loginResponse = Invoke-WebRequest -Uri "$BaseUrl/admin/login" `
