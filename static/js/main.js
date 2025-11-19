@@ -410,36 +410,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 })();
 
-// Dark Mode Toggle
-(function() {
-    const darkModeToggle = document.getElementById('darkModeToggle');
-    const body = document.body;
-    
-    // Load saved preference
-    const isDarkMode = localStorage.getItem('darkMode') === 'true';
-    if (isDarkMode) {
-        body.classList.add('dark-mode');
-        if (darkModeToggle) {
-            darkModeToggle.querySelector('i').classList.replace('fa-moon', 'fa-sun');
-        }
-    }
-    
-    if (darkModeToggle) {
-        darkModeToggle.addEventListener('click', () => {
-            body.classList.toggle('dark-mode');
-            const isDark = body.classList.contains('dark-mode');
-            localStorage.setItem('darkMode', isDark);
-            
-            const icon = darkModeToggle.querySelector('i');
-            if (isDark) {
-                icon.classList.replace('fa-moon', 'fa-sun');
-            } else {
-                icon.classList.replace('fa-sun', 'fa-moon');
-            }
-        });
-    }
-})();
-
 // Advanced Filters
 (function() {
     const advancedFiltersBtn = document.getElementById('advancedFiltersBtn');
@@ -694,55 +664,6 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Favorites (localStorage)
-function toggleFavorite(eventId) {
-    if (!window.eventsData || !window.eventsData[eventId]) return;
-    
-    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-    const index = favorites.indexOf(eventId);
-    
-    const favoriteBtn = document.querySelector(`.event-card[data-event-id="${eventId}"] .favorite-btn`);
-    
-    if (index > -1) {
-        favorites.splice(index, 1);
-        if (favoriteBtn) {
-            favoriteBtn.classList.remove('favorited');
-            const icon = favoriteBtn.querySelector('i');
-            if (icon) {
-                icon.classList.remove('fas', 'fa-heart');
-                icon.classList.add('far', 'fa-heart');
-            }
-        }
-    } else {
-        favorites.push(eventId);
-        if (favoriteBtn) {
-            favoriteBtn.classList.add('favorited');
-            const icon = favoriteBtn.querySelector('i');
-            if (icon) {
-                icon.classList.remove('far');
-                icon.classList.add('fas');
-            }
-        }
-    }
-    
-    localStorage.setItem('favorites', JSON.stringify(favorites));
-}
-
-// Load favorites on page load
-(function() {
-    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-    favorites.forEach(eventId => {
-        const favoriteBtn = document.querySelector(`.event-card[data-event-id="${eventId}"] .favorite-btn`);
-        if (favoriteBtn) {
-            favoriteBtn.classList.add('favorited');
-            const icon = favoriteBtn.querySelector('i');
-            if (icon) {
-                icon.classList.replace('far', 'fas');
-            }
-        }
-    });
-})();
-
 // Share Event
 function shareEvent(eventId) {
     if (!window.eventsData || !window.eventsData[eventId]) return;
@@ -869,7 +790,6 @@ function filterEvents() {
 // Make functions globally available
 window.openEventModal = openEventModal;
 window.closeEventModal = closeEventModal;
-window.toggleFavorite = toggleFavorite;
 window.shareEvent = shareEvent;
 window.filterEvents = filterEvents;
 window.renderCalendar = renderCalendar;

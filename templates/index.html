@@ -10,10 +10,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
-    <!-- Dark Mode Toggle -->
-    <button id="darkModeToggle" class="dark-mode-toggle" aria-label="Toggle dark mode">
-        <i class="fas fa-moon"></i>
-    </button>
+    <header class="site-header">
+        <a class="site-logo" href="{{ url_for('index') }}">
+            Oxford Happenings
+        </a>
+        <a class="auth-link" href="{{ url_for('signup') }}">Log In / Sign Up</a>
+    </header>
 
     <!-- Hero Carousel Section -->
     <div class="hero-carousel">
@@ -223,70 +225,39 @@
                     <div class="athletics-header">
                         <img src="{{ url_for('static', filename='images/ole-miss-logo.png') }}" alt="Ole Miss" class="ole-miss-logo">
                     </div>
-                    {% else %}
-                    {% if event.image and event.image.startswith('http') %}
-                    <img src="{{ event.image }}" 
-                         alt="{{ event.title }}" 
+                    {% elif event.display_image %}
+                    <img src="{{ event.display_image }}"
+                         alt="{{ event.title }}"
                          class="event-image"
                          loading="lazy"
-                         onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'no-image-placeholder\'><i class=\'fas fa-calendar-alt\'></i></div>'">
-                    {% elif event.category == 'Community' %}
-                    {% set hash_val = (event.title|string|hash) % 2 %}
-                    {% if hash_val == 0 %}
-                    <img src="{{ url_for('static', filename='images/fallbacks/Community1.webp') }}" 
-                         alt="{{ event.title }}" 
-                         class="event-image"
-                         loading="lazy">
-                    {% else %}
-                    <img src="{{ url_for('static', filename='images/fallbacks/Community2.jpg') }}" 
-                         alt="{{ event.title }}" 
-                         class="event-image"
-                         loading="lazy">
-                    {% endif %}
-                    {% elif event.category == 'University' %}
-                    <img src="{{ url_for('static', filename='images/fallbacks/University.jpg') }}" 
-                         alt="{{ event.title }}" 
-                         class="event-image"
-                         loading="lazy">
-                    {% elif 'Proud Larry' in event.location %}
-                    <img src="{{ url_for('static', filename='images/fallbacks/Proud_Larrys.jpg') }}" 
-                         alt="{{ event.title }}" 
-                         class="event-image"
-                         loading="lazy">
+                         onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/fallbacks/default.jpg') }}'">
                     {% else %}
                     <div class="no-image-placeholder">
                         <i class="fas fa-calendar-alt"></i>
                     </div>
                     {% endif %}
-                    {% endif %}
-                    {# Badges on top-right of image #}
                     <div class="event-badges">
-                        {% if is_free %}
-                        <span class="badge badge-free">Free</span>
-                        {% elif cost_badge %}
-                        <span class="badge badge-cost">{{ cost_badge }}</span>
-                        {% endif %}
-                        {% if is_today %}
-                        <span class="badge badge-today">Today</span>
-                        {% elif is_weekend %}
-                        <span class="badge badge-weekend">This Weekend</span>
-                        {% endif %}
+                        <div class="badge-slot badge-slot-left">
+                            {% if is_free %}
+                            <span class="badge badge-free">Free</span>
+                            {% elif cost_badge %}
+                            <span class="badge badge-cost">{{ cost_badge }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="badge-slot badge-slot-right">
+                            {% if is_today %}
+                            <span class="badge badge-today">Today</span>
+                            {% elif is_weekend %}
+                            <span class="badge badge-weekend">This Weekend</span>
+                            {% endif %}
+                        </div>
                     </div>
-                    {# Favorite heart button bottom-right #}
-                    <button class="favorite-btn" onclick="event.stopPropagation(); toggleFavorite({{ loop.index0 }})" aria-label="Add to favorites">
-                        <i class="far fa-heart"></i>
-                    </button>
                 </div>
                 <div class="event-content">
                     {# Date line - small uppercase weekday #}
                     {% if weekday %}
                     <div class="event-date-line">{{ weekday }}</div>
                     {% endif %}
-                    {# Time - large bold navy #}
-                    {% if time_str %}
-                    <div class="event-time">{{ time_str }}</div>
-                    {% endif %}
-                    {# Title - large bold navy, Playfair Display #}
                     <h3 class="event-title">
                         {% if detail_link %}
                         <a href="{{ detail_link }}" target="_blank" rel="noopener" onclick="event.stopPropagation()">{{ event.title }}</a>
@@ -294,7 +265,9 @@
                         {{ event.title }}
                         {% endif %}
                     </h3>
-                    {# Location - ox-red, medium weight #}
+                    {% if time_str %}
+                    <div class="event-time">{{ time_str }}</div>
+                    {% endif %}
                     <div class="event-venue">{{ event.location }}</div>
                     {# Description - 2-3 lines max, truncate #}
                     <div class="event-description">{{ event.description|truncate_description }}</div>

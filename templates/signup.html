@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Your Oxford Happenings Account</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Montserrat:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="signup-body">
+    <div class="signup-wrapper">
+        <a href="{{ url_for('index') }}" class="signup-back-link">
+            <i class="fas fa-arrow-left"></i> Back to Oxford Happenings
+        </a>
+        <div class="signup-card">
+            <h1>Create Your Account</h1>
+            <p>Save your favorite happenings, get reminders, and keep Oxford on your calendar.</p>
+
+            {% with messages = get_flashed_messages(with_categories=True) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="signup-success">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            {% if errors %}
+            <div class="signup-errors">
+                <ul>
+                    {% for error in errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form method="post" class="signup-form" novalidate>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label for="full_name">Full Name</label>
+                <input type="text" id="full_name" name="full_name" placeholder="Jane Rebel" required>
+
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" placeholder="you@example.com" required>
+
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="At least 8 characters" minlength="8" required>
+
+                <button type="submit" class="signup-submit">Create Account</button>
+            </form>
+
+            <p style="margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-medium);">
+                Already have admin access? <a href="{{ url_for('admin_login') }}">Log in here</a>.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+

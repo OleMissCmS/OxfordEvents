@@ -22,6 +22,35 @@ LAST_SOURCE_METRICS: Dict[str, Any] = {
 }
 
 
+ATHLETICS_HOME_KEYWORDS = [
+    "oxford",
+    "pavilion",
+    "pavilion at ole miss",
+    "vaught",
+    "hemingway",
+    "swayze",
+    "ole miss softball",
+    "ole miss soccer",
+    "ole miss soccer stadium",
+    "ole miss softball complex",
+    "gillom",
+    "tad smith",
+    "manning center",
+    "oxford-university stadium",
+    "oxford university stadium",
+    "ole miss track",
+    "ole miss golf",
+]
+
+
+def _is_oxford_home_game(location: Optional[str]) -> bool:
+    """Return True if the athletics event appears to be played in Oxford/home venues."""
+    if not location:
+        return False
+    location_lower = location.lower()
+    return any(keyword in location_lower for keyword in ATHLETICS_HOME_KEYWORDS)
+
+
 def fetch_ics_events(url: str, source_name: str) -> List[Dict[str, Any]]:
     """Fetch events from an ICS calendar URL"""
     from lib.categorizer import categorize_event
@@ -1473,6 +1502,9 @@ def collect_all_events(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 is_athletics = "Ole Miss Athletics" in category_str
                 if is_athletics:
                     athletics_count += 1
+                    if not _is_oxford_home_game(event.get("location")):
+                        print(f"[collect_all_events] Skipping non-home athletics event: {event.get('title')} @ {event.get('location')}")
+                        continue
                 
                 if now <= event_date <= cutoff:
                     filtered_events.append(event)

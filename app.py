@@ -15,7 +15,7 @@ from flask import (
 from flask_caching import Cache
 from datetime import datetime, timedelta, date
 import os
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 from werkzeug.security import check_password_hash, generate_password_hash
 import pytz
 from flask_wtf import CSRFProtect
@@ -33,6 +33,11 @@ from lib.database import (
     SubmittedEvent,
 )
 from utils.image_processing import detect_sports_teams, create_team_matchup_image
+from utils.placeholder_images import (
+    get_location_image,
+    get_placeholder_image,
+    get_university_default_image,
+)
 
 app = Flask(__name__)
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
@@ -637,6 +642,48 @@ EVENT_SOURCES = [
     ]
 
 
+def _static_url(*parts: str) -> str:
+    """Convert path parts into a /static/... style URL."""
+    return "/" + "/".join(parts).replace("\\", "/")
+
+
+PROUD_LARRYS_IMAGE = _static_url("static", "images", "fallbacks", "Proud_Larrys.jpg")
+DEFAULT_FALLBACK_IMAGE = "https://via.placeholder.com/400x250/f8f9fa/6C757D?text=Oxford+Event"
+
+
+def _determine_event_image(event: dict) -> str:
+    """Return the best image URL for an event, considering API data and fallbacks."""
+    image = event.get("image")
+    if isinstance(image, str) and image.strip():
+        if image.startswith(("http://", "https://", "/")):
+            return image
+
+    location = (event.get("location") or "").strip()
+    category = (event.get("category") or "").strip()
+    title = (event.get("title") or "").strip()
+
+    location_image = get_location_image(location)
+    if location_image:
+        return location_image
+
+    location_lower = location.lower()
+
+    if "proud larry" in location_lower:
+        return PROUD_LARRYS_IMAGE
+
+    if category == "University":
+        return get_university_default_image()
+
+    placeholder = get_placeholder_image(category or "default", title)
+    return placeholder or DEFAULT_FALLBACK_IMAGE
+
+
+def _attach_event_images(events: List[dict]) -> None:
+    """Add a display_image key to each event dict for template rendering."""
+    for event in events:
+        event["display_image"] = _determine_event_image(event)
+
+
 @cache.cached(timeout=600, key_prefix='all_events')
 def load_events():
     """Load events from all sources"""
@@ -735,6 +782,7 @@ def index():
         pass
     
     events = load_events()
+    _attach_event_images(events)
     
     # Clear status after events loaded (but before template render)
     try:
@@ -843,6 +891,30 @@ def submit_event():
         selected_categories=selected_categories,
         form_defaults=form_defaults,
     )
+
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    """Public user creation page for future personalization."""
+    errors: List[str] = []
+
+    if request.method == 'POST':
+        full_name = (request.form.get('full_name') or "").strip()
+        email = (request.form.get('email') or "").strip()
+        password = (request.form.get('password') or "").strip()
+
+        if not full_name:
+            errors.append("Please enter your full name.")
+        if not email or "@" not in email:
+            errors.append("Please provide a valid email address.")
+        if not password or len(password) < 8:
+            errors.append("Password must be at least 8 characters long.")
+
+        if not errors:
+            flash("Thanks! Your account request has been received. We'll be in touch soon.", "success")
+            return redirect(url_for('signup'))
+
+    return render_template('signup.html', errors=errors)
 
 
 @app.route('/admin')
@@ -1165,7 +1237,7 @@ def sports_image(title):
                 # Check if this is Ole Miss Athletics and determine venue
                 # More flexible matching for venue names
                 if "pavilion" in location_lower or "basketball" in title_lower or "mbb" in title_lower or "wbb" in title_lower:
-                    background_image_path = os.path.join("static", "images", "fallbacks", "Pavilion.webp")
+                    background_image_path = os.path.join("static", "images", "buildings", "Pavilion.png")
                     print(f"[sports-image] Detected Pavilion venue, using: {background_image_path}")
                 elif "swayze" in location_lower or "baseball" in title_lower:
                     background_image_path = os.path.join("static", "images", "fallbacks", "Swayze.jpg")
