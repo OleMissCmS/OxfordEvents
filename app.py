@@ -765,6 +765,11 @@ def load_events():
         ]
         normalized_events = [normalize_event_dict(event) for event in fallback_events]
 
+    normalized_events = [
+        event for event in normalized_events
+        if "canceled" not in (event.get("title") or "").lower()
+    ]
+
     # Ensure events are sorted by start time
     normalized_events.sort(key=lambda e: e.get("start_iso") or "")
     

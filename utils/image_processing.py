@@ -6,6 +6,8 @@ import io
 import os
 import re
 import base64
+from functools import lru_cache
+from pathlib import Path
 from typing import Optional, Tuple, Dict, Any
 from PIL import Image, ImageDraw
 import requests
@@ -110,6 +112,21 @@ TEAM_NAMES = {
         "https://logos-world.net/wp-content/uploads/2020/06/South-Carolina-Gamecocks-Logo.png",
     ]),
 }
+
+OLE_MISS_LOGO_FILE = Path("static/images/ole-miss-logo.png")
+
+
+@lru_cache(maxsize=8)
+def _load_ole_miss_logo(size: int) -> Optional[Image.Image]:
+    if not OLE_MISS_LOGO_FILE.exists():
+        return None
+    try:
+        img = Image.open(OLE_MISS_LOGO_FILE)
+        img = img.convert("RGBA")
+        img.thumbnail((size, size), Image.Resampling.LANCZOS)
+        return img
+    except Exception:
+        return None
 
 
 def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str, str]]]:
@@ -280,12 +297,21 @@ def create_team_matchup_image(
         away_logo = get_logo_image(away_team[1], size=logo_size)
         home_logo = get_logo_image(home_team[1], size=logo_size)
         
-        # Check which logos failed
         away_urls_str = str(away_team[1]) if isinstance(away_team[1], list) else away_team[1]
         home_urls_str = str(home_team[1]) if isinstance(home_team[1], list) else home_team[1]
-        
+        fallback_logo = _load_ole_miss_logo(logo_size)
+
+        if not away_logo and not home_logo and fallback_logo:
+            away_logo = fallback_logo.copy()
+            home_logo = fallback_logo.copy()
+        else:
+            if not away_logo and fallback_logo:
+                away_logo = fallback_logo.copy()
+            if not home_logo and fallback_logo:
+                home_logo = fallback_logo.copy()
+
         if not away_logo and not home_logo:
-            return None, f"Failed to download both logos: {away_team[0]} and {home_team[0]}"
+            return None, f"Failed to download logos for {away_team[0]} and {home_team[0]}"
         if not away_logo:
             return None, f"Failed to download away team logo: {away_team[0]} (tried: {away_urls_str})"
         if not home_logo:

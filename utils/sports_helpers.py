@@ -250,3 +250,4 @@ def get_matchup_data(event: dict) -> Optional[dict]:
         'has_logos': bool(away_logo and home_logo)
     }
 
+

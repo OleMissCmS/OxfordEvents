@@ -5,6 +5,7 @@ Uses local images from static/images/fallbacks/ and static/images/buildings/.
 
 import hashlib
 import os
+import re
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -55,6 +56,8 @@ def _load_building_images() -> Dict[str, str]:
 
 
 BUILDING_IMAGE_MAP = _load_building_images()
+LAW_IMAGE_URL = BUILDING_IMAGE_MAP.get("robertckhayatlawcenter")
+TURNER_CENTER_IMAGE_URL = BUILDING_IMAGE_MAP.get("turnercenter")
 
 
 def _building_image_from_location(location: str) -> Optional[str]:
@@ -91,11 +94,17 @@ def get_location_image(location: str) -> Optional[str]:
     if not location:
         return None
 
+    location_lower = location.lower()
+
+    if LAW_IMAGE_URL and re.search(r"\blaw\b", location_lower):
+        return LAW_IMAGE_URL
+
+    if TURNER_CENTER_IMAGE_URL and "turner center" in location_lower:
+        return TURNER_CENTER_IMAGE_URL
+
     building_image = _building_image_from_location(location)
     if building_image:
         return building_image
-
-    location_lower = location.lower()
 
     # If it's clearly a University/Hall building without a dedicated image, fallback to University default
     if "university of mississippi" in location_lower or "hall" in location_lower:

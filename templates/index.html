@@ -168,6 +168,11 @@
             {% set weekday = event.start_iso|format_weekday if event.start_iso else '' %}
             {% set time_str = event.start_iso|format_time if event.start_iso else '' %}
             {% set is_weekend = event.start_iso|is_weekend if event.start_iso else False %}
+            {% set is_ole_miss_athletics = 'Ole Miss Athletics' in event.category %}
+            {% set is_ice_hockey = 'ice hockey' in event.title|lower %}
+            {% set use_sports_composite = is_ole_miss_athletics or is_ice_hockey %}
+            {% set fallback_image = url_for('static', filename='images/fallbacks/default.jpg') %}
+            {% set card_image = event.display_image or fallback_image %}
             {% set cost_str = event.cost or 'Free' %}
             {% set cost_badge = '' %}
             {% if not is_free and cost_str != 'Free' and cost_str != 'Varies' %}
@@ -189,9 +194,7 @@
                  onclick="openEventModal({{ loop.index0 }})">
                 <div class="event-image-container">
                     {% set matchup = get_matchup_data(event) %}
-                    {% if matchup and matchup.has_logos %}
-                    {# Use generated composite image with background for Ole Miss Athletics #}
-                    {% if 'Ole Miss Athletics' in event.category %}
+                    {% if matchup and matchup.has_logos and use_sports_composite %}
                     {% set event_hash = event.get('hash', '') %}
                     {% set image_url = url_for('sports_image', title=event.title|urlencode) %}
                     {% if event_hash %}
@@ -203,8 +206,7 @@
                          alt="{{ event.title }}" 
                          class="event-image"
                          loading="lazy">
-                    {% else %}
-                    {# For non-Ole Miss Athletics sports, use the matchup graphic #}
+                    {% elif matchup and matchup.has_logos %}
                     <div class="matchup-graphic">
                         <div class="matchup-team matchup-away">
                             <img src="{{ matchup.away_logo }}" alt="{{ matchup.opponent }}" class="matchup-logo" onerror="this.style.display='none'">
@@ -216,25 +218,12 @@
                             <span class="matchup-team-name">Ole Miss</span>
                         </div>
                     </div>
-                    {% endif %}
-                    {% elif 'Turner Center' in event.category %}
-                    <div class="turner-center-placeholder">
-                        <i class="fas fa-dumbbell"></i>
-                    </div>
-                    {% elif 'Ole Miss Athletics' in event.category %}
-                    <div class="athletics-header">
-                        <img src="{{ url_for('static', filename='images/ole-miss-logo.png') }}" alt="Ole Miss" class="ole-miss-logo">
-                    </div>
-                    {% elif event.display_image %}
-                    <img src="{{ event.display_image }}"
+                    {% else %}
+                    <img src="{{ card_image }}"
                          alt="{{ event.title }}"
                          class="event-image"
                          loading="lazy"
-                         onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/fallbacks/default.jpg') }}'">
-                    {% else %}
-                    <div class="no-image-placeholder">
-                        <i class="fas fa-calendar-alt"></i>
-                    </div>
+                         onerror="this.onerror=null; this.src='{{ fallback_image }}'">
                     {% endif %}
                     <div class="event-badges">
                         <div class="badge-slot badge-slot-left">
@@ -277,6 +266,9 @@
                             <button class="btn-details" onclick="event.stopPropagation(); openEventModal({{ loop.index0 }})">
                                 <i class="fas fa-info-circle"></i> View Details
                             </button>
+                            <button class="share-btn" onclick="event.stopPropagation(); shareEvent({{ loop.index0 }})" aria-label="Share event">
+                                <i class="fas fa-share-alt"></i> Share
+                            </button>
                             {% if event.tickets_url %}
                             <a href="{{ event.tickets_url }}" class="btn-tickets" target="_blank" rel="noopener" onclick="event.stopPropagation()">
                                 <i class="fas fa-ticket-alt"></i> Tickets
@@ -294,11 +286,6 @@
                             <a href="{{ event|ics_calendar_link }}" class="calendar-btn apple-cal" onclick="event.stopPropagation()">
                                 <i class="fab fa-apple"></i> Apple
                             </a>
-                        </div>
-                        <div class="event-share">
-                            <button class="share-btn" onclick="event.stopPropagation(); shareEvent({{ loop.index0 }})" aria-label="Share event">
-                                <i class="fas fa-share-alt"></i> Share
-                            </button>
                         </div>
                     </div>
                 </div>

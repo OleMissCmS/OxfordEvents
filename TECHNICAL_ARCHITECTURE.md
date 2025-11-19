@@ -337,3 +337,4 @@ OxfordEvents/
 - SQL injection protection (SQLAlchemy parameterized queries)
 - Input validation on user submissions
 
+

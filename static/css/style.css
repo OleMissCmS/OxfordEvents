@@ -857,12 +857,6 @@ body.dark-mode .event-footer {
     border-top-color: rgba(255, 255, 255, 0.1);
 }
 
-.event-share {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-}
-
 .event-actions {
     display: flex;
     gap: 0.5rem;
