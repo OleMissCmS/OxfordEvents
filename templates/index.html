@@ -193,38 +193,12 @@
                  data-event-id="{{ loop.index0 }}"
                  onclick="openEventModal({{ loop.index0 }})">
                 <div class="event-image-container">
-                    {% set matchup = get_matchup_data(event) %}
-                    {% if matchup and matchup.has_logos and use_sports_composite %}
-                    {% set event_hash = event.get('hash', '') %}
-                    {% set image_url = url_for('sports_image', title=event.title|urlencode) %}
-                    {% if event_hash %}
-                    {% set image_url = image_url + '?hash=' + event_hash + '&date=' + (event.start_iso|urlencode if event.start_iso else '') + '&location=' + (event.location|urlencode if event.location else '') %}
-                    {% else %}
-                    {% set image_url = image_url + '?date=' + (event.start_iso|urlencode if event.start_iso else '') + '&location=' + (event.location|urlencode if event.location else '') %}
-                    {% endif %}
-                    <img src="{{ image_url }}" 
-                         alt="{{ event.title }}" 
-                         class="event-image"
-                         loading="lazy">
-                    {% elif matchup and matchup.has_logos %}
-                    <div class="matchup-graphic">
-                        <div class="matchup-team matchup-away">
-                            <img src="{{ matchup.away_logo }}" alt="{{ matchup.opponent }}" class="matchup-logo" onerror="this.style.display='none'">
-                            <span class="matchup-team-name">{{ matchup.opponent }}</span>
-                        </div>
-                        <div class="matchup-vs">VS</div>
-                        <div class="matchup-team matchup-home">
-                            <img src="{{ matchup.home_logo }}" alt="Ole Miss" class="matchup-logo" onerror="this.style.display='none'">
-                            <span class="matchup-team-name">Ole Miss</span>
-                        </div>
-                    </div>
-                    {% else %}
+                    {# Use display_image which is set by _determine_event_image - it will be a sports-image URL for athletics events #}
                     <img src="{{ card_image }}"
                          alt="{{ event.title }}"
                          class="event-image"
                          loading="lazy"
                          onerror="this.onerror=null; this.src='{{ fallback_image }}'">
-                    {% endif %}
                     <div class="event-badges">
                         <div class="badge-slot badge-slot-left">
                             {% if is_free %}

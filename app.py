@@ -661,6 +661,30 @@ def _determine_event_image(event: dict) -> str:
     location = (event.get("location") or "").strip()
     category = (event.get("category") or "").strip()
     title = (event.get("title") or "").strip()
+    
+    # Check if this is a sports event that should use the sports-image endpoint
+    from utils.image_processing import detect_sports_teams
+    teams = detect_sports_teams(title)
+    is_ole_miss_athletics = 'Ole Miss Athletics' in category
+    is_ice_hockey = 'ice hockey' in title.lower()
+    
+    # For athletics events, always try to use sports-image endpoint
+    # Even if teams aren't detected, we'll handle it in the endpoint
+    if is_ole_miss_athletics or is_ice_hockey:
+        # Return URL to sports-image endpoint
+        event_hash = event.get('hash', '')
+        from urllib.parse import quote
+        image_url = url_for('sports_image', title=quote(title))
+        params = []
+        if event_hash:
+            params.append(f'hash={quote(event_hash)}')
+        if event.get('start_iso'):
+            params.append(f'date={quote(event["start_iso"])}')
+        if location:
+            params.append(f'location={quote(location)}')
+        if params:
+            image_url += '?' + '&'.join(params)
+        return image_url
 
     location_image = get_location_image(location)
     if location_image:
@@ -1232,7 +1256,7 @@ def sports_image(title):
             if teams:
                 away, home = teams
                 
-                # For Ole Miss Athletics, use plain white background (no venue images)
+                # For Ole Miss Athletics, use split team colors (no venue images)
                 background_image_path = None
                 print(f"[sports-image] Generating matchup image for: title='{title}', location='{location_str}'")
                 print(f"[sports-image] Teams detected: {away[0]} vs {home[0]}")
@@ -1240,13 +1264,75 @@ def sports_image(title):
                 matchup_img, error = create_team_matchup_image(
                     away, 
                     home, 
-                    background_image_path=None,  # Always use white background for athletics
+                    background_image_path=None,  # Use split team colors instead
                     background_opacity=0.6
                 )
-                result_queue.put(('success', matchup_img, error))
+                if matchup_img:
+                    result_queue.put(('success', matchup_img, error))
+                else:
+                    result_queue.put(('error', None, error or 'Failed to generate matchup image'))
             else:
-                result_queue.put(('no_teams', None, None))
+                # No teams detected - try to create image with just Ole Miss
+                print(f"[sports-image] No teams detected for '{title}', attempting to create image with opponent name")
+                # Try to extract opponent name from title and create image
+                from utils.image_processing import _load_ole_miss_logo
+                from utils.team_colors import get_team_color
+                from PIL import Image, ImageDraw, ImageFont
+                import io
+                import re
+                
+                ole_miss_logo = _load_ole_miss_logo(80)
+                ole_miss_color = get_team_color("Ole Miss") or "#001148"
+                
+                # Try to extract opponent name
+                title_lower = title.lower()
+                # Pattern: "Opponent at Ole Miss" or "Ole Miss vs Opponent"
+                opponent_name = None
+                if " at " in title_lower:
+                    parts = title_lower.split(" at ")
+                    if "ole miss" in parts[1] or "rebel" in parts[1]:
+                        opponent_name = parts[0].strip()
+                elif " vs " in title_lower or " @ " in title_lower:
+                    parts = re.split(r'\s+(?:vs|@)\s+', title_lower)
+                    if len(parts) == 2:
+                        if "ole miss" in parts[1] or "rebel" in parts[1]:
+                            opponent_name = parts[0].strip()
+                        elif "ole miss" in parts[0] or "rebel" in parts[0]:
+                            opponent_name = parts[1].strip()
+                
+                # Get opponent color if we found a name
+                opponent_color = "#FFFFFF"  # Default white
+                if opponent_name:
+                    opponent_color = get_team_color(opponent_name) or "#CCCCCC"
+                    print(f"[sports-image] Extracted opponent: {opponent_name}, color: {opponent_color}")
+                
+                # Create split background image
+                img = Image.new("RGB", (400, 150), color="#FFFFFF")
+                draw = ImageDraw.Draw(img)
+                
+                # Split background: opponent color (upper left), Ole Miss color (lower right)
+                away_polygon = [(0, 0), (400, 0), (0, 150)]
+                draw.polygon(away_polygon, fill=opponent_color)
+                home_polygon = [(400, 0), (400, 150), (0, 150)]
+                draw.polygon(home_polygon, fill=ole_miss_color)
+                
+                # Draw diagonal divider
+                draw.line([(0, 150), (400, 0)], fill="#FFFFFF", width=3)
+                draw.line([(1, 150), (401, 0)], fill="#000000", width=1)
+                
+                # Paste Ole Miss logo (lower right)
+                if ole_miss_logo:
+                    paste_x = 3 * 400 // 4 - ole_miss_logo.width // 2
+                    paste_y = 2 * 150 // 3 - ole_miss_logo.height // 2
+                    img.paste(ole_miss_logo, (paste_x, paste_y), ole_miss_logo)
+                
+                buffer = io.BytesIO()
+                img.save(buffer, format="PNG")
+                buffer.seek(0)
+                result_queue.put(('success', buffer, None))
         except Exception as e:
+            import traceback
+            print(f"[sports-image] Exception: {e}\n{traceback.format_exc()}")
             result_queue.put(('error', None, str(e)))
     
     result_queue = queue.Queue()

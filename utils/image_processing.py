@@ -136,18 +136,29 @@ def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str
     Uses database first, then falls back to hardcoded TEAM_NAMES.
     """
     title_lower = title.lower()
-    # Pattern: "Team A vs Team B" or "Team A @ Team B"
+    # Pattern: "Team A vs Team B", "Team A @ Team B", or "Team A at Team B"
     # More flexible pattern - capture team names even if followed by words or parenthetical info
-    # Handle patterns like "Ice Hockey Club (D2) vs Alabama at Mid-South Ice House"
-    vs_pattern = r'(.+?)\s+(?:vs|@|v\.|versus)\s+(.+?)(?:\s+(?:in|at|@)|$)'
-    match = re.search(vs_pattern, title_lower)
+    # Handle patterns like:
+    # - "Ice Hockey Club (D2) vs Alabama at Mid-South Ice House"
+    # - "Miami Hurricanes at Ole Miss Rebels Mens Basketball"
+    # - "Longwood Lancers at Ole Miss Rebels Womens Basketball"
+    
+    # Try "at" pattern first (common for "Team A at Team B")
+    at_pattern = r'(.+?)\s+at\s+(.+?)(?:\s+(?:mens|womens|men\'s|women\'s|mbb|wbb|basketball|football|baseball|in|@)|$)'
+    match = re.search(at_pattern, title_lower)
+    
+    if not match:
+        # Try "vs" pattern
+        vs_pattern = r'(.+?)\s+(?:vs|@|v\.|versus)\s+(.+?)(?:\s+(?:in|at|@)|$)'
+        match = re.search(vs_pattern, title_lower)
+    
     if not match:
         return None
     
     team1_text, team2_text = match.groups()
-    # Clean up team text - remove trailing location info
-    team1_text = re.sub(r'\s+(?:at|in)\s+.+$', '', team1_text).strip()
-    team2_text = re.sub(r'\s+(?:at|in)\s+.+$', '', team2_text).strip()
+    # Clean up team text - remove trailing location info and sport names
+    team1_text = re.sub(r'\s+(?:at|in|mens|womens|men\'s|women\'s|mbb|wbb|basketball|football|baseball)\s+.+$', '', team1_text).strip()
+    team2_text = re.sub(r'\s+(?:at|in|mens|womens|men\'s|women\'s|mbb|wbb|basketball|football|baseball)\s+.+$', '', team2_text).strip()
     
     # Find team names - try database first, then hardcoded
     def find_team(text):
@@ -183,7 +194,12 @@ def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str
         # Sort by key length (longer first) to match "mississippi state" before "mississippi"
         sorted_teams = sorted(TEAM_NAMES.items(), key=lambda x: len(x[0]), reverse=True)
         for key, (name, logo_urls) in sorted_teams:
+            # Check if key appears in the text (as whole word or part of phrase)
             if key in text_lower or key in team_name_clean:
+                return name, logo_urls
+            # Also check if any word in the key matches (e.g., "rebels" in "ole miss rebels")
+            key_words = key.split()
+            if len(key_words) == 1 and key_words[0] in text_lower:
                 return name, logo_urls
         
         # If not in hardcoded list, try database with cleaned name
@@ -203,15 +219,19 @@ def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str
     team1_result = find_team(team1_text)
     team2_result = find_team(team2_text)
     
+    # Debug logging
+    print(f"[detect_sports_teams] Team1 '{team1_text}': {team1_result}")
+    print(f"[detect_sports_teams] Team2 '{team2_text}': {team2_result}")
+    
     # If both teams found, return them
     if team1_result[0] and team2_result[0]:
         # First team is away, second is home
         return team1_result, team2_result
     
-    # If only one team found, try to fetch the other from database/wiki
+    # If only one team found, try to fetch the other from database/wiki/NCAA cache
     # This handles cases like "Ole Miss vs Norfolk State" where Norfolk State isn't in hardcoded list
     if team1_result[0] and not team2_result[0]:
-        # Try harder to find team2 - clean the text and try database/wiki
+        # Try harder to find team2 - clean the text and try database/wiki/NCAA
         team2_clean = team2_text.strip()
         try:
             from utils.image_database import get_team_logo
@@ -220,12 +240,13 @@ def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str
                 name_parts = team2_clean.split()
                 name = ' '.join(word.capitalize() for word in name_parts)
                 team2_result = (name, logos)
+                print(f"[detect_sports_teams] Found team2 via database: {team2_result}")
                 return team1_result, team2_result
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[detect_sports_teams] Error finding team2: {e}")
     
     if team2_result[0] and not team1_result[0]:
-        # Try harder to find team1 - clean the text and try database/wiki
+        # Try harder to find team1 - clean the text and try database/wiki/NCAA
         team1_clean = team1_text.strip()
         try:
             from utils.image_database import get_team_logo
@@ -234,9 +255,19 @@ def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str
                 name_parts = team1_clean.split()
                 name = ' '.join(word.capitalize() for word in name_parts)
                 team1_result = (name, logos)
+                print(f"[detect_sports_teams] Found team1 via database: {team1_result}")
                 return team1_result, team2_result
-        except Exception:
-            pass
+            # Also try just the first word (e.g., "Longwood" from "Longwood Lancers")
+            first_word = team1_clean.split()[0] if team1_clean.split() else team1_clean
+            if first_word != team1_clean:
+                logos = get_team_logo(first_word)
+                if logos:
+                    name = first_word.capitalize()
+                    team1_result = (name, logos)
+                    print(f"[detect_sports_teams] Found team1 via first word '{first_word}': {team1_result}")
+                    return team1_result, team2_result
+        except Exception as e:
+            print(f"[detect_sports_teams] Error finding team1: {e}")
     
     return None
 
