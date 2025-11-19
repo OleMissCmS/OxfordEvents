@@ -40,8 +40,12 @@ def categorize_event(title: str, description: str = "", source: str = "", locati
        ("ole miss" in source_lower and any(sport in source_lower for sport in ['football', 'basketball', 'baseball', 'softball', 'soccer', 'tennis', 'volleyball', 'track', 'mbb', 'wbb'])):
         return "Ole Miss Athletics"
     
+    # Check for Ice Hockey Club events (Ole Miss Athletics)
+    if "ice hockey club" in text and ("ole miss" in text or "rebel" in text or " vs " in text or " @ " in text):
+        return "Ole Miss Athletics"
+    
     # Also check if title/description indicates Ole Miss Athletics game
-    if "ole miss" in text and (" vs " in text or " vs. " in text) and any(sport in text for sport in ['football', 'basketball', 'game']):
+    if "ole miss" in text and (" vs " in text or " vs. " in text) and any(sport in text for sport in ['football', 'basketball', 'game', 'ice hockey', 'hockey']):
         return "Ole Miss Athletics"
     
     # Check for Performance category (Proud Larry's or The Lyric)
