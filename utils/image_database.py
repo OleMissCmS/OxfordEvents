@@ -530,10 +530,21 @@ def get_team_logo(team_name: str) -> Optional[List[str]]:
     """
     Get team logo URLs from SQLite database (or JSON fallback), or fetch from Wikipedia if not found
     Returns list of logo URLs (local paths or remote URLs)
+    Priority: NCAA local cache > SQLite/JSON database > Wikipedia
     """
     team_key = team_name.lower().strip()
     
-    # Try SQLite database first
+    # First, try NCAA local cache (fastest, most reliable for college teams)
+    try:
+        from utils.ncaa_logos import get_ncaa_logo_urls
+        ncaa_logos = get_ncaa_logo_urls(team_name)
+        if ncaa_logos:
+            print(f"[image_database] Found NCAA logo in local cache for: {team_name}")
+            return ncaa_logos
+    except Exception as e:
+        print(f"[image_database] Error checking NCAA cache: {e}")
+    
+    # Try SQLite database
     try:
         from lib.database import get_session, TeamLogo
         session = get_session()

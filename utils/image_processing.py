@@ -137,20 +137,33 @@ def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str
     """
     title_lower = title.lower()
     # Pattern: "Team A vs Team B" or "Team A @ Team B"
-    # More flexible pattern - capture team names even if followed by words
-    vs_pattern = r'(.+?)\s+(?:vs|@|v\.|versus)\s+(.+?)(?:\s+(?:in|at)|$)'
+    # More flexible pattern - capture team names even if followed by words or parenthetical info
+    # Handle patterns like "Ice Hockey Club (D2) vs Alabama at Mid-South Ice House"
+    vs_pattern = r'(.+?)\s+(?:vs|@|v\.|versus)\s+(.+?)(?:\s+(?:in|at|@)|$)'
     match = re.search(vs_pattern, title_lower)
     if not match:
         return None
     
     team1_text, team2_text = match.groups()
+    # Clean up team text - remove trailing location info
+    team1_text = re.sub(r'\s+(?:at|in)\s+.+$', '', team1_text).strip()
+    team2_text = re.sub(r'\s+(?:at|in)\s+.+$', '', team2_text).strip()
     
     # Find team names - try database first, then hardcoded
     def find_team(text):
         text_lower = text.lower().strip()
         
-        # Clean up team name (remove common prefixes)
+        # Clean up team name (remove common prefixes and suffixes like "(D2)", "(D1)", etc.)
         team_name_clean = re.sub(r'^(#?\d+\s+)?', '', text_lower).strip()
+        # Remove parenthetical suffixes like "(D2)", "(D1)", "(Club)", etc.
+        team_name_clean = re.sub(r'\s*\([^)]+\)\s*$', '', team_name_clean).strip()
+        
+        # Special handling for "Ice Hockey Club" - treat as Ole Miss (home team)
+        # This handles "Ice Hockey Club (D2)" or "Ole Miss Ice Hockey Club" etc.
+        if "ice hockey club" in team_name_clean:
+            ole_miss_entry = TEAM_NAMES.get("ole miss")
+            if ole_miss_entry:
+                return ("Ole Miss", ole_miss_entry[1])
         
         # Try database first
         try:
@@ -170,7 +183,7 @@ def detect_sports_teams(title: str) -> Optional[Tuple[Tuple[str, str], Tuple[str
         # Sort by key length (longer first) to match "mississippi state" before "mississippi"
         sorted_teams = sorted(TEAM_NAMES.items(), key=lambda x: len(x[0]), reverse=True)
         for key, (name, logo_urls) in sorted_teams:
-            if key in text_lower:
+            if key in text_lower or key in team_name_clean:
                 return name, logo_urls
         
         # If not in hardcoded list, try database with cleaned name
@@ -250,10 +263,19 @@ def get_logo_image(url_or_urls, size: int = 120) -> Optional[Image.Image]:
     # Try each URL until one works
     for url in urls:
         try:
-            # Handle local file paths (from database)
+            # Handle local file paths (from database or NCAA cache)
             if url.startswith('/static/images/cache/'):
                 # Local file path
                 file_path = url.replace('/static/images/cache/', 'static/images/cache/')
+                if os.path.exists(file_path):
+                    img = Image.open(file_path)
+                    img = img.convert("RGBA")
+                    img.thumbnail((size, size), Image.Resampling.LANCZOS)
+                    return img
+                continue
+            elif url.startswith('/static/images/ncaa-logos/'):
+                # NCAA logo cache path
+                file_path = url.replace('/static/images/ncaa-logos/', 'static/images/ncaa-logos/')
                 if os.path.exists(file_path):
                     img = Image.open(file_path)
                     img = img.convert("RGBA")
@@ -287,7 +309,7 @@ def create_team_matchup_image(
 ) -> Tuple[Optional[io.BytesIO], Optional[str]]:
     """
     Create composite image with away team (upper left), home team (lower right), diagonal divider.
-    Optionally uses a background image (e.g., venue photo) with transparency.
+    Uses team colors from logos.csv for split background (Ole Miss color vs opponent color).
     Returns (BytesIO buffer or None, error_message or None).
     Image size matches display size (400x150) to prevent cropping.
     """
@@ -317,82 +339,61 @@ def create_team_matchup_image(
         if not home_logo:
             return None, f"Failed to download home team logo: {home_team[0]} (tried: {home_urls_str})"
         
-        # Create base image - use background if provided, otherwise solid color
-        has_background = False
-        if background_image_path:
-            # Try multiple path variations
-            possible_paths = [
-                background_image_path,  # Original path
-                os.path.join(os.getcwd(), background_image_path),  # Relative to current working directory
-                os.path.abspath(background_image_path),  # Absolute path
-            ]
-            
-            # Also try with app root if we can find it
-            import sys
-            if hasattr(sys, '_getframe'):
-                try:
-                    # Try to find the project root
-                    current_file = os.path.abspath(__file__)
-                    project_root = os.path.dirname(os.path.dirname(current_file))
-                    possible_paths.append(os.path.join(project_root, background_image_path))
-                except:
-                    pass
-            
-            bg_img = None
-            loaded_path = None
-            
-            for path in possible_paths:
-                if os.path.exists(path):
-                    try:
-                        bg_img = Image.open(path)
-                        loaded_path = path
-                        print(f"[create_team_matchup_image] Successfully loaded background from: {path}")
-                        break
-                    except Exception as e:
-                        print(f"[create_team_matchup_image] Failed to open {path}: {e}")
-                        continue
-            
-            if bg_img:
-                try:
-                    # Resize to match display size (400x150)
-                    bg_img = bg_img.resize((width, height), Image.Resampling.LANCZOS)
-                    # Convert to RGBA for transparency
-                    if bg_img.mode != 'RGBA':
-                        bg_img = bg_img.convert('RGBA')
-                    
-                    # Apply opacity to background
-                    alpha = bg_img.split()[3]
-                    alpha = alpha.point(lambda p: int(p * background_opacity))
-                    bg_img.putalpha(alpha)
-                    
-                    # Create base image with background
-                    img = Image.new("RGB", (width, height), color="#f8f9fa")
-                    img.paste(bg_img, (0, 0), bg_img)
-                    has_background = True
-                    print(f"[create_team_matchup_image] Background image applied successfully (opacity: {background_opacity})")
-                except Exception as e:
-                    # If background processing fails, use solid color
-                    print(f"[create_team_matchup_image] Failed to process background: {e}")
-                    img = Image.new("RGB", (width, height), color="#f8f9fa")
-            else:
-                print(f"[create_team_matchup_image] Background image not found. Tried paths: {possible_paths}")
-                img = Image.new("RGB", (width, height), color="#f8f9fa")
-        else:
-            # Create base image matching display size
-            img = Image.new("RGB", (width, height), color="#f8f9fa")
+        # Determine which team is Ole Miss
+        away_name_lower = away_team[0].lower()
+        home_name_lower = home_team[0].lower()
+        is_ole_miss_away = any(keyword in away_name_lower for keyword in ['ole miss', 'rebel', 'rebels'])
+        is_ole_miss_home = any(keyword in home_name_lower for keyword in ['ole miss', 'rebel', 'rebels'])
         
+        # Get team colors from CSV
+        from utils.team_colors import get_team_color
+        
+        ole_miss_color = get_team_color("Ole Miss") or "#C8122E"  # Default Ole Miss red
+        away_color = get_team_color(away_team[0]) or "#FFFFFF"  # Default white
+        home_color = get_team_color(home_team[0]) or "#FFFFFF"  # Default white
+        
+        # Determine background colors: Ole Miss side vs opponent side
+        if is_ole_miss_away:
+            # Away team is Ole Miss
+            away_side_color = ole_miss_color
+            home_side_color = home_color
+        elif is_ole_miss_home:
+            # Home team is Ole Miss
+            away_side_color = away_color
+            home_side_color = ole_miss_color
+        else:
+            # Neither is Ole Miss (shouldn't happen for athletics, but handle gracefully)
+            away_side_color = away_color
+            home_side_color = home_color
+        
+        # Create base image with split background colors
+        # Diagonal split: bottom-left to top-right
+        # Away team (upper left) gets away_side_color
+        # Home team (lower right) gets home_side_color
+        img = Image.new("RGB", (width, height), color="#FFFFFF")
         draw = ImageDraw.Draw(img)
         
-        # Draw diagonal line from bottom-left to top-right
-        # Use thicker, semi-transparent line that works on both backgrounds and solid colors
-        if has_background:
-            # On background images, use white with shadow for better visibility
-            draw.line([(0, height), (width, 0)], fill="#FFFFFF", width=3)
-            # Add a subtle shadow/outline for better visibility
-            draw.line([(1, height), (width + 1, 0)], fill="#000000", width=1)
-        else:
-            # On solid backgrounds, use black
-            draw.line([(0, height), (width, 0)], fill="#000000", width=2)
+        # Create polygon for away team side (upper left triangle)
+        # Points: top-left, top-right, bottom-left
+        away_polygon = [
+            (0, 0),           # Top-left
+            (width, 0),       # Top-right
+            (0, height),      # Bottom-left
+        ]
+        draw.polygon(away_polygon, fill=away_side_color)
+        
+        # Create polygon for home team side (lower right triangle)
+        # Points: top-right, bottom-right, bottom-left
+        home_polygon = [
+            (width, 0),       # Top-right
+            (width, height),  # Bottom-right
+            (0, height),      # Bottom-left
+        ]
+        draw.polygon(home_polygon, fill=home_side_color)
+        
+        # Draw diagonal divider line (white with shadow for visibility)
+        draw.line([(0, height), (width, 0)], fill="#FFFFFF", width=3)
+        draw.line([(1, height), (width + 1, 0)], fill="#000000", width=1)
         
         # Calculate safe positioning with generous padding for 150px height
         padding = 15  # Padding from edges
