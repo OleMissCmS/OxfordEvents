@@ -244,7 +244,9 @@
                         {% endif %}
                     </h3>
                     {# Location second #}
+                    {% if event.location %}
                     <div class="event-venue">{{ event.location }}</div>
+                    {% endif %}
                     {# Day and Time third #}
                     {% if weekday and time_str %}
                     <div class="event-date-time">{{ weekday }} {{ time_str }}</div>

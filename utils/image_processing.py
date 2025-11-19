@@ -436,9 +436,11 @@ def create_team_matchup_image(
                     if bg_img.mode != 'RGBA':
                         bg_img = bg_img.convert('RGBA')
                     
-                    # Apply opacity to background (70% = 0.7)
+                    # Apply opacity to background - keep it more visible (85% = 0.85) so venue shows through
+                    # User wants venue behind logos/colors, so make it more opaque
+                    venue_opacity = 0.85  # 85% opacity for better visibility
                     alpha = bg_img.split()[3]
-                    alpha = alpha.point(lambda p: int(p * background_opacity))
+                    alpha = alpha.point(lambda p: int(p * venue_opacity))
                     bg_img.putalpha(alpha)
                     
                     # Create base image with venue background
@@ -477,24 +479,24 @@ def create_team_matchup_image(
             draw.polygon(home_polygon, fill=home_side_color)
         else:
             # Overlay semi-transparent team colors on venue background
-            # Create overlay with team colors at 50% opacity for better visibility
+            # Reduce team color opacity to 30% so venue is more visible behind
             overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
             overlay_draw = ImageDraw.Draw(overlay)
             
-            # Away team side (upper left triangle) - semi-transparent
+            # Away team side (upper left triangle) - 30% opacity for better venue visibility
             away_polygon = [(0, 0), (width, 0), (0, height)]
             # Convert hex color to RGB
             away_rgb = tuple(int(away_side_color[i:i+2], 16) for i in (1, 3, 5))
-            overlay_draw.polygon(away_polygon, fill=(*away_rgb, 128))  # 50% opacity (128/255)
+            overlay_draw.polygon(away_polygon, fill=(*away_rgb, 77))  # 30% opacity (77/255)
             
-            # Home team side (lower right triangle) - semi-transparent
+            # Home team side (lower right triangle) - 30% opacity
             home_polygon = [(width, 0), (width, height), (0, height)]
             home_rgb = tuple(int(home_side_color[i:i+2], 16) for i in (1, 3, 5))
-            overlay_draw.polygon(home_polygon, fill=(*home_rgb, 128))  # 50% opacity
+            overlay_draw.polygon(home_polygon, fill=(*home_rgb, 77))  # 30% opacity
             
             # Composite overlay onto base image
             img = Image.alpha_composite(img.convert("RGBA"), overlay)
-            img = img.convert("RGB")
+            # Keep as RGBA for logo transparency
             draw = ImageDraw.Draw(img)
         
         # Draw diagonal divider line (white with shadow for visibility)
@@ -509,15 +511,49 @@ def create_team_matchup_image(
         home_center_y = 2 * height // 3  # Slightly higher for better fit
         
         # Ensure logos don't get cut off - use center positioning with bounds checking
-        # Away logo (upper left)
+        # Apply 40% opacity to logos (102/255 ≈ 0.4)
+        logo_opacity = 102  # 40% opacity
+        
+        # Away logo (upper left) - apply transparency
+        away_logo_with_alpha = away_logo.copy()
+        if away_logo_with_alpha.mode == 'RGBA':
+            alpha = away_logo_with_alpha.split()[3]
+            alpha = alpha.point(lambda p: int(p * (logo_opacity / 255)))
+            away_logo_with_alpha.putalpha(alpha)
+        else:
+            away_logo_with_alpha = away_logo_with_alpha.convert('RGBA')
+            alpha = Image.new('L', away_logo_with_alpha.size, logo_opacity)
+            away_logo_with_alpha.putalpha(alpha)
+        
         paste_x = max(padding, min(away_center_x - away_logo.width // 2, width - away_logo.width - padding))
         paste_y = max(padding, min(away_center_y - away_logo.height // 2, height - away_logo.height - padding))
-        img.paste(away_logo, (paste_x, paste_y), away_logo)
         
-        # Home logo (lower right)
+        # Paste logo with transparency onto RGBA image
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+        img.paste(away_logo_with_alpha, (paste_x, paste_y), away_logo_with_alpha)
+        
+        # Home logo (lower right) - apply transparency
+        home_logo_with_alpha = home_logo.copy()
+        if home_logo_with_alpha.mode == 'RGBA':
+            alpha = home_logo_with_alpha.split()[3]
+            alpha = alpha.point(lambda p: int(p * (logo_opacity / 255)))
+            home_logo_with_alpha.putalpha(alpha)
+        else:
+            home_logo_with_alpha = home_logo_with_alpha.convert('RGBA')
+            alpha = Image.new('L', home_logo_with_alpha.size, logo_opacity)
+            home_logo_with_alpha.putalpha(alpha)
+        
         paste_x = max(padding, min(home_center_x - home_logo.width // 2, width - home_logo.width - padding))
         paste_y = max(padding, min(home_center_y - home_logo.height // 2, height - home_logo.height - padding))
-        img.paste(home_logo, (paste_x, paste_y), home_logo)
+        img.paste(home_logo_with_alpha, (paste_x, paste_y), home_logo_with_alpha)
+        
+        # Convert back to RGB if needed (for PNG compatibility)
+        if img.mode == 'RGBA':
+            # Create white background and composite
+            rgb_img = Image.new("RGB", img.size, (255, 255, 255))
+            rgb_img.paste(img, mask=img.split()[3] if img.mode == 'RGBA' else None)
+            img = rgb_img
         
         # Convert to BytesIO
         buffer = io.BytesIO()
