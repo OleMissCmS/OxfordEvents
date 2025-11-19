@@ -217,22 +217,43 @@
                     </div>
                 </div>
                 <div class="event-content">
-                    {# Date line - small uppercase weekday #}
-                    {% if weekday %}
-                    <div class="event-date-line">{{ weekday }}</div>
+                    {# Title first - with short date format if date is in title #}
+                    {% set short_date = event.start_iso|format_short_date if event.start_iso else '' %}
+                    {% set title_text = event.title %}
+                    {# Remove date from title if it starts with a date pattern #}
+                    {% if title_text and ':' in title_text %}
+                        {% set title_parts = title_text.split(':', 1) %}
+                        {% if title_parts|length > 1 %}
+                            {# Check if first part looks like a date #}
+                            {% set first_part = title_parts[0].strip() %}
+                            {% if first_part|length < 20 and (',' in first_part or first_part|length < 15) %}
+                                {# Likely a date prefix, replace with short date #}
+                                {% if short_date %}
+                                    {% set title_text = short_date + ': ' + title_parts[1].strip() %}
+                                {% else %}
+                                    {% set title_text = title_parts[1].strip() %}
+                                {% endif %}
+                            {% endif %}
+                        {% endif %}
                     {% endif %}
                     <h3 class="event-title">
                         {% if detail_link %}
-                        <a href="{{ detail_link }}" target="_blank" rel="noopener" onclick="event.stopPropagation()">{{ event.title }}</a>
+                        <a href="{{ detail_link }}" target="_blank" rel="noopener" onclick="event.stopPropagation()">{{ title_text }}</a>
                         {% else %}
-                        {{ event.title }}
+                        {{ title_text }}
                         {% endif %}
                     </h3>
-                    {% if time_str %}
-                    <div class="event-time">{{ time_str }}</div>
-                    {% endif %}
+                    {# Location second #}
                     <div class="event-venue">{{ event.location }}</div>
-                    {# Description - 2-3 lines max, truncate #}
+                    {# Day and Time third #}
+                    {% if weekday and time_str %}
+                    <div class="event-date-time">{{ weekday }} {{ time_str }}</div>
+                    {% elif weekday %}
+                    <div class="event-date-time">{{ weekday }}</div>
+                    {% elif time_str %}
+                    <div class="event-date-time">{{ time_str }}</div>
+                    {% endif %}
+                    {# Description last #}
                     <div class="event-description">{{ event.description|truncate_description }}</div>
                     {# Footer with actions #}
                     <div class="event-footer">

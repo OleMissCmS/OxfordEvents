@@ -267,6 +267,46 @@ def format_time(value):
         except:
             return ""
 
+@app.template_filter('format_short_date')
+def format_short_date(value):
+    """Extract short date (e.g., 'Nov 21') from ISO datetime string"""
+    if not value:
+        return ""
+    try:
+        dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        return dt.strftime("%b %d").replace(" 0", " ")
+    except:
+        try:
+            from dateutil import parser as dtp
+            dt = dtp.parse(value)
+            return dt.strftime("%b %d").replace(" 0", " ")
+        except:
+            return ""
+
+@app.template_filter('format_date_time')
+def format_date_time(value):
+    """Format as 'MON Nov 21, 6:00 PM'"""
+    if not value:
+        return ""
+    try:
+        dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        weekday_map = {0: 'MON', 1: 'TUE', 2: 'WED', 3: 'THU', 4: 'FRI', 5: 'SAT', 6: 'SUN'}
+        weekday = weekday_map[dt.weekday()]
+        date_str = dt.strftime("%b %d").replace(" 0", " ")
+        time_str = dt.strftime("%I:%M %p").replace(" 0", " ").lstrip("0")
+        return f"{weekday} {date_str}, {time_str}"
+    except:
+        try:
+            from dateutil import parser as dtp
+            dt = dtp.parse(value)
+            weekday_map = {0: 'MON', 1: 'TUE', 2: 'WED', 3: 'THU', 4: 'FRI', 5: 'SAT', 6: 'SUN'}
+            weekday = weekday_map[dt.weekday()]
+            date_str = dt.strftime("%b %d").replace(" 0", " ")
+            time_str = dt.strftime("%I:%M %p").replace(" 0", " ").lstrip("0")
+            return f"{weekday} {date_str}, {time_str}"
+        except:
+            return ""
+
 @app.template_filter('is_weekend')
 def is_weekend(value):
     """Check if date is a weekend (Saturday or Sunday)"""
@@ -1277,16 +1317,29 @@ def sports_image(title):
             if teams:
                 away, home = teams
                 
-                # For Ole Miss Athletics, use split team colors (no venue images)
+                # Determine venue background image for Ole Miss Athletics
                 background_image_path = None
+                location_lower = (location_str or '').lower()
+                title_lower = title.lower()
+                
+                # Check for venue-specific images
+                if "pavilion" in location_lower or "basketball" in title_lower or "mbb" in title_lower or "wbb" in title_lower:
+                    background_image_path = os.path.join("static", "images", "buildings", "Pavilion.png")
+                elif "swayze" in location_lower or "baseball" in title_lower:
+                    background_image_path = os.path.join("static", "images", "fallbacks", "Swayze.jpg")
+                elif "vaught" in location_lower or "hemingway" in location_lower or "football" in title_lower:
+                    background_image_path = os.path.join("static", "images", "fallbacks", "Vaught.jpg")
+                
                 print(f"[sports-image] Generating matchup image for: title='{title}', location='{location_str}'")
                 print(f"[sports-image] Teams detected: {away[0]} vs {home[0]}")
+                if background_image_path:
+                    print(f"[sports-image] Using venue background: {background_image_path}")
                 
                 matchup_img, error = create_team_matchup_image(
                     away, 
                     home, 
-                    background_image_path=None,  # Use split team colors instead
-                    background_opacity=0.6
+                    background_image_path=background_image_path,  # Venue image with 70% transparency
+                    background_opacity=0.7  # 70% transparency as requested
                 )
                 if matchup_img:
                     result_queue.put(('success', matchup_img, error))

@@ -354,21 +354,21 @@ def create_team_matchup_image(
         home_urls_str = str(home_team[1]) if isinstance(home_team[1], list) else home_team[1]
         fallback_logo = _load_ole_miss_logo(logo_size)
 
-        if not away_logo and not home_logo and fallback_logo:
-            away_logo = fallback_logo.copy()
-            home_logo = fallback_logo.copy()
-        else:
-            if not away_logo and fallback_logo:
-                away_logo = fallback_logo.copy()
-            if not home_logo and fallback_logo:
-                home_logo = fallback_logo.copy()
-
-        if not away_logo and not home_logo:
-            return None, f"Failed to download logos for {away_team[0]} and {home_team[0]}"
+        # Always ensure we have at least Ole Miss logo as fallback
+        if not fallback_logo:
+            return None, "Ole Miss fallback logo not available"
+        
+        # Use Ole Miss logo for missing logos
         if not away_logo:
-            return None, f"Failed to download away team logo: {away_team[0]} (tried: {away_urls_str})"
+            away_logo = fallback_logo.copy()
+            print(f"[create_team_matchup_image] Using Ole Miss logo for missing away team: {away_team[0]}")
         if not home_logo:
-            return None, f"Failed to download home team logo: {home_team[0]} (tried: {home_urls_str})"
+            home_logo = fallback_logo.copy()
+            print(f"[create_team_matchup_image] Using Ole Miss logo for missing home team: {home_team[0]}")
+        
+        # At this point, we should have both logos (at least Ole Miss)
+        if not away_logo or not home_logo:
+            return None, f"Failed to load logos (away: {away_team[0]}, home: {home_team[0]})"
         
         # Determine which team is Ole Miss
         away_name_lower = away_team[0].lower()
@@ -397,30 +397,105 @@ def create_team_matchup_image(
             away_side_color = away_color
             home_side_color = home_color
         
-        # Create base image with split background colors
-        # Diagonal split: bottom-left to top-right
-        # Away team (upper left) gets away_side_color
-        # Home team (lower right) gets home_side_color
-        img = Image.new("RGB", (width, height), color="#FFFFFF")
+        # Create base image - use venue background if provided, otherwise split colors
+        has_background = False
+        if background_image_path:
+            # Try multiple path variations
+            possible_paths = [
+                background_image_path,
+                os.path.join(os.getcwd(), background_image_path),
+                os.path.abspath(background_image_path),
+            ]
+            
+            # Also try with app root if we can find it
+            import sys
+            if hasattr(sys, '_getframe'):
+                try:
+                    current_file = os.path.abspath(__file__)
+                    project_root = os.path.dirname(os.path.dirname(current_file))
+                    possible_paths.append(os.path.join(project_root, background_image_path))
+                except:
+                    pass
+            
+            bg_img = None
+            for path in possible_paths:
+                if os.path.exists(path):
+                    try:
+                        bg_img = Image.open(path)
+                        print(f"[create_team_matchup_image] Successfully loaded venue background from: {path}")
+                        break
+                    except Exception as e:
+                        print(f"[create_team_matchup_image] Failed to open {path}: {e}")
+                        continue
+            
+            if bg_img:
+                try:
+                    # Resize to match display size
+                    bg_img = bg_img.resize((width, height), Image.Resampling.LANCZOS)
+                    # Convert to RGBA for transparency
+                    if bg_img.mode != 'RGBA':
+                        bg_img = bg_img.convert('RGBA')
+                    
+                    # Apply opacity to background (70% = 0.7)
+                    alpha = bg_img.split()[3]
+                    alpha = alpha.point(lambda p: int(p * background_opacity))
+                    bg_img.putalpha(alpha)
+                    
+                    # Create base image with venue background
+                    img = Image.new("RGB", (width, height), color="#FFFFFF")
+                    img.paste(bg_img, (0, 0), bg_img)
+                    has_background = True
+                    print(f"[create_team_matchup_image] Venue background applied with {background_opacity*100}% opacity")
+                except Exception as e:
+                    print(f"[create_team_matchup_image] Failed to process venue background: {e}")
+                    img = Image.new("RGB", (width, height), color="#FFFFFF")
+            else:
+                print(f"[create_team_matchup_image] Venue background not found. Tried paths: {possible_paths}")
+                img = Image.new("RGB", (width, height), color="#FFFFFF")
+        else:
+            # No venue background - use split team colors
+            img = Image.new("RGB", (width, height), color="#FFFFFF")
+        
         draw = ImageDraw.Draw(img)
         
-        # Create polygon for away team side (upper left triangle)
-        # Points: top-left, top-right, bottom-left
-        away_polygon = [
-            (0, 0),           # Top-left
-            (width, 0),       # Top-right
-            (0, height),      # Bottom-left
-        ]
-        draw.polygon(away_polygon, fill=away_side_color)
-        
-        # Create polygon for home team side (lower right triangle)
-        # Points: top-right, bottom-right, bottom-left
-        home_polygon = [
-            (width, 0),       # Top-right
-            (width, height),  # Bottom-right
-            (0, height),      # Bottom-left
-        ]
-        draw.polygon(home_polygon, fill=home_side_color)
+        # Overlay split team colors on top of venue background (or create if no background)
+        if not has_background:
+            # Create polygon for away team side (upper left triangle)
+            away_polygon = [
+                (0, 0),           # Top-left
+                (width, 0),       # Top-right
+                (0, height),      # Bottom-left
+            ]
+            draw.polygon(away_polygon, fill=away_side_color)
+            
+            # Create polygon for home team side (lower right triangle)
+            home_polygon = [
+                (width, 0),       # Top-right
+                (width, height),  # Bottom-right
+                (0, height),      # Bottom-left
+            ]
+            draw.polygon(home_polygon, fill=home_side_color)
+        else:
+            # Overlay semi-transparent team colors on venue background
+            # Create overlay with team colors at 50% opacity for better visibility
+            overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+            overlay_draw = ImageDraw.Draw(overlay)
+            
+            # Away team side (upper left triangle) - semi-transparent
+            away_polygon = [(0, 0), (width, 0), (0, height)]
+            # Convert hex color to RGB
+            away_rgb = tuple(int(away_side_color[i:i+2], 16) for i in (1, 3, 5))
+            overlay_draw.polygon(away_polygon, fill=(*away_rgb, 128))  # 50% opacity (128/255)
+            
+            # Home team side (lower right triangle) - semi-transparent
+            home_polygon = [(width, 0), (width, height), (0, height)]
+            home_rgb = tuple(int(home_side_color[i:i+2], 16) for i in (1, 3, 5))
+            overlay_draw.polygon(home_polygon, fill=(*home_rgb, 128))  # 50% opacity
+            
+            # Composite overlay onto base image
+            img = Image.alpha_composite(img.convert("RGBA"), overlay)
+            img = img.convert("RGB")
+            draw = ImageDraw.Draw(img)
         
         # Draw diagonal divider line (white with shadow for visibility)
         draw.line([(0, height), (width, 0)], fill="#FFFFFF", width=3)

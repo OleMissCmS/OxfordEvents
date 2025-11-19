@@ -121,6 +121,15 @@ def get_ncaa_logo_path(team_name: str) -> Optional[str]:
             if logo_path.exists():
                 return f"/static/images/ncaa-logos/{filename}"
         
+        # Try first two words (e.g., "Notre Dame Fighting Irish" -> "Notre Dame")
+        if len(words) >= 2:
+            first_two = f"{words[0]} {words[1]}".lower()
+            if first_two in mappings:
+                filename = mappings[first_two]
+                logo_path = CACHE_DIR / filename
+                if logo_path.exists():
+                    return f"/static/images/ncaa-logos/{filename}"
+        
         # Try last word (sometimes the nickname)
         last_word = words[-1].lower()
         if last_word in mappings:
@@ -130,9 +139,40 @@ def get_ncaa_logo_path(team_name: str) -> Optional[str]:
                 return f"/static/images/ncaa-logos/{filename}"
     
     # Try direct filename lookup as fallback
+    words = normalized.split()
     for ext in ['.png', '.jpg', '.jpeg', '.svg']:
         # Try normalized name
         filename = f"{normalized}{ext}"
+        logo_path = CACHE_DIR / filename
+        if logo_path.exists():
+            return f"/static/images/ncaa-logos/{filename}"
+        
+        # Try first two words (e.g., "Notre Dame Fighting Irish" -> "Notre Dame")
+        if len(words) >= 2:
+            first_two = f"{words[0]} {words[1]}"
+            filename = f"{first_two}{ext}"
+            logo_path = CACHE_DIR / filename
+            if logo_path.exists():
+                return f"/static/images/ncaa-logos/{filename}"
+            
+            # Try camelCase of first two words (e.g., "Notre Dame" -> "notreDame")
+            camel_case = words[0].lower() + ''.join(word.capitalize() for word in words[1:2])
+            filename = f"{camel_case}{ext}"
+            logo_path = CACHE_DIR / filename
+            if logo_path.exists():
+                return f"/static/images/ncaa-logos/{filename}"
+        
+        # Try camelCase version of full normalized name (e.g., "Notre Dame Fighting Irish" -> "notreDameFightingIrish")
+        if len(words) > 1:
+            camel_case = words[0].lower() + ''.join(word.capitalize() for word in words[1:])
+            filename = f"{camel_case}{ext}"
+            logo_path = CACHE_DIR / filename
+            if logo_path.exists():
+                return f"/static/images/ncaa-logos/{filename}"
+        
+        # Try all lowercase, no spaces
+        no_space = normalized.replace(' ', '').lower()
+        filename = f"{no_space}{ext}"
         logo_path = CACHE_DIR / filename
         if logo_path.exists():
             return f"/static/images/ncaa-logos/{filename}"

@@ -120,13 +120,9 @@ def get_placeholder_image(category: str, event_title: str = "") -> str:
     Returns local path to image in static/images/fallbacks/ directory.
     Falls back to default.jpg if category-specific image not found.
     """
-    # Special handling for Community events - alternate between Community1 and Community2
+    # Special handling for Community events - always use Community2.jpg
     if category == "Community":
-        if event_title:
-            hash_val = int(hashlib.md5(event_title.encode()).hexdigest(), 16)
-            filename = "Community1.webp" if hash_val % 2 == 0 else "Community2.jpg"
-        else:
-            filename = "Community1.webp"
+        filename = "Community2.jpg"
     else:
         filename = CATEGORY_FILENAMES.get(category, CATEGORY_FILENAMES["default"])
 
