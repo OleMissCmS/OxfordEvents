@@ -663,18 +663,18 @@ def _determine_event_image(event: dict) -> str:
     title = (event.get("title") or "").strip()
     
     # Check if this is a sports event that should use the sports-image endpoint
-    from utils.image_processing import detect_sports_teams
-    teams = detect_sports_teams(title)
+    # Fast check - avoid expensive detect_sports_teams call here
     is_ole_miss_athletics = 'Ole Miss Athletics' in category
     is_ice_hockey = 'ice hockey' in title.lower()
     
     # For athletics events, always try to use sports-image endpoint
-    # Even if teams aren't detected, we'll handle it in the endpoint
+    # The endpoint will handle team detection and image generation
     if is_ole_miss_athletics or is_ice_hockey:
-        # Return URL to sports-image endpoint
+        # Return URL to sports-image endpoint (lazy generation - only when image is requested)
         event_hash = event.get('hash', '')
         from urllib.parse import quote
-        image_url = url_for('sports_image', title=quote(title))
+        # Build URL manually to avoid url_for context issues in cached function
+        image_url = f"/api/sports-image/{quote(title)}"
         params = []
         if event_hash:
             params.append(f'hash={quote(event_hash)}')
@@ -686,26 +686,42 @@ def _determine_event_image(event: dict) -> str:
             image_url += '?' + '&'.join(params)
         return image_url
 
-    location_image = get_location_image(location)
-    if location_image:
-        return location_image
-
-    location_lower = location.lower()
-
+    # Fast location checks (no file system operations)
+    location_lower = location.lower() if location else ""
+    
     if "proud larry" in location_lower:
         return PROUD_LARRYS_IMAGE
-
+    
+    # Try location image (may do file system check, but should be fast)
+    try:
+        location_image = get_location_image(location)
+        if location_image:
+            return location_image
+    except Exception:
+        pass  # Fall through to defaults
+    
     if category == "University":
-        return get_university_default_image()
+        try:
+            return get_university_default_image()
+        except Exception:
+            pass
+    
+    # Fast placeholder (should just return a URL string)
+    try:
+        placeholder = get_placeholder_image(category or "default", title)
+        if placeholder:
+            return placeholder
+    except Exception:
+        pass
+    
+    return DEFAULT_FALLBACK_IMAGE
 
-    placeholder = get_placeholder_image(category or "default", title)
-    return placeholder or DEFAULT_FALLBACK_IMAGE
 
-
+# _attach_event_images is now integrated into load_events() for caching
+# Keeping function signature for backwards compatibility but it's no longer used
 def _attach_event_images(events: List[dict]) -> None:
-    """Add a display_image key to each event dict for template rendering."""
-    for event in events:
-        event["display_image"] = _determine_event_image(event)
+    """Deprecated: Image URLs are now set in load_events() cache."""
+    pass
 
 
 @cache.cached(timeout=600, key_prefix='all_events')
@@ -797,6 +813,11 @@ def load_events():
     # Ensure events are sorted by start time
     normalized_events.sort(key=lambda e: e.get("start_iso") or "")
     
+    # Attach image URLs (this is fast - just returns URL strings, doesn't generate images)
+    # This is done here so it's cached along with events
+    for event in normalized_events:
+        event["display_image"] = _determine_event_image(event)
+    
     return normalized_events
 
 
@@ -810,8 +831,8 @@ def index():
     except Exception:
         pass
     
+    # Events already have display_image set from load_events() cache
     events = load_events()
-    _attach_event_images(events)
     
     # Clear status after events loaded (but before template render)
     try:
